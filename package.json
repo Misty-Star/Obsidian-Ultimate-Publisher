@@ -1,0 +1,19 @@
+{
+  "name": "obsidian-ultimate-publisher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Publish active Obsidian notes to WordPress, Yuque, or the local filesystem.",
+  "packageManager": "pnpm@10.22.0",
+  "scripts": {
+    "build": "node esbuild.config.mjs --production",
+    "dev": "node esbuild.config.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "^1.8.10",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

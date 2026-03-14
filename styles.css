@@ -1,0 +1,25 @@
+.ultimate-publisher-setting-group {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  margin: 16px 0;
+  padding: 12px 14px;
+}
+
+.ultimate-publisher-setting-group h4 {
+  margin: 0 0 12px;
+}
+
+.ultimate-publisher-setting-group.is-disabled {
+  opacity: 0.72;
+}
+
+.ultimate-publisher-setting-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ultimate-publisher-empty-state {
+  color: var(--text-muted);
+  margin: 8px 0 16px;
+}
