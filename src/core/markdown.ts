@@ -5,6 +5,11 @@ export interface ParsedAssetReference {
   source: "wiki-embed" | "markdown-image";
 }
 
+export interface AssetReplacement {
+  reference: ParsedAssetReference;
+  replacementPath: string;
+}
+
 const WIKI_EMBED_REGEX = /!\[\[([^\]]+)\]\]/g;
 const MARKDOWN_IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g;
 
@@ -49,4 +54,12 @@ export function replaceAssetReference(markdown: string, reference: ParsedAssetRe
   const altText = reference.altText.trim();
   const rewritten = `![${altText}](${replacementPath})`;
   return markdown.split(reference.originalText).join(rewritten);
+}
+
+export function replaceAssetReferences(markdown: string, replacements: AssetReplacement[]): string {
+  return replacements.reduce(
+    (currentMarkdown, replacement) =>
+      replaceAssetReference(currentMarkdown, replacement.reference, replacement.replacementPath),
+    markdown
+  );
 }
