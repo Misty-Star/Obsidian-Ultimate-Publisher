@@ -1,8 +1,8 @@
-import { App, requestUrl } from "obsidian";
+import { App, normalizePath, requestUrl } from "obsidian";
 import { PreparedHtmlNote } from "../core/content";
 import { renderMarkdownToHtml } from "../core/html";
-import { PublisherProvider, PublishResult, assertRemoteAssetsSupported } from "../core/providers";
-import { PublishableNote } from "../core/note";
+import { MediaSupport, MediaUploadResult, PublisherProvider, PublishResult } from "../core/providers";
+import { PublishableNote, ResolvedAsset } from "../core/note";
 import { WordpressTargetConfig } from "../types";
 
 interface WordpressPostResponse {
@@ -14,6 +14,14 @@ interface WordpressTermResponse {
   id: number;
   name: string;
   slug: string;
+}
+
+interface WordpressMediaResponse {
+  id: number;
+  source_url?: string;
+  guid?: {
+    rendered?: string;
+  };
 }
 
 function tryParseJsonPayload<T>(text: string): T | null {
@@ -131,6 +139,10 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
 
   constructor(private readonly app: App) {}
 
+  getMediaSupport(_target: WordpressTargetConfig): MediaSupport {
+    return { mode: "native-upload" };
+  }
+
   async validateConfig(target: WordpressTargetConfig): Promise<void> {
     if (!target.endpoint || !target.username || !target.appPassword) {
       throw new Error("WordPress target is missing endpoint, username, or application password.");
@@ -139,7 +151,6 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
   }
 
   async publish(note: PublishableNote, target: WordpressTargetConfig): Promise<PublishResult> {
-    assertRemoteAssetsSupported(note, target.name);
     const response = await requestJson<WordpressPostResponse>(
       target,
       "/posts",
@@ -153,7 +164,6 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
   }
 
   async update(remoteId: string, note: PublishableNote, target: WordpressTargetConfig): Promise<PublishResult> {
-    assertRemoteAssetsSupported(note, target.name);
     const preparedNote = await this.prepareNote(note);
     const response = await requestJson<WordpressPostResponse>(
       target,
@@ -174,6 +184,37 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
   async getPreviewUrl(remoteId: string, target: WordpressTargetConfig): Promise<string | undefined> {
     const response = await requestJson<WordpressPostResponse>(target, `/posts/${encodeURIComponent(remoteId)}`);
     return response.link;
+  }
+
+  async uploadAsset(
+    asset: ResolvedAsset,
+    _note: PublishableNote,
+    target: WordpressTargetConfig
+  ): Promise<MediaUploadResult> {
+    const bytes = await this.app.vault.adapter.readBinary(normalizePath(asset.sourcePath));
+    const response = await requestUrl({
+      url: `${normalizeEndpoint(target)}/media`,
+      method: "POST",
+      headers: {
+        Authorization: makeAuthHeader(target),
+        "Content-Disposition": `attachment; filename="${asset.fileName}"`,
+        "Content-Type": "application/octet-stream",
+      },
+      body: Buffer.from(bytes),
+      throw: false,
+    });
+
+    if (response.status >= 400) {
+      throw new Error(`WordPress media upload failed for ${asset.fileName} (${response.status}): ${response.text}`);
+    }
+
+    const payload = tryParseJsonPayload<WordpressMediaResponse>(response.text);
+    const url = payload?.source_url ?? payload?.guid?.rendered;
+    if (!url) {
+      throw new Error(`WordPress media upload failed for ${asset.fileName}: ${response.text}`);
+    }
+
+    return { url };
   }
 
   private async prepareNote(note: PublishableNote): Promise<PublishableNote & PreparedHtmlNote> {
