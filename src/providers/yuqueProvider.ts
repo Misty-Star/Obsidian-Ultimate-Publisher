@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { PublisherProvider, PublishResult, assertRemoteAssetsSupported } from "../core/providers";
+import { MediaSupport, PublisherProvider, PublishResult, assertRemoteAssetsSupported } from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { YuqueTargetConfig } from "../types";
 
@@ -61,6 +61,10 @@ function getDocUrl(doc: YuqueDoc): string | undefined {
 
 export class YuqueProvider implements PublisherProvider<YuqueTargetConfig> {
   readonly provider = "yuque" as const;
+
+  getMediaSupport(_target: YuqueTargetConfig): MediaSupport {
+    return { mode: "unsupported" };
+  }
 
   async validateConfig(target: YuqueTargetConfig): Promise<void> {
     if (!target.repo || !target.token) {

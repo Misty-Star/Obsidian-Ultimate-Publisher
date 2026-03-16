@@ -1,5 +1,7 @@
 import { App, TFile } from "obsidian";
 import { extractPublishableNote, computeContentHash } from "./note";
+import { prepareNoteForPublish } from "./mediaPipeline";
+import { PublisherProvider } from "./providers";
 import { ProviderRegistry } from "../providers/registry";
 import { PublishRecord, PublishTargetConfig, UltimatePublisherSettings } from "../types";
 import { getRecord, upsertRecord } from "../settings";
@@ -9,8 +11,22 @@ export interface PublishServiceResult {
   created: boolean;
 }
 
+export interface PublishMediaPipeline {
+  prepare(
+    note: ReturnType<typeof extractPublishableNote> extends Promise<infer T> ? T : never,
+    target: PublishTargetConfig,
+    provider: PublisherProvider
+  ): Promise<ReturnType<typeof extractPublishableNote> extends Promise<infer T> ? T : never>;
+}
+
 export class PublishService {
-  constructor(private readonly app: App, private readonly providers: ProviderRegistry) {}
+  constructor(
+    private readonly app: App,
+    private readonly providers: ProviderRegistry,
+    private readonly mediaPipeline: PublishMediaPipeline = {
+      prepare: prepareNoteForPublish,
+    }
+  ) {}
 
   async publishFile(
     file: TFile,
@@ -22,11 +38,12 @@ export class PublishService {
 
     const note = await extractPublishableNote(this.app, file);
     const contentHash = computeContentHash(note);
+    const preparedNote = await this.mediaPipeline.prepare(note, target, provider);
     const existing = getRecord(settings.records, file.path, target.id);
 
     const result = existing
-      ? await provider.update(existing.remoteId, note, target as never)
-      : await provider.publish(note, target as never);
+      ? await provider.update(existing.remoteId, preparedNote, target as never)
+      : await provider.publish(preparedNote, target as never);
 
     const previewUrl = result.remoteUrl ?? (await provider.getPreviewUrl(result.remoteId, target as never));
     const record: PublishRecord = {
