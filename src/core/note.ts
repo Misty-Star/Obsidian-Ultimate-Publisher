@@ -10,18 +10,26 @@ export interface ResolvedAsset {
   fileName: string;
 }
 
+export interface UnresolvedAsset {
+  reference: ParsedAssetReference;
+  reason: "missing" | "unsupported-type";
+}
+
 export interface PublishableNote {
   filePath: string;
   title: string;
   markdown: string;
   frontmatter: Record<string, unknown>;
   attachments: ResolvedAsset[];
+  unresolvedAttachments: UnresolvedAsset[];
   excerpt: string;
   slug: string;
   tags: string[];
   categories: string[];
   date?: string;
 }
+
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"]);
 
 function ensureArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -66,16 +74,50 @@ function pickExcerpt(markdown: string, frontmatter: Record<string, unknown>): st
   return collapsed.slice(0, 200);
 }
 
-function resolveAsset(app: App, file: TFile, reference: ParsedAssetReference): ResolvedAsset | null {
+function isImagePath(value: string): boolean {
+  const normalized = value.split(/[?#]/)[0] ?? value;
+  return IMAGE_EXTENSIONS.has(extname(normalized).toLowerCase());
+}
+
+function resolveAsset(
+  app: App,
+  file: TFile,
+  reference: ParsedAssetReference
+): { resolved?: ResolvedAsset; unresolved?: UnresolvedAsset } {
+  if (!isImagePath(reference.rawTarget)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type",
+      },
+    };
+  }
+
   const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
   if (!(resolved instanceof TFile)) {
-    return null;
+    return {
+      unresolved: {
+        reference,
+        reason: "missing",
+      },
+    };
+  }
+
+  if (!isImagePath(resolved.path)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type",
+      },
+    };
   }
 
   return {
-    reference,
-    sourcePath: resolved.path,
-    fileName: resolved.name,
+    resolved: {
+      reference,
+      sourcePath: resolved.path,
+      fileName: resolved.name,
+    },
   };
 }
 
@@ -86,9 +128,17 @@ export async function extractPublishableNote(app: App, file: TFile): Promise<Pub
   const markdown = stripFrontmatter(rawMarkdown);
 
   const references = extractAssetReferences(markdown);
-  const attachments = references
-    .map((reference) => resolveAsset(app, file, reference))
-    .filter((asset): asset is ResolvedAsset => Boolean(asset));
+  const attachments: ResolvedAsset[] = [];
+  const unresolvedAttachments: UnresolvedAsset[] = [];
+  for (const reference of references) {
+    const result = resolveAsset(app, file, reference);
+    if (result.resolved) {
+      attachments.push(result.resolved);
+    }
+    if (result.unresolved) {
+      unresolvedAttachments.push(result.unresolved);
+    }
+  }
 
   const title = typeof frontmatter.title === "string" && frontmatter.title ? frontmatter.title : file.basename;
   const slug =
@@ -105,6 +155,7 @@ export async function extractPublishableNote(app: App, file: TFile): Promise<Pub
     markdown,
     frontmatter,
     attachments,
+    unresolvedAttachments,
     excerpt: pickExcerpt(markdown, frontmatter),
     slug,
     tags,
