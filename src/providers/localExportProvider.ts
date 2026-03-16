@@ -1,9 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import { App, normalizePath } from "obsidian";
 import { PublishableNote, ResolvedAsset, sanitizeFileName } from "../core/note";
-import { PublishResult, PublisherProvider } from "../core/providers";
-import { replaceAssetReference } from "../core/markdown";
+import { MediaSupport, MediaUploadResult, PublishResult, PublisherProvider } from "../core/providers";
 import { buildExportFrontmatter, serializeFrontmatter } from "../core/yaml";
 import { LocalExportTargetConfig } from "../types";
 
@@ -11,6 +10,10 @@ export class LocalExportProvider implements PublisherProvider<LocalExportTargetC
   readonly provider = "local-export" as const;
 
   constructor(private readonly app: App) {}
+
+  getMediaSupport(_target: LocalExportTargetConfig): MediaSupport {
+    return { mode: "local-copy" };
+  }
 
   async validateConfig(target: LocalExportTargetConfig): Promise<void> {
     if (!target.outputDir) {
@@ -38,15 +41,7 @@ export class LocalExportProvider implements PublisherProvider<LocalExportTargetC
   private async writeExport(remoteId: string | undefined, note: PublishableNote, target: LocalExportTargetConfig): Promise<PublishResult> {
     const slug = sanitizeFileName(note.slug || note.title, "note");
     const outputPath = remoteId || join(target.outputDir, `${slug}.md`);
-    const assetDir = join(target.outputDir, target.assetDirName || "assets");
     await mkdir(target.outputDir, { recursive: true });
-    await mkdir(assetDir, { recursive: true });
-
-    let markdown = note.markdown;
-    for (const asset of note.attachments) {
-      const rewritten = await this.copyAsset(asset, slug, assetDir, target);
-      markdown = replaceAssetReference(markdown, asset.reference, rewritten);
-    }
 
     const frontmatter = buildExportFrontmatter(
       {
@@ -60,7 +55,7 @@ export class LocalExportProvider implements PublisherProvider<LocalExportTargetC
       },
       target.yamlType
     );
-    const content = `${serializeFrontmatter(frontmatter)}\n\n${markdown.trim()}\n`;
+    const content = `${serializeFrontmatter(frontmatter)}\n\n${note.markdown.trim()}\n`;
     await writeFile(outputPath, content, "utf8");
 
     return {
@@ -69,17 +64,23 @@ export class LocalExportProvider implements PublisherProvider<LocalExportTargetC
     };
   }
 
-  private async copyAsset(
+  async copyAsset(
     asset: ResolvedAsset,
-    slug: string,
-    assetDir: string,
+    note: PublishableNote,
     target: LocalExportTargetConfig
-  ): Promise<string> {
+  ): Promise<MediaUploadResult> {
     const sourceData = await this.app.vault.adapter.readBinary(normalizePath(asset.sourcePath));
-    const assetName = `${slug}-${sanitizeFileName(asset.fileName, "asset")}`;
+    const slug = sanitizeFileName(note.slug || note.title, "note");
+    const assetDir = join(target.outputDir, target.assetDirName || "assets");
+    await mkdir(assetDir, { recursive: true });
+    const extension = extname(asset.fileName);
+    const baseName = extension ? asset.fileName.slice(0, -extension.length) : asset.fileName;
+    const assetName = `${slug}-${sanitizeFileName(baseName, "asset")}${extension}`;
     const destination = join(assetDir, assetName);
     await writeFile(destination, Buffer.from(sourceData));
     const relativeDir = target.assetDirName || "assets";
-    return `./${relativeDir}/${assetName}`;
+    return {
+      url: `./${relativeDir}/${assetName}`,
+    };
   }
 }
