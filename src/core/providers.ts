@@ -1,14 +1,27 @@
 import { Notice } from "obsidian";
 import { PublishRecord, PublishTargetConfig } from "../types";
-import { PublishableNote } from "./note";
+import { PublishableNote, ResolvedAsset } from "./note";
 
 export interface PublishResult {
   remoteId: string;
   remoteUrl?: string;
 }
 
+export type MediaSupportMode = "unsupported" | "local-copy" | "native-upload";
+
+export interface MediaSupport {
+  mode: MediaSupportMode;
+}
+
+export interface MediaUploadResult {
+  url: string;
+}
+
 export interface PublisherProvider<TConfig extends PublishTargetConfig = PublishTargetConfig> {
   readonly provider: TConfig["provider"];
+  getMediaSupport(target: TConfig): MediaSupport;
+  uploadAsset?(asset: ResolvedAsset, note: PublishableNote, target: TConfig): Promise<MediaUploadResult>;
+  copyAsset?(asset: ResolvedAsset, note: PublishableNote, target: TConfig): Promise<MediaUploadResult>;
   validateConfig(target: TConfig): Promise<void>;
   publish(note: PublishableNote, target: TConfig): Promise<PublishResult>;
   update(remoteId: string, note: PublishableNote, target: TConfig): Promise<PublishResult>;
