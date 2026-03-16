@@ -71,6 +71,12 @@ function replaceAssetReference(markdown, reference, replacementPath) {
   const rewritten = `![${altText}](${replacementPath})`;
   return markdown.split(reference.originalText).join(rewritten);
 }
+function replaceAssetReferences(markdown, replacements) {
+  return replacements.reduce(
+    (currentMarkdown, replacement) => replaceAssetReference(currentMarkdown, replacement.reference, replacement.replacementPath),
+    markdown
+  );
+}
 
 // src/core/content.ts
 function stripFrontmatter(markdown) {
@@ -81,6 +87,7 @@ function stripFrontmatter(markdown) {
 }
 
 // src/core/note.ts
+var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"]);
 function ensureArray(value) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean);
@@ -101,15 +108,42 @@ function pickExcerpt(markdown, frontmatter) {
   const collapsed = markdown.replace(/^---[\s\S]*?---\s*/m, "").replace(/!\[\[[^\]]+\]\]/g, "").replace(/!\[[^\]]*]\(([^)]+)\)/g, "").replace(/\[\[([^\]]+)]]/g, "$1").replace(/\[([^\]]+)]\(([^)]+)\)/g, "$1").replace(/[#>*`~-]/g, " ").replace(/\s+/g, " ").trim();
   return collapsed.slice(0, 200);
 }
+function isImagePath(value) {
+  const normalized = value.split(/[?#]/)[0] ?? value;
+  return IMAGE_EXTENSIONS.has((0, import_node_path.extname)(normalized).toLowerCase());
+}
 function resolveAsset(app, file, reference) {
+  if (!isImagePath(reference.rawTarget)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type"
+      }
+    };
+  }
   const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
   if (!(resolved instanceof import_obsidian.TFile)) {
-    return null;
+    return {
+      unresolved: {
+        reference,
+        reason: "missing"
+      }
+    };
+  }
+  if (!isImagePath(resolved.path)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type"
+      }
+    };
   }
   return {
-    reference,
-    sourcePath: resolved.path,
-    fileName: resolved.name
+    resolved: {
+      reference,
+      sourcePath: resolved.path,
+      fileName: resolved.name
+    }
   };
 }
 async function extractPublishableNote(app, file) {
@@ -118,7 +152,17 @@ async function extractPublishableNote(app, file) {
   const frontmatter = cache?.frontmatter ?? {};
   const markdown = stripFrontmatter(rawMarkdown);
   const references = extractAssetReferences(markdown);
-  const attachments = references.map((reference) => resolveAsset(app, file, reference)).filter((asset) => Boolean(asset));
+  const attachments = [];
+  const unresolvedAttachments = [];
+  for (const reference of references) {
+    const result = resolveAsset(app, file, reference);
+    if (result.resolved) {
+      attachments.push(result.resolved);
+    }
+    if (result.unresolved) {
+      unresolvedAttachments.push(result.unresolved);
+    }
+  }
   const title = typeof frontmatter.title === "string" && frontmatter.title ? frontmatter.title : file.basename;
   const slug = typeof frontmatter.slug === "string" && frontmatter.slug || typeof frontmatter.permalink === "string" && frontmatter.permalink || slugify(file.basename);
   const tags = ensureArray(frontmatter.tags);
@@ -129,6 +173,7 @@ async function extractPublishableNote(app, file) {
     markdown,
     frontmatter,
     attachments,
+    unresolvedAttachments,
     excerpt: pickExcerpt(markdown, frontmatter),
     slug,
     tags,
@@ -150,6 +195,68 @@ function sanitizeFileName(value, fallback = "note") {
   const name = ext ? value.slice(0, -ext.length) : value;
   const sanitized = name.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "-").trim();
   return sanitized || fallback;
+}
+
+// src/core/mediaPipeline.ts
+async function resolveReplacement(provider, note, target, sourcePath) {
+  const asset = note.attachments.find((item) => item.sourcePath === sourcePath);
+  if (!asset) {
+    throw new Error(`Missing attachment for source path: ${sourcePath}`);
+  }
+  const support = provider.getMediaSupport(target);
+  if (support.mode === "native-upload") {
+    if (!provider.uploadAsset) {
+      throw new Error(`${target.name} cannot upload local assets because uploadAsset() is not implemented.`);
+    }
+    return provider.uploadAsset(asset, note, target);
+  }
+  if (support.mode === "local-copy") {
+    if (!provider.copyAsset) {
+      throw new Error(`${target.name} cannot copy local assets because copyAsset() is not implemented.`);
+    }
+    return provider.copyAsset(asset, note, target);
+  }
+  const files = note.attachments.map((item) => item.sourcePath).join(", ");
+  throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
+}
+async function prepareNoteForPublish(note, target, provider) {
+  const missingAttachment = note.unresolvedAttachments.find((asset) => asset.reason === "missing");
+  if (missingAttachment) {
+    throw new Error(`Missing local image asset: ${missingAttachment.reference.rawTarget}`);
+  }
+  if (note.attachments.length === 0) {
+    return {
+      ...note,
+      mediaReplacements: []
+    };
+  }
+  const support = provider.getMediaSupport(target);
+  if (support.mode === "unsupported") {
+    const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
+    throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
+  }
+  const resolvedPaths = /* @__PURE__ */ new Map();
+  const replacements = [];
+  for (const asset of note.attachments) {
+    let replacementPath = resolvedPaths.get(asset.sourcePath);
+    if (!replacementPath) {
+      const result = await resolveReplacement(provider, note, target, asset.sourcePath);
+      replacementPath = result.url;
+      resolvedPaths.set(asset.sourcePath, replacementPath);
+    }
+    replacements.push({
+      reference: asset.reference,
+      replacementPath
+    });
+  }
+  return {
+    ...note,
+    markdown: replaceAssetReferences(note.markdown, replacements),
+    mediaReplacements: [...resolvedPaths.entries()].map(([sourcePath, replacementPath]) => ({
+      sourcePath,
+      replacementPath
+    }))
+  };
 }
 
 // src/settings.ts
@@ -235,17 +342,21 @@ function normalizeTarget(target) {
 
 // src/core/publishService.ts
 var PublishService = class {
-  constructor(app, providers) {
+  constructor(app, providers, mediaPipeline = {
+    prepare: prepareNoteForPublish
+  }) {
     this.app = app;
     this.providers = providers;
+    this.mediaPipeline = mediaPipeline;
   }
   async publishFile(file, target, settings) {
     const provider = this.providers.get(target);
     await provider.validateConfig(target);
     const note = await extractPublishableNote(this.app, file);
     const contentHash = computeContentHash(note);
+    const preparedNote = await this.mediaPipeline.prepare(note, target, provider);
     const existing = getRecord(settings.records, file.path, target.id);
-    const result = existing ? await provider.update(existing.remoteId, note, target) : await provider.publish(note, target);
+    const result = existing ? await provider.update(existing.remoteId, preparedNote, target) : await provider.publish(preparedNote, target);
     const previewUrl = result.remoteUrl ?? await provider.getPreviewUrl(result.remoteId, target);
     const record = {
       notePath: file.path,
@@ -365,6 +476,9 @@ var LocalExportProvider = class {
     this.app = app;
     this.provider = "local-export";
   }
+  getMediaSupport(_target) {
+    return { mode: "local-copy" };
+  }
   async validateConfig(target) {
     if (!target.outputDir) {
       throw new Error("Local export target is missing outputDir.");
@@ -386,14 +500,7 @@ var LocalExportProvider = class {
   async writeExport(remoteId, note, target) {
     const slug = sanitizeFileName(note.slug || note.title, "note");
     const outputPath = remoteId || (0, import_node_path2.join)(target.outputDir, `${slug}.md`);
-    const assetDir = (0, import_node_path2.join)(target.outputDir, target.assetDirName || "assets");
     await (0, import_promises.mkdir)(target.outputDir, { recursive: true });
-    await (0, import_promises.mkdir)(assetDir, { recursive: true });
-    let markdown = note.markdown;
-    for (const asset of note.attachments) {
-      const rewritten = await this.copyAsset(asset, slug, assetDir, target);
-      markdown = replaceAssetReference(markdown, asset.reference, rewritten);
-    }
     const frontmatter = buildExportFrontmatter(
       {
         title: note.title,
@@ -408,7 +515,7 @@ var LocalExportProvider = class {
     );
     const content = `${serializeFrontmatter(frontmatter)}
 
-${markdown.trim()}
+${note.markdown.trim()}
 `;
     await (0, import_promises.writeFile)(outputPath, content, "utf8");
     return {
@@ -416,18 +523,25 @@ ${markdown.trim()}
       remoteUrl: outputPath
     };
   }
-  async copyAsset(asset, slug, assetDir, target) {
+  async copyAsset(asset, note, target) {
     const sourceData = await this.app.vault.adapter.readBinary((0, import_obsidian2.normalizePath)(asset.sourcePath));
-    const assetName = `${slug}-${sanitizeFileName(asset.fileName, "asset")}`;
+    const slug = sanitizeFileName(note.slug || note.title, "note");
+    const assetDir = (0, import_node_path2.join)(target.outputDir, target.assetDirName || "assets");
+    await (0, import_promises.mkdir)(assetDir, { recursive: true });
+    const extension = (0, import_node_path2.extname)(asset.fileName);
+    const baseName = extension ? asset.fileName.slice(0, -extension.length) : asset.fileName;
+    const assetName = `${slug}-${sanitizeFileName(baseName, "asset")}${extension}`;
     const destination = (0, import_node_path2.join)(assetDir, assetName);
     await (0, import_promises.writeFile)(destination, Buffer.from(sourceData));
     const relativeDir = target.assetDirName || "assets";
-    return `./${relativeDir}/${assetName}`;
+    return {
+      url: `./${relativeDir}/${assetName}`
+    };
   }
 };
 
 // src/providers/wordpressProvider.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/core/html.ts
 var import_obsidian3 = require("obsidian");
@@ -441,16 +555,6 @@ async function renderMarkdownToHtml(app, markdown, sourcePath) {
   } finally {
     component.unload();
   }
-}
-
-// src/core/providers.ts
-var import_obsidian4 = require("obsidian");
-function assertRemoteAssetsSupported(note, targetName) {
-  if (note.attachments.length === 0) {
-    return;
-  }
-  const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
-  throw new Error(`${targetName} does not support local Obsidian assets in the MVP. Remove or externalize these files first: ${files}`);
 }
 
 // src/providers/wordpressProvider.ts
@@ -485,7 +589,7 @@ function normalizeEndpoint(target) {
   return `${trimTrailingSlash(target.endpoint)}/wp-json/wp/v2`;
 }
 async function requestJson(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian5.requestUrl)({
+  const response = await (0, import_obsidian4.requestUrl)({
     url: `${normalizeEndpoint(target)}${path}`,
     method,
     headers: {
@@ -545,6 +649,9 @@ var WordpressProvider = class {
     this.app = app;
     this.provider = "wordpress";
   }
+  getMediaSupport(_target) {
+    return { mode: "native-upload" };
+  }
   async validateConfig(target) {
     if (!target.endpoint || !target.username || !target.appPassword) {
       throw new Error("WordPress target is missing endpoint, username, or application password.");
@@ -552,7 +659,6 @@ var WordpressProvider = class {
     await requestJson(target, "/users/me");
   }
   async publish(note, target) {
-    assertRemoteAssetsSupported(note, target.name);
     const response = await requestJson(
       target,
       "/posts",
@@ -565,7 +671,6 @@ var WordpressProvider = class {
     };
   }
   async update(remoteId, note, target) {
-    assertRemoteAssetsSupported(note, target.name);
     const preparedNote = await this.prepareNote(note);
     const response = await requestJson(
       target,
@@ -585,6 +690,30 @@ var WordpressProvider = class {
     const response = await requestJson(target, `/posts/${encodeURIComponent(remoteId)}`);
     return response.link;
   }
+  async uploadAsset(asset, _note, target) {
+    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian4.normalizePath)(asset.sourcePath));
+    const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
+    const response = await (0, import_obsidian4.requestUrl)({
+      url: `${normalizeEndpoint(target)}/media`,
+      method: "POST",
+      headers: {
+        Authorization: makeAuthHeader(target),
+        "Content-Disposition": `attachment; filename="${asset.fileName}"`,
+        "Content-Type": "application/octet-stream"
+      },
+      body,
+      throw: false
+    });
+    if (response.status >= 400) {
+      throw new Error(`WordPress media upload failed for ${asset.fileName} (${response.status}): ${response.text}`);
+    }
+    const payload = tryParseJsonPayload(response.text);
+    const url = payload?.source_url ?? payload?.guid?.rendered;
+    if (!url) {
+      throw new Error(`WordPress media upload failed for ${asset.fileName}: ${response.text}`);
+    }
+    return { url };
+  }
   async prepareNote(note) {
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     return {
@@ -596,6 +725,18 @@ var WordpressProvider = class {
 
 // src/providers/yuqueProvider.ts
 var import_obsidian6 = require("obsidian");
+
+// src/core/providers.ts
+var import_obsidian5 = require("obsidian");
+function assertRemoteAssetsSupported(note, targetName) {
+  if (note.attachments.length === 0) {
+    return;
+  }
+  const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
+  throw new Error(`${targetName} does not support local Obsidian assets in the MVP. Remove or externalize these files first: ${files}`);
+}
+
+// src/providers/yuqueProvider.ts
 function trimTrailingSlash2(value) {
   return value.replace(/\/+$/, "");
 }
@@ -637,6 +778,9 @@ function getDocUrl(doc) {
 var YuqueProvider = class {
   constructor() {
     this.provider = "yuque";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
   }
   async validateConfig(target) {
     if (!target.repo || !target.token) {

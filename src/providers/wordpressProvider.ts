@@ -192,6 +192,7 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
     target: WordpressTargetConfig
   ): Promise<MediaUploadResult> {
     const bytes = await this.app.vault.adapter.readBinary(normalizePath(asset.sourcePath));
+    const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
     const response = await requestUrl({
       url: `${normalizeEndpoint(target)}/media`,
       method: "POST",
@@ -200,7 +201,7 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
         "Content-Disposition": `attachment; filename="${asset.fileName}"`,
         "Content-Type": "application/octet-stream",
       },
-      body: Buffer.from(bytes),
+      body,
       throw: false,
     });
 
