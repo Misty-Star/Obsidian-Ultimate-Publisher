@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PublishWorkflow } from "../src/core/publishWorkflow";
 
 describe("PublishWorkflow", () => {
