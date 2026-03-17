@@ -25,7 +25,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 
 // src/core/note.ts
 var import_obsidian = require("obsidian");
@@ -376,6 +376,61 @@ var PublishService = class {
     return {
       ...settings,
       records: upsertRecord(settings.records, record)
+    };
+  }
+};
+
+// src/core/publishWorkflow.ts
+var PublishWorkflow = class {
+  constructor(publishService) {
+    this.publishService = publishService;
+  }
+  resolveAction(file, target, settings) {
+    return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
+  }
+  async runSingle(file, target, settings) {
+    const action = this.resolveAction(file, target, settings);
+    const serviceResult = await this.publishService.publishFile(file, target, settings);
+    const nextSettings = this.publishService.updateSettings(settings, serviceResult.record);
+    return {
+      action,
+      record: serviceResult.record,
+      settings: nextSettings
+    };
+  }
+  async runBatch(file, targets, settings) {
+    let currentSettings = settings;
+    const results = [];
+    for (const target of targets) {
+      const action = this.resolveAction(file, target, currentSettings);
+      try {
+        const singleResult = await this.runSingle(file, target, currentSettings);
+        currentSettings = singleResult.settings;
+        results.push({
+          targetId: target.id,
+          targetName: target.name,
+          action: singleResult.action,
+          status: "success",
+          remoteUrl: singleResult.record.remoteUrl
+        });
+      } catch (error) {
+        results.push({
+          targetId: target.id,
+          targetName: target.name,
+          action,
+          status: "failure",
+          error: error instanceof Error ? error : new Error(String(error))
+        });
+      }
+    }
+    const successCount = results.filter((item) => item.status === "success").length;
+    const failureCount = results.length - successCount;
+    return {
+      results,
+      totalCount: results.length,
+      successCount,
+      failureCount,
+      settings: currentSettings
     };
   }
 };
@@ -1065,8 +1120,580 @@ var UltimatePublisherSettingTab = class extends import_obsidian8.PluginSettingTa
   }
 };
 
+// src/ui/modals/BatchPublishModal.ts
+var import_obsidian9 = require("obsidian");
+
+// src/ui/publishSummary.ts
+var DEFAULT_DASHBOARD_RECORD_LIMIT = 10;
+function parseTimestamp(timestamp) {
+  const parsed = Date.parse(timestamp);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+function compareTimestampsDesc(a, b) {
+  return parseTimestamp(b) - parseTimestamp(a);
+}
+function isAfter(candidate, reference) {
+  return parseTimestamp(candidate) > parseTimestamp(reference);
+}
+function compareTargetsForModalDefaults(a, b) {
+  if (a.enabled === b.enabled) {
+    return a.name.localeCompare(b.name);
+  }
+  return a.enabled ? -1 : 1;
+}
+function mapLatestRecordByTarget(records) {
+  return records.reduce((acc, record) => {
+    const existing = acc.get(record.targetId);
+    if (!existing || isAfter(record.lastPublishedAt, existing.lastPublishedAt)) {
+      acc.set(record.targetId, record);
+    }
+    return acc;
+  }, /* @__PURE__ */ new Map());
+}
+function deriveDashboardSummary(settings, recordLimit = DEFAULT_DASHBOARD_RECORD_LIMIT) {
+  const configuredCount = settings.targets.length;
+  const enabledCount = settings.targets.filter((target) => target.enabled).length;
+  const limit = Math.max(0, recordLimit);
+  const recentRecords = [...settings.records].sort((a, b) => compareTimestampsDesc(a.lastPublishedAt, b.lastPublishedAt)).slice(0, limit);
+  const latestRecords = mapLatestRecordByTarget(settings.records);
+  const targetSummaries = settings.targets.map((target) => ({
+    targetId: target.id,
+    name: target.name,
+    provider: target.provider,
+    enabled: target.enabled,
+    lastPublishedAt: latestRecords.get(target.id)?.lastPublishedAt
+  })).sort((a, b) => a.name.localeCompare(b.name));
+  return {
+    configuredCount,
+    enabledCount,
+    recentRecords,
+    recordLimit: limit,
+    targetSummaries
+  };
+}
+function deriveNoteTargetSummaries(settings, notePath) {
+  const recordsForNote = settings.records.filter((record) => record.notePath === notePath);
+  const latestRecords = mapLatestRecordByTarget(recordsForNote);
+  const summaries = settings.targets.map((target) => {
+    const record = latestRecords.get(target.id);
+    return {
+      targetId: target.id,
+      name: target.name,
+      provider: target.provider,
+      enabled: target.enabled,
+      action: record ? "update" : "publish",
+      lastPublishedAt: record?.lastPublishedAt
+    };
+  });
+  return summaries.sort(compareTargetsForModalDefaults);
+}
+function summarizeBatchSelection(targets, selectedTargetIds) {
+  const selectedSet = new Set(selectedTargetIds);
+  const selectedTargets = targets.filter((target) => selectedSet.has(target.targetId));
+  const publishCount = selectedTargets.filter((target) => target.action === "publish").length;
+  const updateCount = selectedTargets.filter((target) => target.action === "update").length;
+  return {
+    selectedCount: selectedTargets.length,
+    publishCount,
+    updateCount
+  };
+}
+
+// src/ui/modals/BatchPublishModal.ts
+var BatchPublishModal = class extends import_obsidian9.Modal {
+  constructor(plugin, file, workflow) {
+    super(plugin.app);
+    this.plugin = plugin;
+    this.file = file;
+    this.workflow = workflow;
+    this.selectedTargetIds = /* @__PURE__ */ new Set();
+    this.noteSnapshot = null;
+    this.enabledSummaries = [];
+    this.isPublishing = false;
+    this.fatalErrorMessage = null;
+    this.results = [];
+    this.lastRunSummary = null;
+  }
+  async onOpen() {
+    this.noteSnapshot = {
+      basename: this.file.basename,
+      path: this.file.path
+    };
+    this.enabledSummaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path).filter((item) => item.enabled);
+    this.selectedTargetIds.clear();
+    for (const summary of this.enabledSummaries) {
+      this.selectedTargetIds.add(summary.targetId);
+    }
+    await this.render();
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+  openPublishSettings() {
+    const appWithSettings = this.app;
+    appWithSettings.setting?.open();
+    appWithSettings.setting?.openTabById(this.plugin.manifest.id);
+  }
+  getSelectedTargets() {
+    return this.plugin.settings.targets.filter(
+      (target) => target.enabled && this.selectedTargetIds.has(target.id)
+    );
+  }
+  toggleTargetSelection(targetId, checked) {
+    if (checked) {
+      this.selectedTargetIds.add(targetId);
+      return;
+    }
+    this.selectedTargetIds.delete(targetId);
+  }
+  renderResultSection(container) {
+    if (this.results.length === 0) {
+      return;
+    }
+    container.createEl("h3", { text: "Batch Results" });
+    const summary = this.lastRunSummary ?? {
+      totalCount: this.results.length,
+      successCount: this.results.filter((item) => item.status === "success").length,
+      failureCount: this.results.filter((item) => item.status === "failure").length
+    };
+    container.createEl("p", {
+      text: `Completed ${summary.totalCount} targets: ${summary.successCount} succeeded, ${summary.failureCount} failed.`
+    });
+    const list = container.createEl("ul");
+    for (const result of this.results) {
+      const item = list.createEl("li");
+      const actionLabel = result.action === "update" ? "update" : "publish";
+      if (result.status === "success") {
+        const remoteDetail = result.remoteUrl ? ` (${result.remoteUrl})` : "";
+        item.setText(`${result.targetName}: success (${actionLabel})${remoteDetail}`);
+        continue;
+      }
+      const failure = result.error?.message ?? "Unknown error";
+      item.setText(`${result.targetName}: failed (${actionLabel}) - ${failure}`);
+    }
+  }
+  async handleBatchPublish() {
+    const selectedTargets = this.getSelectedTargets();
+    if (selectedTargets.length === 0) {
+      new import_obsidian9.Notice("Select at least one target before running batch publish.", 6e3);
+      return;
+    }
+    this.isPublishing = true;
+    this.fatalErrorMessage = null;
+    this.results = [];
+    this.lastRunSummary = null;
+    await this.render();
+    try {
+      const result = await this.workflow.runBatch(this.file, selectedTargets, this.plugin.settings);
+      this.plugin.settings = result.settings;
+      await this.plugin.saveSettings();
+      this.results = result.results;
+      this.lastRunSummary = {
+        totalCount: result.totalCount,
+        successCount: result.successCount,
+        failureCount: result.failureCount
+      };
+      new import_obsidian9.Notice(
+        `Batch publish finished: ${result.successCount} succeeded, ${result.failureCount} failed.`,
+        6e3
+      );
+    } catch (error) {
+      this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
+      new import_obsidian9.Notice(`Batch publish failed: ${this.fatalErrorMessage}`, 8e3);
+    } finally {
+      this.isPublishing = false;
+      await this.render();
+    }
+  }
+  async render() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "Batch Publish" });
+    if (this.noteSnapshot) {
+      const noteInfo = contentEl.createDiv();
+      noteInfo.createEl("strong", { text: "Note: " });
+      noteInfo.createSpan({ text: this.noteSnapshot.basename });
+      noteInfo.createEl("br");
+      noteInfo.createEl("strong", { text: "Path: " });
+      noteInfo.createSpan({ text: this.noteSnapshot.path });
+    }
+    if (this.enabledSummaries.length === 0) {
+      contentEl.createEl("p", {
+        cls: "ultimate-publisher-empty-state",
+        text: "No enabled publish targets. Open settings to enable at least one target."
+      });
+      const settingsButton2 = contentEl.createEl("button", { text: "Open Publish Settings" });
+      settingsButton2.addEventListener("click", () => {
+        this.openPublishSettings();
+      });
+      return;
+    }
+    const targetSection = contentEl.createDiv();
+    targetSection.createEl("h3", { text: "Targets" });
+    for (const summary of this.enabledSummaries) {
+      const row = targetSection.createEl("label");
+      row.style.display = "block";
+      row.style.margin = "6px 0";
+      const input = row.createEl("input", { type: "checkbox" });
+      input.checked = this.selectedTargetIds.has(summary.targetId);
+      input.disabled = this.isPublishing;
+      input.addEventListener("change", () => {
+        this.toggleTargetSelection(summary.targetId, input.checked);
+        void this.render();
+      });
+      const actionLabel = summary.action === "update" ? "Update existing post" : "Publish new post";
+      row.appendText(` ${summary.name} (${summary.provider}) - ${actionLabel}`);
+    }
+    const selectionSummary = summarizeBatchSelection(
+      this.enabledSummaries.map((item) => ({
+        targetId: item.targetId,
+        action: item.action,
+        enabled: item.enabled
+      })),
+      Array.from(this.selectedTargetIds)
+    );
+    contentEl.createEl("p", {
+      text: `Selected ${selectionSummary.selectedCount} targets (${selectionSummary.publishCount} publish, ${selectionSummary.updateCount} update).`
+    });
+    if (this.isPublishing) {
+      contentEl.createEl("p", {
+        text: "Batch publish is running sequentially. Please wait..."
+      });
+    }
+    if (this.fatalErrorMessage) {
+      contentEl.createEl("p", {
+        cls: "mod-warning",
+        text: `Batch failed before completion: ${this.fatalErrorMessage}`
+      });
+    }
+    this.renderResultSection(contentEl);
+    const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const runButton = actions.createEl("button", { text: "Run Batch Publish" });
+    runButton.toggleClass("mod-cta", true);
+    runButton.disabled = this.isPublishing || this.selectedTargetIds.size === 0;
+    runButton.addEventListener("click", () => {
+      void this.handleBatchPublish();
+    });
+    const settingsButton = actions.createEl("button", { text: "Open Publish Settings" });
+    settingsButton.disabled = this.isPublishing;
+    settingsButton.addEventListener("click", () => {
+      this.openPublishSettings();
+    });
+  }
+};
+
+// src/ui/modals/NormalPublishModal.ts
+var import_obsidian10 = require("obsidian");
+var NormalPublishModal = class extends import_obsidian10.Modal {
+  constructor(plugin, file, workflow) {
+    super(plugin.app);
+    this.plugin = plugin;
+    this.file = file;
+    this.workflow = workflow;
+    this.selectedTargetId = null;
+    this.isPublishing = false;
+    this.errorMessage = null;
+  }
+  async onOpen() {
+    await this.render();
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+  openPublishSettings() {
+    const appWithSettings = this.app;
+    appWithSettings.setting?.open();
+    appWithSettings.setting?.openTabById(this.plugin.manifest.id);
+  }
+  getTargetById(targetId) {
+    return this.plugin.settings.targets.find((target) => target.id === targetId);
+  }
+  createInfoRow(container, label, value) {
+    const row = container.createDiv();
+    row.createEl("strong", { text: `${label}: ` });
+    row.createSpan({ text: value });
+  }
+  async handlePublish(target) {
+    this.isPublishing = true;
+    this.errorMessage = null;
+    await this.render();
+    try {
+      const result = await this.workflow.runSingle(this.file, target, this.plugin.settings);
+      this.plugin.settings = result.settings;
+      await this.plugin.saveSettings();
+      new import_obsidian10.Notice(`Publish succeeded: ${target.name} ${result.action}.`);
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : String(error);
+      new import_obsidian10.Notice(`Publish failed: ${this.errorMessage}`, 8e3);
+    } finally {
+      this.isPublishing = false;
+      await this.render();
+    }
+  }
+  async render() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "Normal Publish" });
+    const noteInfo = contentEl.createDiv();
+    this.createInfoRow(noteInfo, "Note", this.file.basename);
+    this.createInfoRow(noteInfo, "Path", this.file.path);
+    const summaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path);
+    this.selectedTargetId ?? (this.selectedTargetId = summaries.find((item) => item.enabled)?.targetId ?? null);
+    const enabledSummaries = summaries.filter((item) => item.enabled);
+    if (enabledSummaries.length === 0) {
+      contentEl.createEl("p", {
+        cls: "ultimate-publisher-empty-state",
+        text: "No enabled publish targets. Open settings to enable at least one target."
+      });
+      const settingsButton2 = contentEl.createEl("button", { text: "Open Publish Settings" });
+      settingsButton2.addEventListener("click", () => {
+        this.openPublishSettings();
+      });
+      return;
+    }
+    if (!this.selectedTargetId || !summaries.some((item) => item.targetId === this.selectedTargetId && item.enabled)) {
+      this.selectedTargetId = enabledSummaries[0].targetId;
+    }
+    const targetList = contentEl.createDiv();
+    targetList.createEl("h3", { text: "Target" });
+    for (const summary of summaries) {
+      const row = targetList.createEl("label");
+      row.style.display = "block";
+      row.style.margin = "6px 0";
+      const input = row.createEl("input", { type: "radio" });
+      input.name = "ultimate-publisher-normal-target";
+      input.value = summary.targetId;
+      input.checked = summary.targetId === this.selectedTargetId;
+      input.disabled = !summary.enabled || this.isPublishing;
+      input.addEventListener("change", () => {
+        if (input.checked) {
+          this.selectedTargetId = summary.targetId;
+          void this.render();
+        }
+      });
+      row.appendText(` ${summary.name} (${summary.provider})`);
+      row.createEl("small", {
+        text: ` - ${summary.action === "update" ? "Update existing post" : "Publish new post"}${summary.enabled ? "" : " (disabled)"}`
+      });
+    }
+    const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
+    const selectedAction = selectedSummary?.action ?? "publish";
+    contentEl.createEl("p", {
+      text: `Selected action: ${selectedAction === "update" ? "update" : "publish"}`
+    });
+    if (this.errorMessage) {
+      contentEl.createEl("p", {
+        cls: "mod-warning",
+        text: `Last error: ${this.errorMessage}`
+      });
+    }
+    const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const publishButton = actions.createEl("button", {
+      text: selectedAction === "update" ? "Update" : "Publish"
+    });
+    publishButton.toggleClass("mod-cta", true);
+    publishButton.disabled = this.isPublishing || !this.selectedTargetId;
+    publishButton.addEventListener("click", () => {
+      if (!this.selectedTargetId) {
+        return;
+      }
+      const target = this.getTargetById(this.selectedTargetId);
+      if (!target || !target.enabled) {
+        this.errorMessage = "Selected target is not available.";
+        new import_obsidian10.Notice(this.errorMessage, 6e3);
+        void this.render();
+        return;
+      }
+      void this.handlePublish(target);
+    });
+    const settingsButton = actions.createEl("button", { text: "Open Publish Settings" });
+    settingsButton.disabled = this.isPublishing;
+    settingsButton.addEventListener("click", () => {
+      this.openPublishSettings();
+    });
+  }
+};
+
+// src/ui/publisherMenu.ts
+function buildPublisherMenuModel(context) {
+  const noteDependentDisabled = !context.hasActiveMarkdown;
+  const quickPublishChildren = buildQuickPublishChildren(context.enabledTargets);
+  return [
+    {
+      key: "dashboard",
+      title: "Dashboard",
+      disabled: false
+    },
+    {
+      key: "quick-publish",
+      title: "Quick Publish",
+      disabled: noteDependentDisabled,
+      children: quickPublishChildren
+    },
+    {
+      key: "normal-publish",
+      title: "Normal Publish",
+      disabled: noteDependentDisabled
+    },
+    {
+      key: "batch-publish",
+      title: "Batch Publish",
+      disabled: noteDependentDisabled
+    },
+    {
+      key: "publish-settings",
+      title: "Publish Settings"
+    }
+  ];
+}
+function buildQuickPublishChildren(enabledTargets) {
+  if (enabledTargets.length === 0) {
+    return [
+      {
+        key: "quick-publish-empty",
+        title: "Enable at least one publish target",
+        helpText: "No quick publish targets are enabled",
+        disabled: true
+      }
+    ];
+  }
+  return [...enabledTargets].sort((a, b) => a.name.localeCompare(b.name)).map((target) => ({
+    key: "quick-publish-target",
+    title: target.name,
+    helpText: target.provider,
+    targetId: target.id
+  }));
+}
+
+// src/ui/views/PublisherDashboardView.ts
+var import_obsidian11 = require("obsidian");
+var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
+function formatTimestamp(timestamp) {
+  if (!timestamp) {
+    return "Never";
+  }
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return timestamp;
+  }
+  return parsed.toLocaleString();
+}
+var PublisherDashboardView = class extends import_obsidian11.ItemView {
+  constructor(leaf, plugin) {
+    super(leaf);
+    this.plugin = plugin;
+  }
+  getViewType() {
+    return PUBLISHER_DASHBOARD_VIEW_TYPE;
+  }
+  getDisplayText() {
+    return "Ultimate Publisher";
+  }
+  async onOpen() {
+    await this.render();
+  }
+  async onClose() {
+    this.contentEl.empty();
+  }
+  async render() {
+    const summary = deriveDashboardSummary(this.plugin.settings, 10);
+    const { contentEl } = this;
+    const lastPublishedAt = summary.recentRecords[0]?.lastPublishedAt;
+    contentEl.empty();
+    contentEl.toggleClass("ultimate-publisher-dashboard", true);
+    contentEl.createEl("h2", { text: "Ultimate Publisher" });
+    const cards = contentEl.createDiv({ cls: "ultimate-publisher-dashboard-cards" });
+    this.renderCard(cards, "Configured Targets", String(summary.configuredCount), "All saved publish destinations");
+    this.renderCard(cards, "Enabled Targets", String(summary.enabledCount), "Targets available to publish now");
+    this.renderCard(cards, "Last Publish", formatTimestamp(lastPublishedAt), "Most recent publish record");
+    const statusSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
+    statusSection.createEl("h3", { text: "Target Status" });
+    if (summary.targetSummaries.length === 0) {
+      statusSection.createEl("p", {
+        cls: "ultimate-publisher-empty-state",
+        text: "No publish targets configured yet."
+      });
+    } else {
+      const statusList = statusSection.createDiv({
+        cls: "ultimate-publisher-status-list ultimate-publisher-target-list"
+      });
+      for (const target of summary.targetSummaries) {
+        this.renderTargetStatus(statusList, target);
+      }
+    }
+    const recordSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
+    recordSection.createEl("h3", { text: "Recent Records" });
+    if (summary.recentRecords.length === 0) {
+      recordSection.createEl("p", {
+        cls: "ultimate-publisher-empty-state",
+        text: "No publish activity recorded yet."
+      });
+    } else {
+      const targetNames = new Map(summary.targetSummaries.map((target) => [target.targetId, target.name]));
+      const recordList = recordSection.createDiv({ cls: "ultimate-publisher-record-list" });
+      for (const record of summary.recentRecords) {
+        const row = recordList.createDiv({ cls: "ultimate-publisher-record-row" });
+        row.createEl("strong", { text: record.notePath });
+        const meta = row.createDiv({ cls: "ultimate-publisher-meta" });
+        meta.createSpan({
+          text: `${targetNames.get(record.targetId) ?? record.targetId} (${record.provider})`
+        });
+        meta.createSpan({ text: formatTimestamp(record.lastPublishedAt) });
+        if (record.remoteUrl) {
+          meta.createSpan({ text: record.remoteUrl });
+        }
+      }
+    }
+    const shortcutSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
+    shortcutSection.createEl("h3", { text: "Shortcuts" });
+    const shortcuts = shortcutSection.createDiv({ cls: "ultimate-publisher-shortcuts" });
+    const normalPublishButton = shortcuts.createEl("button", { text: "Normal Publish" });
+    normalPublishButton.addEventListener("click", () => {
+      this.plugin.openNormalPublishForActiveNote();
+    });
+    const batchPublishButton = shortcuts.createEl("button", { text: "Batch Publish" });
+    batchPublishButton.addEventListener("click", () => {
+      this.plugin.openBatchPublishForActiveNote();
+    });
+    const settingsButton = shortcuts.createEl("button", { text: "Publish Settings" });
+    settingsButton.addEventListener("click", () => {
+      this.plugin.openPublishSettings();
+    });
+  }
+  renderCard(container, label, value, helpText) {
+    const card = container.createDiv({ cls: "ultimate-publisher-card" });
+    card.createDiv({
+      cls: "ultimate-publisher-card-label",
+      text: label
+    });
+    card.createDiv({
+      cls: "ultimate-publisher-card-value",
+      text: value
+    });
+    card.createDiv({
+      cls: "ultimate-publisher-card-help",
+      text: helpText
+    });
+  }
+  renderTargetStatus(container, target) {
+    const row = container.createDiv({ cls: "ultimate-publisher-status-row" });
+    const details = row.createDiv({ cls: "ultimate-publisher-status-row-main" });
+    details.createEl("strong", { text: target.name });
+    details.createDiv({
+      cls: "ultimate-publisher-meta",
+      text: `${target.provider} - ${target.lastPublishedAt ? formatTimestamp(target.lastPublishedAt) : "Never published"}`
+    });
+    const badge = row.createSpan({
+      cls: "ultimate-publisher-status-badge",
+      text: target.enabled ? "Enabled" : "Disabled"
+    });
+    badge.toggleClass("is-enabled", target.enabled);
+    badge.toggleClass("is-disabled", !target.enabled);
+  }
+};
+
 // src/plugin.ts
-var UltimatePublisherPlugin = class extends import_obsidian9.Plugin {
+var UltimatePublisherPlugin = class extends import_obsidian12.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -1075,8 +1702,11 @@ var UltimatePublisherPlugin = class extends import_obsidian9.Plugin {
     await this.loadSettings();
     const providers = new ProviderRegistry(this.app);
     this.publishService = new PublishService(this.app, providers);
-    this.addRibbonIcon("upload", "Publish active note", () => {
-      void this.publishActiveNote();
+    this.publishWorkflow = new PublishWorkflow(this.publishService);
+    this.registerView(PUBLISHER_DASHBOARD_VIEW_TYPE, (leaf) => new PublisherDashboardView(leaf, this));
+    this.addRibbonIcon("upload", "Ultimate Publisher", (event) => {
+      const anchorEl = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+      this.openRibbonMenu(anchorEl);
     });
     this.addCommand({
       id: "publish-active-note",
@@ -1128,26 +1758,77 @@ var UltimatePublisherPlugin = class extends import_obsidian9.Plugin {
     };
     await this.saveSettings();
   }
-  getEnabledTargets() {
-    return this.settings.targets.filter((target) => target.enabled);
+  openRibbonMenu(anchorEl) {
+    const activeFile = this.getActiveMarkdownFile();
+    const menuModel = buildPublisherMenuModel({
+      hasActiveMarkdown: Boolean(activeFile),
+      enabledTargets: this.getEnabledTargets().map(({ id, name, provider }) => ({
+        id,
+        name,
+        provider
+      }))
+    });
+    this.showPublisherMenu(menuModel, this.getRootMenuPosition(anchorEl));
   }
-  getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
-    const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian9.TFile) || file.extension !== "md") {
-      return null;
+  async openDashboard() {
+    const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
+    const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
+    if (!leaf) {
+      new import_obsidian12.Notice("Unable to open the publisher dashboard.");
+      return;
     }
-    return file;
+    await leaf.setViewState({
+      type: PUBLISHER_DASHBOARD_VIEW_TYPE,
+      active: true
+    });
+    await this.app.workspace.revealLeaf(leaf);
+    if (leaf.view instanceof PublisherDashboardView) {
+      await leaf.view.render();
+    }
+  }
+  openNormalPublishForActiveNote() {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new import_obsidian12.Notice("Open a Markdown note before publishing.");
+      return;
+    }
+    new NormalPublishModal(this, file, this.publishWorkflow).open();
+  }
+  openBatchPublishForActiveNote() {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new import_obsidian12.Notice("Open a Markdown note before publishing.");
+      return;
+    }
+    new BatchPublishModal(this, file, this.publishWorkflow).open();
+  }
+  async runQuickPublishForTarget(targetId) {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new import_obsidian12.Notice("Open a Markdown note before publishing.");
+      return;
+    }
+    const target = this.getEnabledTargets().find((item) => item.id === targetId);
+    if (!target) {
+      new import_obsidian12.Notice("Enable the selected publish target before using Quick Publish.", 6e3);
+      return;
+    }
+    await this.publishToTarget(file, target);
+  }
+  openPublishSettings() {
+    const appWithSettings = this.app;
+    appWithSettings.setting?.open();
+    appWithSettings.setting?.openTabById(this.manifest.id);
   }
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian9.Notice("Open a Markdown note before publishing.");
+      new import_obsidian12.Notice("Open a Markdown note before publishing.");
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian9.Notice("Configure at least one enabled publish target first.");
+      new import_obsidian12.Notice("Configure at least one enabled publish target first.");
       return;
     }
     if (targets.length === 1) {
@@ -1158,17 +1839,100 @@ var UltimatePublisherPlugin = class extends import_obsidian9.Plugin {
       void this.publishToTarget(file, target);
     }).open();
   }
+  getEnabledTargets() {
+    return this.settings.targets.filter((target) => target.enabled);
+  }
+  getActiveMarkdownFile() {
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian12.MarkdownView);
+    const file = view?.file ?? this.app.workspace.getActiveFile();
+    if (!(file instanceof import_obsidian12.TFile) || file.extension !== "md") {
+      return null;
+    }
+    return file;
+  }
+  showPublisherMenu(items, position) {
+    const menu = new import_obsidian12.Menu();
+    for (const item of items) {
+      menu.addItem((menuItem) => {
+        menuItem.setTitle(item.title).setDisabled(Boolean(item.disabled));
+        if (item.disabled) {
+          return;
+        }
+        if (item.children?.length) {
+          menuItem.onClick((event) => {
+            this.showPublisherMenu(item.children ?? [], this.getChildMenuPosition(event));
+          });
+          return;
+        }
+        menuItem.onClick(() => this.handleMenuItem(item));
+      });
+    }
+    menu.showAtPosition(position);
+  }
+  getRootMenuPosition(anchorEl) {
+    if (!anchorEl) {
+      return { x: 0, y: 0 };
+    }
+    const rect = anchorEl.getBoundingClientRect();
+    return {
+      x: rect.left,
+      y: rect.bottom,
+      width: rect.width
+    };
+  }
+  getChildMenuPosition(event) {
+    const anchor = this.resolveRectAnchor(event?.currentTarget);
+    if (!anchor) {
+      return { x: 0, y: 0 };
+    }
+    const rect = anchor.getBoundingClientRect();
+    return {
+      x: rect.right,
+      y: rect.top,
+      width: rect.width
+    };
+  }
+  resolveRectAnchor(value) {
+    if (!value || typeof value !== "object" || !("getBoundingClientRect" in value)) {
+      return null;
+    }
+    const candidate = value;
+    return typeof candidate.getBoundingClientRect === "function" ? candidate : null;
+  }
+  handleMenuItem(item) {
+    switch (item.key) {
+      case "dashboard":
+        void this.openDashboard();
+        return;
+      case "normal-publish":
+        this.openNormalPublishForActiveNote();
+        return;
+      case "batch-publish":
+        this.openBatchPublishForActiveNote();
+        return;
+      case "publish-settings":
+        this.openPublishSettings();
+        return;
+      case "quick-publish-target":
+        if (item.targetId) {
+          void this.runQuickPublishForTarget(item.targetId);
+        }
+        return;
+      default:
+        return;
+    }
+  }
   async publishToTarget(file, target) {
-    new import_obsidian9.Notice(`Publishing "${file.basename}" to ${target.name}...`);
+    new import_obsidian12.Notice(`Publishing "${file.basename}" to ${target.name}...`);
     try {
-      const result = await this.publishService.publishFile(file, target, this.settings);
-      this.settings = this.publishService.updateSettings(this.settings, result.record);
+      const result = await this.publishWorkflow.runSingle(file, target, this.settings);
+      this.settings = result.settings;
       await this.saveSettings();
-      const action = result.created ? "created" : "updated";
-      new import_obsidian9.Notice(`Publish succeeded: ${target.name} ${action}.`);
+      const actionLabel = result.action === "update" ? "updated" : "published";
+      new import_obsidian12.Notice(`Publish succeeded: ${target.name} ${actionLabel}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian9.Notice(`Publish failed: ${message}`, 8e3);
+      new import_obsidian12.Notice(`Publish failed: ${message}`, 8e3);
       throw error;
     }
   }
