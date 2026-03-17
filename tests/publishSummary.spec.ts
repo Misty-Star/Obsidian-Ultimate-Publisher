@@ -61,6 +61,22 @@ describe("publishSummary", () => {
     ]);
   });
 
+  it("orders note-target summaries with enabled targets first and name order for modal defaults", () => {
+    const statuses = deriveNoteTargetSummaries(
+      {
+        targets: [
+          { id: "yuque", name: "Yuque", provider: "yuque", enabled: false },
+          { id: "wp", name: "WordPress", provider: "wordpress", enabled: true },
+          { id: "local", name: "Local Export", provider: "local-export", enabled: true },
+        ],
+        records: [],
+      } as never,
+      "Notes/Post.md"
+    );
+
+    expect(statuses.map((item) => item.targetId)).toEqual(["local", "wp", "yuque"]);
+  });
+
   it("summarizes batch selection counts for publish and update targets", () => {
     const summary = summarizeBatchSelection(
       [

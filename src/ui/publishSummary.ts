@@ -54,6 +54,16 @@ function isAfter(candidate: string, reference: string): boolean {
   return parseTimestamp(candidate) > parseTimestamp(reference);
 }
 
+function compareTargetsForModalDefaults(
+  a: Pick<NoteTargetSummary, "enabled" | "name">,
+  b: Pick<NoteTargetSummary, "enabled" | "name">
+): number {
+  if (a.enabled === b.enabled) {
+    return a.name.localeCompare(b.name);
+  }
+  return a.enabled ? -1 : 1;
+}
+
 function mapLatestRecordByTarget(records: PublishRecord[]): Map<string, PublishRecord> {
   return records.reduce((acc, record) => {
     const existing = acc.get(record.targetId);
@@ -116,12 +126,7 @@ export function deriveNoteTargetSummaries(
     };
   });
 
-  return summaries.sort((a, b) => {
-    if (a.enabled === b.enabled) {
-      return a.name.localeCompare(b.name);
-    }
-    return a.enabled ? -1 : 1;
-  });
+  return summaries.sort(compareTargetsForModalDefaults);
 }
 
 export function summarizeBatchSelection(
