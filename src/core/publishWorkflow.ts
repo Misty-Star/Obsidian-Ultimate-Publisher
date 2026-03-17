@@ -23,6 +23,9 @@ export interface BatchPublishTargetResult {
 
 export interface BatchPublishWorkflowResult {
   results: BatchPublishTargetResult[];
+  totalCount: number;
+  successCount: number;
+  failureCount: number;
   settings: UltimatePublisherSettings;
 }
 
@@ -82,8 +85,14 @@ export class PublishWorkflow {
       }
     }
 
+    const successCount = results.filter((item) => item.status === "success").length;
+    const failureCount = results.length - successCount;
+
     return {
       results,
+      totalCount: results.length,
+      successCount,
+      failureCount,
       settings: currentSettings,
     };
   }

@@ -56,4 +56,36 @@ describe("PublishWorkflow", () => {
     ]);
     expect(result.settings.records).toHaveLength(1);
   });
+
+  it("returns batch results that can be counted directly for summary output", async () => {
+    const file = { path: "Notes/Post.md", basename: "Post" };
+    const wp = { id: "wp", name: "WordPress", provider: "wordpress", enabled: true };
+    const local = { id: "local", name: "Local Export", provider: "local-export", enabled: true };
+    const publishService = {
+      publishFile: vi
+        .fn()
+        .mockResolvedValueOnce({
+          record: {
+            notePath: "Notes/Post.md",
+            provider: "wordpress",
+            targetId: "wp",
+            remoteId: "1",
+            lastPublishedAt: "2026-03-17T00:00:00.000Z",
+            contentHash: "a",
+          },
+          created: false,
+        })
+        .mockRejectedValueOnce(new Error("permission denied")),
+      updateSettings: vi.fn((settings, nextRecord) => ({ ...settings, records: [...settings.records, nextRecord] })),
+    };
+
+    const workflow = new PublishWorkflow(publishService as never);
+    const result = await workflow.runBatch(file as never, [wp, local] as never, {
+      targets: [wp, local],
+      records: [],
+    } as never);
+
+    expect(result.results.filter((item) => item.status === "success")).toHaveLength(1);
+    expect(result.results.filter((item) => item.status === "failure")).toHaveLength(1);
+  });
 });
