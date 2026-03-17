@@ -1592,7 +1592,7 @@ var PublisherDashboardView = class extends import_obsidian11.ItemView {
   async onOpen() {
     await this.render();
   }
-  onClose() {
+  async onClose() {
     this.contentEl.empty();
   }
   async render() {

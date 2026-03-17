@@ -37,7 +37,7 @@ export class PublisherDashboardView extends ItemView {
     await this.render();
   }
 
-  onClose(): void {
+  async onClose(): Promise<void> {
     this.contentEl.empty();
   }
 

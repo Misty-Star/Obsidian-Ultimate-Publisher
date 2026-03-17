@@ -2,6 +2,7 @@ import { WorkspaceLeaf, FakeElement } from "obsidian";
 import { describe, expect, it, vi } from "vitest";
 import { deriveDashboardSummary, deriveNoteTargetSummaries, summarizeBatchSelection } from "../src/ui/publishSummary";
 import { createLocalExportTarget, createWordpressTarget, createYuqueTarget } from "../src/settings";
+import { UltimatePublisherSettings } from "../src/types";
 import { PublisherDashboardView } from "../src/ui/views/PublisherDashboardView";
 
 function collectText(element: FakeElement): string[] {
@@ -31,7 +32,7 @@ describe("publishSummary", () => {
   it("sorts recent publish records newest-first and limits the dashboard slice", () => {
     const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
     const yuque = { ...createYuqueTarget(), id: "yuque", name: "Yuque", enabled: false };
-    const settings = {
+    const settings: UltimatePublisherSettings = {
       targets: [wordpress, yuque],
       records: [
         {
@@ -64,7 +65,7 @@ describe("publishSummary", () => {
   it("labels note targets as publish or update for the current note snapshot", () => {
     const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
     const local = { ...createLocalExportTarget(), id: "local", name: "Local Export" };
-    const settings = {
+    const settings: UltimatePublisherSettings = {
       targets: [wordpress, local],
       records: [
         {
