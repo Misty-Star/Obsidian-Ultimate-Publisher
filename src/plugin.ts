@@ -1,22 +1,45 @@
-import { MarkdownView, Notice, Plugin, TFile } from "obsidian";
+import { MarkdownView, Menu, Notice, Plugin, TFile } from "obsidian";
 import { PublishService } from "./core/publishService";
+import { PublishWorkflow } from "./core/publishWorkflow";
 import { ProviderRegistry } from "./providers/registry";
 import { cloneTarget, DEFAULT_SETTINGS, normalizeTarget } from "./settings";
 import { PublishTargetConfig, UltimatePublisherSettings } from "./types";
 import { PublishTargetModal } from "./ui/PublishTargetModal";
 import { UltimatePublisherSettingTab } from "./ui/UltimatePublisherSettingTab";
+import { BatchPublishModal } from "./ui/modals/BatchPublishModal";
+import { NormalPublishModal } from "./ui/modals/NormalPublishModal";
+import { buildPublisherMenuModel, PublisherMenuItem } from "./ui/publisherMenu";
+import {
+  PUBLISHER_DASHBOARD_VIEW_TYPE,
+  PublisherDashboardView,
+} from "./ui/views/PublisherDashboardView";
+
+interface AppSettingsController {
+  open(): void;
+  openTabById(id: string): void;
+}
+
+interface AppWithSettings {
+  setting?: AppSettingsController;
+}
 
 export default class UltimatePublisherPlugin extends Plugin {
   settings: UltimatePublisherSettings = DEFAULT_SETTINGS;
   private publishService!: PublishService;
+  private publishWorkflow!: PublishWorkflow;
 
   async onload(): Promise<void> {
     await this.loadSettings();
+
     const providers = new ProviderRegistry(this.app);
     this.publishService = new PublishService(this.app, providers);
+    this.publishWorkflow = new PublishWorkflow(this.publishService);
 
-    this.addRibbonIcon("upload", "Publish active note", () => {
-      void this.publishActiveNote();
+    this.registerView(PUBLISHER_DASHBOARD_VIEW_TYPE, (leaf) => new PublisherDashboardView(leaf, this));
+
+    this.addRibbonIcon("upload", "Ultimate Publisher", (event) => {
+      const anchorEl = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+      this.openRibbonMenu(anchorEl);
     });
 
     this.addCommand({
@@ -76,17 +99,79 @@ export default class UltimatePublisherPlugin extends Plugin {
     await this.saveSettings();
   }
 
-  private getEnabledTargets(): PublishTargetConfig[] {
-    return this.settings.targets.filter((target) => target.enabled);
+  openRibbonMenu(anchorEl: HTMLElement | null): void {
+    const activeFile = this.getActiveMarkdownFile();
+    const menuModel = buildPublisherMenuModel({
+      hasActiveMarkdown: Boolean(activeFile),
+      enabledTargets: this.getEnabledTargets().map(({ id, name, provider }) => ({
+        id,
+        name,
+        provider,
+      })),
+    });
+
+    this.showPublisherMenu(menuModel, anchorEl, 0);
   }
 
-  private getActiveMarkdownFile(): TFile | null {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof TFile) || file.extension !== "md") {
-      return null;
+  async openDashboard(): Promise<void> {
+    const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
+    const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
+    if (!leaf) {
+      new Notice("Unable to open the publisher dashboard.");
+      return;
     }
-    return file;
+
+    await leaf.setViewState({
+      type: PUBLISHER_DASHBOARD_VIEW_TYPE,
+      active: true,
+    });
+    await this.app.workspace.revealLeaf(leaf);
+
+    if (leaf.view instanceof PublisherDashboardView) {
+      await leaf.view.render();
+    }
+  }
+
+  openNormalPublishForActiveNote(): void {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new Notice("Open a Markdown note before publishing.");
+      return;
+    }
+
+    new NormalPublishModal(this, file, this.publishWorkflow).open();
+  }
+
+  openBatchPublishForActiveNote(): void {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new Notice("Open a Markdown note before publishing.");
+      return;
+    }
+
+    new BatchPublishModal(this, file, this.publishWorkflow).open();
+  }
+
+  async runQuickPublishForTarget(targetId: string): Promise<void> {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new Notice("Open a Markdown note before publishing.");
+      return;
+    }
+
+    const target = this.getEnabledTargets().find((item) => item.id === targetId);
+    if (!target) {
+      new Notice("Enable the selected publish target before using Quick Publish.", 6000);
+      return;
+    }
+
+    await this.publishToTarget(file, target);
+  }
+
+  openPublishSettings(): void {
+    const appWithSettings = this.app as typeof this.app & AppWithSettings;
+    appWithSettings.setting?.open();
+    appWithSettings.setting?.openTabById(this.manifest.id);
   }
 
   async publishActiveNote(): Promise<void> {
@@ -112,14 +197,95 @@ export default class UltimatePublisherPlugin extends Plugin {
     }).open();
   }
 
+  private getEnabledTargets(): PublishTargetConfig[] {
+    return this.settings.targets.filter((target) => target.enabled);
+  }
+
+  private getActiveMarkdownFile(): TFile | null {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const file = view?.file ?? this.app.workspace.getActiveFile();
+    if (!(file instanceof TFile) || file.extension !== "md") {
+      return null;
+    }
+    return file;
+  }
+
+  private showPublisherMenu(items: PublisherMenuItem[], anchorEl: HTMLElement | null, offsetX: number): void {
+    const menu = new Menu();
+
+    for (const item of items) {
+      menu.addItem((menuItem) => {
+        menuItem.setTitle(item.title).setDisabled(Boolean(item.disabled));
+
+        if (item.disabled) {
+          return;
+        }
+
+        if (item.children?.length) {
+          menuItem.onClick(() => {
+            this.showPublisherMenu(item.children ?? [], anchorEl, offsetX + 24);
+          });
+          return;
+        }
+
+        menuItem.onClick(() => this.handleMenuItem(item));
+      });
+    }
+
+    const position = this.getMenuPosition(anchorEl, offsetX);
+    menu.showAtPosition(position);
+  }
+
+  private getMenuPosition(anchorEl: HTMLElement | null, offsetX: number): {
+    x: number;
+    y: number;
+    width?: number;
+  } {
+    if (!anchorEl) {
+      return { x: offsetX, y: 0 };
+    }
+
+    const rect = anchorEl.getBoundingClientRect();
+    return {
+      x: rect.left + offsetX,
+      y: rect.bottom,
+      width: rect.width,
+    };
+  }
+
+  private handleMenuItem(item: PublisherMenuItem): void {
+    switch (item.key) {
+      case "dashboard":
+        void this.openDashboard();
+        return;
+      case "normal-publish":
+        this.openNormalPublishForActiveNote();
+        return;
+      case "batch-publish":
+        this.openBatchPublishForActiveNote();
+        return;
+      case "publish-settings":
+        this.openPublishSettings();
+        return;
+      case "quick-publish-target":
+        if (item.targetId) {
+          void this.runQuickPublishForTarget(item.targetId);
+        }
+        return;
+      default:
+        return;
+    }
+  }
+
   private async publishToTarget(file: TFile, target: PublishTargetConfig): Promise<void> {
     new Notice(`Publishing "${file.basename}" to ${target.name}...`);
+
     try {
-      const result = await this.publishService.publishFile(file, target, this.settings);
-      this.settings = this.publishService.updateSettings(this.settings, result.record);
+      const result = await this.publishWorkflow.runSingle(file, target, this.settings);
+      this.settings = result.settings;
       await this.saveSettings();
-      const action = result.created ? "created" : "updated";
-      new Notice(`Publish succeeded: ${target.name} ${action}.`);
+      const actionLabel = result.action === "update" ? "updated" : "published";
+      new Notice(`Publish succeeded: ${target.name} ${actionLabel}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       new Notice(`Publish failed: ${message}`, 8000);
