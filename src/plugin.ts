@@ -23,6 +23,22 @@ interface AppWithSettings {
   setting?: AppSettingsController;
 }
 
+interface MenuPosition {
+  x: number;
+  y: number;
+  width?: number;
+}
+
+interface RectAnchor {
+  getBoundingClientRect(): {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    width: number;
+  };
+}
+
 export default class UltimatePublisherPlugin extends Plugin {
   settings: UltimatePublisherSettings = DEFAULT_SETTINGS;
   private publishService!: PublishService;
@@ -110,7 +126,7 @@ export default class UltimatePublisherPlugin extends Plugin {
       })),
     });
 
-    this.showPublisherMenu(menuModel, anchorEl, 0);
+    this.showPublisherMenu(menuModel, this.getRootMenuPosition(anchorEl));
   }
 
   async openDashboard(): Promise<void> {
@@ -210,7 +226,7 @@ export default class UltimatePublisherPlugin extends Plugin {
     return file;
   }
 
-  private showPublisherMenu(items: PublisherMenuItem[], anchorEl: HTMLElement | null, offsetX: number): void {
+  private showPublisherMenu(items: PublisherMenuItem[], position: MenuPosition): void {
     const menu = new Menu();
 
     for (const item of items) {
@@ -222,8 +238,8 @@ export default class UltimatePublisherPlugin extends Plugin {
         }
 
         if (item.children?.length) {
-          menuItem.onClick(() => {
-            this.showPublisherMenu(item.children ?? [], anchorEl, offsetX + 24);
+          menuItem.onClick((event) => {
+            this.showPublisherMenu(item.children ?? [], this.getChildMenuPosition(event));
           });
           return;
         }
@@ -232,25 +248,43 @@ export default class UltimatePublisherPlugin extends Plugin {
       });
     }
 
-    const position = this.getMenuPosition(anchorEl, offsetX);
     menu.showAtPosition(position);
   }
 
-  private getMenuPosition(anchorEl: HTMLElement | null, offsetX: number): {
-    x: number;
-    y: number;
-    width?: number;
-  } {
+  private getRootMenuPosition(anchorEl: HTMLElement | null): MenuPosition {
     if (!anchorEl) {
-      return { x: offsetX, y: 0 };
+      return { x: 0, y: 0 };
     }
 
     const rect = anchorEl.getBoundingClientRect();
     return {
-      x: rect.left + offsetX,
+      x: rect.left,
       y: rect.bottom,
       width: rect.width,
     };
+  }
+
+  private getChildMenuPosition(event: MouseEvent | KeyboardEvent | undefined): MenuPosition {
+    const anchor = this.resolveRectAnchor(event?.currentTarget);
+    if (!anchor) {
+      return { x: 0, y: 0 };
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    return {
+      x: rect.right,
+      y: rect.top,
+      width: rect.width,
+    };
+  }
+
+  private resolveRectAnchor(value: unknown): RectAnchor | null {
+    if (!value || typeof value !== "object" || !("getBoundingClientRect" in value)) {
+      return null;
+    }
+
+    const candidate = value as Partial<RectAnchor>;
+    return typeof candidate.getBoundingClientRect === "function" ? (candidate as RectAnchor) : null;
   }
 
   private handleMenuItem(item: PublisherMenuItem): void {

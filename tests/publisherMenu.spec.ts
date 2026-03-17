@@ -125,9 +125,18 @@ describe("buildPublisherMenuModel", () => {
     await rootMenu.items[0].trigger();
     expect(openDashboard).toHaveBeenCalledTimes(1);
 
-    await rootMenu.items[1].trigger();
+    await rootMenu.items[1].trigger({
+      currentTarget: {
+        getBoundingClientRect: () => ({ left: 120, right: 300, top: 64, bottom: 92, width: 180 }),
+      },
+    });
     const quickPublishMenu = Menu.instances[1];
     expect(quickPublishMenu.items.map((item) => item.title)).toEqual(["Local Export", "WordPress"]);
+    expect(quickPublishMenu.lastPosition).toEqual({
+      x: 300,
+      y: 64,
+      width: 180,
+    });
     await quickPublishMenu.items[0].trigger();
     expect(runQuickPublish).toHaveBeenCalledWith("local");
 
