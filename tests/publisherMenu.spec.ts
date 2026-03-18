@@ -50,14 +50,49 @@ describe("buildPublisherMenuModel", () => {
       ],
     });
 
-    expect(model.map((item) => item.key)).toEqual([
-      "dashboard",
-      "quick-publish",
-      "normal-publish",
-      "batch-publish",
-      "publish-settings",
+    expect(model.map((item) => ({
+      key: item.key,
+      icon: item.icon,
+      section: item.section,
+    }))).toEqual([
+      {
+        key: "dashboard",
+        icon: "layout-dashboard",
+        section: "ultimate-publisher-dashboard",
+      },
+      {
+        key: "quick-publish",
+        icon: "zap",
+        section: "ultimate-publisher-quick-publish",
+      },
+      {
+        key: "normal-publish",
+        icon: "send",
+        section: "ultimate-publisher-normal-publish",
+      },
+      {
+        key: "batch-publish",
+        icon: "layers-3",
+        section: "ultimate-publisher-batch-publish",
+      },
+      {
+        key: "publish-settings",
+        icon: "settings",
+        section: "ultimate-publisher-settings",
+      },
     ]);
-    expect(model[1].children?.map((item) => item.targetId)).toEqual(["local", "wp"]);
+    expect(model[1].children).toEqual([
+      expect.objectContaining({
+        targetId: "local",
+        icon: "folder",
+        section: "ultimate-publisher-quick-publish-targets",
+      }),
+      expect.objectContaining({
+        targetId: "wp",
+        icon: "globe",
+        section: "ultimate-publisher-quick-publish-targets",
+      }),
+    ]);
   });
 
   it("disables note-dependent entries when no markdown note is active", () => {
@@ -81,6 +116,8 @@ describe("buildPublisherMenuModel", () => {
     expect(quickPublish?.children).toEqual([
       expect.objectContaining({
         key: "quick-publish-empty",
+        icon: "circle-alert",
+        section: "ultimate-publisher-quick-publish-empty",
         disabled: true,
       }),
     ]);
@@ -114,12 +151,37 @@ describe("buildPublisherMenuModel", () => {
     } as never);
 
     const rootMenu = Menu.instances[0];
-    expect(rootMenu.items.map((item) => item.title)).toEqual([
-      "Dashboard",
-      "Quick Publish",
-      "Normal Publish",
-      "Batch Publish",
-      "Publish Settings",
+    expect(rootMenu.useNativeMenu).toBe(false);
+    expect(rootMenu.items.map((item) => ({
+      title: item.title,
+      icon: item.icon,
+      section: item.section,
+    }))).toEqual([
+      {
+        title: "Dashboard",
+        icon: "layout-dashboard",
+        section: "ultimate-publisher-dashboard",
+      },
+      {
+        title: "Quick Publish",
+        icon: "zap",
+        section: "ultimate-publisher-quick-publish",
+      },
+      {
+        title: "Normal Publish",
+        icon: "send",
+        section: "ultimate-publisher-normal-publish",
+      },
+      {
+        title: "Batch Publish",
+        icon: "layers-3",
+        section: "ultimate-publisher-batch-publish",
+      },
+      {
+        title: "Publish Settings",
+        icon: "settings",
+        section: "ultimate-publisher-settings",
+      },
     ]);
 
     await rootMenu.items[0].trigger();
@@ -131,7 +193,23 @@ describe("buildPublisherMenuModel", () => {
       },
     });
     const quickPublishMenu = Menu.instances[1];
-    expect(quickPublishMenu.items.map((item) => item.title)).toEqual(["Local Export", "WordPress"]);
+    expect(quickPublishMenu.useNativeMenu).toBe(false);
+    expect(quickPublishMenu.items.map((item) => ({
+      title: item.title,
+      icon: item.icon,
+      section: item.section,
+    }))).toEqual([
+      {
+        title: "Local Export",
+        icon: "folder",
+        section: "ultimate-publisher-quick-publish-targets",
+      },
+      {
+        title: "WordPress",
+        icon: "globe",
+        section: "ultimate-publisher-quick-publish-targets",
+      },
+    ]);
     expect(quickPublishMenu.lastPosition).toEqual({
       x: 300,
       y: 64,

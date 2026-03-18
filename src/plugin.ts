@@ -228,10 +228,15 @@ export default class UltimatePublisherPlugin extends Plugin {
 
   private showPublisherMenu(items: PublisherMenuItem[], position: MenuPosition): void {
     const menu = new Menu();
+    menu.setUseNativeMenu(false);
 
     for (const item of items) {
       menu.addItem((menuItem) => {
-        menuItem.setTitle(item.title).setDisabled(Boolean(item.disabled));
+        menuItem
+          .setTitle(item.title)
+          .setIcon(item.icon)
+          .setSection(item.section)
+          .setDisabled(Boolean(item.disabled));
 
         if (item.disabled) {
           return;

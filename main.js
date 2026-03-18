@@ -1515,36 +1515,75 @@ var NormalPublishModal = class extends import_obsidian10.Modal {
 };
 
 // src/ui/publisherMenu.ts
+var ROOT_MENU_ITEMS = [
+  {
+    key: "dashboard",
+    title: "Dashboard",
+    icon: "layout-dashboard",
+    section: "ultimate-publisher-dashboard"
+  },
+  {
+    key: "quick-publish",
+    title: "Quick Publish",
+    icon: "zap",
+    section: "ultimate-publisher-quick-publish"
+  },
+  {
+    key: "normal-publish",
+    title: "Normal Publish",
+    icon: "send",
+    section: "ultimate-publisher-normal-publish"
+  },
+  {
+    key: "batch-publish",
+    title: "Batch Publish",
+    icon: "layers-3",
+    section: "ultimate-publisher-batch-publish"
+  },
+  {
+    key: "publish-settings",
+    title: "Publish Settings",
+    icon: "settings",
+    section: "ultimate-publisher-settings"
+  }
+];
 function buildPublisherMenuModel(context) {
   const noteDependentDisabled = !context.hasActiveMarkdown;
   const quickPublishChildren = buildQuickPublishChildren(context.enabledTargets);
   return [
     {
-      key: "dashboard",
-      title: "Dashboard",
+      ...ROOT_MENU_ITEMS[0],
       disabled: false
     },
     {
-      key: "quick-publish",
-      title: "Quick Publish",
+      ...ROOT_MENU_ITEMS[1],
       disabled: noteDependentDisabled,
       children: quickPublishChildren
     },
     {
-      key: "normal-publish",
-      title: "Normal Publish",
+      ...ROOT_MENU_ITEMS[2],
       disabled: noteDependentDisabled
     },
     {
-      key: "batch-publish",
-      title: "Batch Publish",
+      ...ROOT_MENU_ITEMS[3],
       disabled: noteDependentDisabled
     },
     {
-      key: "publish-settings",
-      title: "Publish Settings"
+      ...ROOT_MENU_ITEMS[4]
     }
   ];
+}
+function getProviderIcon(provider) {
+  switch (provider) {
+    case "wordpress":
+      return "globe";
+    case "yuque":
+      return "book";
+    case "local-export":
+      return "folder";
+    default:
+      return "upload";
+  }
 }
 function buildQuickPublishChildren(enabledTargets) {
   if (enabledTargets.length === 0) {
@@ -1552,6 +1591,8 @@ function buildQuickPublishChildren(enabledTargets) {
       {
         key: "quick-publish-empty",
         title: "Enable at least one publish target",
+        icon: "circle-alert",
+        section: "ultimate-publisher-quick-publish-empty",
         helpText: "No quick publish targets are enabled",
         disabled: true
       }
@@ -1560,6 +1601,8 @@ function buildQuickPublishChildren(enabledTargets) {
   return [...enabledTargets].sort((a, b) => a.name.localeCompare(b.name)).map((target) => ({
     key: "quick-publish-target",
     title: target.name,
+    icon: getProviderIcon(target.provider),
+    section: "ultimate-publisher-quick-publish-targets",
     helpText: target.provider,
     targetId: target.id
   }));
@@ -1852,9 +1895,10 @@ var UltimatePublisherPlugin = class extends import_obsidian12.Plugin {
   }
   showPublisherMenu(items, position) {
     const menu = new import_obsidian12.Menu();
+    menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
-        menuItem.setTitle(item.title).setDisabled(Boolean(item.disabled));
+        menuItem.setTitle(item.title).setIcon(item.icon).setSection(item.section).setDisabled(Boolean(item.disabled));
         if (item.disabled) {
           return;
         }

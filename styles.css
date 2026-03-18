@@ -138,3 +138,52 @@
   gap: 4px;
   margin-bottom: 12px;
 }
+
+.menu-item:is(
+    [data-section="ultimate-publisher-dashboard"],
+    [data-section="ultimate-publisher-quick-publish"],
+    [data-section="ultimate-publisher-normal-publish"],
+    [data-section="ultimate-publisher-batch-publish"],
+    [data-section="ultimate-publisher-settings"]
+  ) {
+  min-height: 32px;
+}
+
+.menu-item:is(
+    [data-section="ultimate-publisher-dashboard"],
+    [data-section="ultimate-publisher-quick-publish"],
+    [data-section="ultimate-publisher-normal-publish"],
+    [data-section="ultimate-publisher-batch-publish"],
+    [data-section="ultimate-publisher-settings"]
+  )
+  .menu-item-icon,
+.menu-item:is(
+    [data-section="ultimate-publisher-quick-publish-targets"],
+    [data-section="ultimate-publisher-quick-publish-empty"]
+  )
+  .menu-item-icon {
+  color: var(--icon-color);
+}
+
+.menu-item:is(
+    [data-section="ultimate-publisher-quick-publish"],
+    [data-section="ultimate-publisher-normal-publish"],
+    [data-section="ultimate-publisher-batch-publish"],
+    [data-section="ultimate-publisher-settings"]
+  ) {
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: 2px;
+  padding-top: 6px;
+}
+
+.menu-item:is(
+    [data-section="ultimate-publisher-quick-publish-targets"],
+    [data-section="ultimate-publisher-quick-publish-empty"]
+  ) {
+  min-height: 28px;
+}
+
+.menu-item[data-section="ultimate-publisher-quick-publish-empty"] {
+  color: var(--text-muted);
+  opacity: 0.8;
+}

@@ -187,6 +187,7 @@ export class Menu extends Component {
   readonly items: MenuItem[] = [];
   lastMouseEvent: MouseEvent | null = null;
   lastPosition: { x: number; y: number; width?: number } | null = null;
+  useNativeMenu: boolean | null = null;
 
   constructor() {
     super();
@@ -197,6 +198,11 @@ export class Menu extends Component {
     const item = new MenuItem();
     callback(item);
     this.items.push(item);
+    return this;
+  }
+
+  setUseNativeMenu(useNativeMenu: boolean): this {
+    this.useNativeMenu = useNativeMenu;
     return this;
   }
 
