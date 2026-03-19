@@ -22,13 +22,17 @@ function createFile(path: string): TFile {
   return file;
 }
 
-function createApp(markdown: string, resolvedFiles: Record<string, TFile>): App {
+function createApp(
+  markdown: string,
+  resolvedFiles: Record<string, TFile> = {},
+  frontmatter: Record<string, unknown> = {}
+): App {
   return {
     vault: {
       cachedRead: vi.fn().mockResolvedValue(markdown),
     },
     metadataCache: {
-      getFileCache: vi.fn().mockReturnValue({ frontmatter: {} }),
+      getFileCache: vi.fn().mockReturnValue({ frontmatter }),
       getFirstLinkpathDest: vi.fn((target: string) => resolvedFiles[target] ?? null),
     },
   } as unknown as App;
@@ -57,6 +61,33 @@ describe("stripFrontmatter", () => {
 });
 
 describe("extractPublishableNote", () => {
+  it("uses the first level-one heading as the publish title even when frontmatter has a title", async () => {
+    const app = createApp("Intro line\n\n# Actual Title\n\nBody", {}, { title: "Frontmatter Title" });
+    const file = createFile("Notes/Post.md");
+
+    const note = await extractPublishableNote(app, file);
+
+    expect(note.title).toBe("Actual Title");
+  });
+
+  it("falls back to the first non-empty line when no level-one heading exists", async () => {
+    const app = createApp("\n\nFirst line title\n\n## Section\n\nBody");
+    const file = createFile("Notes/Post.md");
+
+    const note = await extractPublishableNote(app, file);
+
+    expect(note.title).toBe("First line title");
+  });
+
+  it("falls back to the file basename when the note has no usable title text", async () => {
+    const app = createApp("   \n\n\t");
+    const file = createFile("Notes/Fallback Name.md");
+
+    const note = await extractPublishableNote(app, file);
+
+    expect(note.title).toBe("Fallback Name");
+  });
+
   it("keeps resolved local image assets and records unresolved ones", async () => {
     const app = createApp("![[assets/cover.png|Cover]]\n![[assets/missing.png]]", {
       "assets/cover.png": createFile("assets/cover.png"),

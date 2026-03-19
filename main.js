@@ -108,6 +108,29 @@ function pickExcerpt(markdown, frontmatter) {
   const collapsed = markdown.replace(/^---[\s\S]*?---\s*/m, "").replace(/!\[\[[^\]]+\]\]/g, "").replace(/!\[[^\]]*]\(([^)]+)\)/g, "").replace(/\[\[([^\]]+)]]/g, "$1").replace(/\[([^\]]+)]\(([^)]+)\)/g, "$1").replace(/[#>*`~-]/g, " ").replace(/\s+/g, " ").trim();
   return collapsed.slice(0, 200);
 }
+function normalizeTitleLine(value) {
+  return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
+}
+function pickTitle(markdown, fallback) {
+  const lines = markdown.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line.startsWith("# ")) {
+      continue;
+    }
+    const title = normalizeTitleLine(line);
+    if (title) {
+      return title;
+    }
+  }
+  for (const rawLine of lines) {
+    const title = normalizeTitleLine(rawLine);
+    if (title) {
+      return title;
+    }
+  }
+  return fallback;
+}
 function isImagePath(value) {
   const normalized = value.split(/[?#]/)[0] ?? value;
   return IMAGE_EXTENSIONS.has((0, import_node_path.extname)(normalized).toLowerCase());
@@ -163,7 +186,7 @@ async function extractPublishableNote(app, file) {
       unresolvedAttachments.push(result.unresolved);
     }
   }
-  const title = typeof frontmatter.title === "string" && frontmatter.title ? frontmatter.title : file.basename;
+  const title = pickTitle(markdown, file.basename);
   const slug = typeof frontmatter.slug === "string" && frontmatter.slug || typeof frontmatter.permalink === "string" && frontmatter.permalink || slugify(file.basename);
   const tags = ensureArray(frontmatter.tags);
   const categories = ensureArray(frontmatter.categories ?? frontmatter.category);
@@ -606,6 +629,9 @@ async function renderMarkdownToHtml(app, markdown, sourcePath) {
   component.load();
   try {
     await import_obsidian3.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
+    container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
+      copyButton.remove();
+    });
     return container.innerHTML.trim();
   } finally {
     component.unload();

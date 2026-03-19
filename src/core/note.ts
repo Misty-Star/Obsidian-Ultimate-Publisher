@@ -74,6 +74,35 @@ function pickExcerpt(markdown: string, frontmatter: Record<string, unknown>): st
   return collapsed.slice(0, 200);
 }
 
+function normalizeTitleLine(value: string): string {
+  return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
+}
+
+function pickTitle(markdown: string, fallback: string): string {
+  const lines = markdown.split(/\r?\n/);
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line.startsWith("# ")) {
+      continue;
+    }
+
+    const title = normalizeTitleLine(line);
+    if (title) {
+      return title;
+    }
+  }
+
+  for (const rawLine of lines) {
+    const title = normalizeTitleLine(rawLine);
+    if (title) {
+      return title;
+    }
+  }
+
+  return fallback;
+}
+
 function isImagePath(value: string): boolean {
   const normalized = value.split(/[?#]/)[0] ?? value;
   return IMAGE_EXTENSIONS.has(extname(normalized).toLowerCase());
@@ -140,7 +169,7 @@ export async function extractPublishableNote(app: App, file: TFile): Promise<Pub
     }
   }
 
-  const title = typeof frontmatter.title === "string" && frontmatter.title ? frontmatter.title : file.basename;
+  const title = pickTitle(markdown, file.basename);
   const slug =
     (typeof frontmatter.slug === "string" && frontmatter.slug) ||
     (typeof frontmatter.permalink === "string" && frontmatter.permalink) ||
