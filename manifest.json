@@ -1,0 +1,10 @@
+{
+  "id": "ultimate-publisher",
+  "name": "Ultimate Publisher",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "One-click publish your Obsidian notes to WordPress, Yuque, local folders, and many more channels.",
+  "author": "Mistystar",
+  "authorUrl": "https://github.com/Misty-Star",
+  "isDesktopOnly": true
+}
