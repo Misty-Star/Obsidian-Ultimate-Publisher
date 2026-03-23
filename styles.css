@@ -26,6 +26,146 @@
   margin: 8px 0 16px;
 }
 
+.ultimate-publisher-settings-shell,
+.ultimate-publisher-settings-page {
+  display: grid;
+  gap: 16px;
+}
+
+.ultimate-publisher-settings-header {
+  display: grid;
+  gap: 8px;
+}
+
+.ultimate-publisher-settings-header h2 {
+  margin: 0;
+}
+
+.ultimate-publisher-settings-header p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.ultimate-publisher-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+}
+
+.ultimate-publisher-settings-tab {
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 12px;
+}
+
+.ultimate-publisher-settings-tab.is-active {
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  color: var(--interactive-accent);
+}
+
+.ultimate-publisher-settings-panel {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  background: var(--background-secondary);
+  padding: 16px;
+}
+
+.ultimate-publisher-settings-empty-state {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.ultimate-publisher-settings-empty-state p {
+  margin: 0;
+}
+
+.ultimate-publisher-target-grid,
+.ultimate-publisher-provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.ultimate-publisher-target-card,
+.ultimate-publisher-provider-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: 12px;
+  background: var(--background-primary);
+  padding: 14px;
+}
+
+.ultimate-publisher-target-card-header,
+.ultimate-publisher-provider-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.ultimate-publisher-target-card-header {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+
+.ultimate-publisher-target-card-copy h3,
+.ultimate-publisher-provider-copy h3 {
+  margin: 0;
+}
+
+.ultimate-publisher-target-card-copy p,
+.ultimate-publisher-provider-copy p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.ultimate-publisher-target-card-actions,
+.ultimate-publisher-provider-card-footer,
+.ultimate-publisher-settings-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ultimate-publisher-target-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-top: 6px;
+}
+
+.ultimate-publisher-target-status.is-enabled {
+  background: var(--color-green);
+}
+
+.ultimate-publisher-target-status.is-disabled {
+  background: var(--text-faint);
+}
+
+.ultimate-publisher-provider-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+  color: var(--interactive-accent);
+  font-weight: 700;
+}
+
+.ultimate-publisher-provider-badge {
+  align-self: center;
+  color: var(--text-success);
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+}
+
 .ultimate-publisher-dashboard {
   display: grid;
   gap: 16px;
