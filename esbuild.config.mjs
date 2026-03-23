@@ -7,6 +7,10 @@ const context = await esbuild.context({
   external: ["obsidian", "electron", "@codemirror/state", "@codemirror/view", "@lezer/common"],
   format: "cjs",
   target: "es2020",
+  jsx: "automatic",
+  loader: {
+    ".tsx": "tsx",
+  },
   logLevel: "info",
   sourcemap: production ? false : "inline",
   treeShaking: true,
