@@ -15,9 +15,34 @@ interface CsdnUserResponse {
 
 interface CsdnPublishResponse {
   code?: number;
+  msg?: string;
+  message?: string;
   data?: {
     id?: number | string;
   };
+}
+
+interface CsdnPublishPayload {
+  title: string;
+  markdowncontent: string;
+  content: string;
+  readType: "public";
+  level: number;
+  tags: string;
+  status: number;
+  categories: string;
+  type: "original";
+  original_link: string;
+  authorized_status: boolean;
+  Description: string;
+  not_auto_saved: "1";
+  source: "pc_mdeditor";
+  cover_images: [];
+  cover_type: 1;
+  is_new: 1;
+  vote_id: 0;
+  resource_id: string;
+  pubStatus: "publish";
 }
 
 function buildHeaders(target: CsdnTargetConfig): Record<string, string> {
@@ -93,6 +118,36 @@ function readCookieValue(cookieHeader: string, key: string): string {
   return "";
 }
 
+function buildPublishPayload(note: PublishableNote, html: string, categories: string[], tags: string[]): CsdnPublishPayload {
+  return {
+    title: note.title,
+    markdowncontent: note.markdown,
+    content: html,
+    readType: "public",
+    level: 0,
+    tags: tags.join(","),
+    status: 0,
+    categories: categories.join(","),
+    type: "original",
+    original_link: "",
+    authorized_status: false,
+    Description: note.excerpt,
+    not_auto_saved: "1",
+    source: "pc_mdeditor",
+    cover_images: [],
+    cover_type: 1,
+    is_new: 1,
+    vote_id: 0,
+    resource_id: "",
+    pubStatus: "publish",
+  };
+}
+
+function getResponseMessage(response: CsdnPublishResponse): string {
+  const message = response.msg ?? response.message;
+  return typeof message === "string" && message.trim() ? message.trim() : "unknown error";
+}
+
 async function requestCsdn<T>(
   target: CsdnTargetConfig,
   url: string,
@@ -163,18 +218,11 @@ export class CsdnProvider implements PublisherProvider<CsdnTargetConfig> {
       target,
       "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
       "POST",
-      {
-        title: note.title,
-        markdowncontent: note.markdown,
-        content: html,
-        tags: input.tags.join(","),
-        categories: input.categories.join(","),
-        Description: note.excerpt,
-      }
+      buildPublishPayload(note, html, input.categories, input.tags)
     );
 
     if (response.code !== 200 || !response.data?.id) {
-      throw new Error("CSDN publish failed.");
+      throw new Error(`CSDN publish failed: ${getResponseMessage(response)}`);
     }
 
     const articleId = String(response.data.id);

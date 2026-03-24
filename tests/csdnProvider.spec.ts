@@ -112,6 +112,34 @@ describe("CsdnProvider", () => {
       content: "<h1>Post</h1>",
       categories: "后端",
       tags: "Obsidian",
+      readType: "public",
+      level: 0,
+      status: 0,
+      type: "original",
+      original_link: "",
+      authorized_status: false,
+      not_auto_saved: "1",
+      source: "pc_mdeditor",
+      cover_images: [],
+      cover_type: 1,
+      is_new: 1,
+      vote_id: 0,
+      resource_id: "",
+      pubStatus: "publish",
     });
+  });
+
+  it("surfaces the backend error when CSDN publish rejects the payload", async () => {
+    vi.mocked(requestUrl).mockResolvedValue({
+      status: 200,
+      json: { code: 400, msg: "分类不能为空" },
+      text: JSON.stringify({ code: 400, msg: "分类不能为空" }),
+    } as never);
+
+    const provider = new CsdnProvider(createApp());
+
+    await expect(provider.publish(createNote(), createTarget())).rejects.toThrow(
+      "CSDN publish failed: 分类不能为空"
+    );
   });
 });
