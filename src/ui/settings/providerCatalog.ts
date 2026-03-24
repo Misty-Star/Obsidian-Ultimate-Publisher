@@ -1,5 +1,21 @@
-import { createLocalExportTarget, createWordpressTarget, createYuqueTarget } from "../../settings";
-import { LocalExportTargetConfig, ProviderId, PublishTargetConfig, WordpressTargetConfig, YuqueTargetConfig } from "../../types";
+import {
+  createCsdnTarget,
+  createJuejinTarget,
+  createLocalExportTarget,
+  createWordpressTarget,
+  createYuqueTarget,
+  createZhihuTarget,
+} from "../../settings";
+import {
+  CsdnTargetConfig,
+  JuejinTargetConfig,
+  LocalExportTargetConfig,
+  ProviderId,
+  PublishTargetConfig,
+  WordpressTargetConfig,
+  YuqueTargetConfig,
+  ZhihuTargetConfig,
+} from "../../types";
 
 interface ProviderCatalogBase<TTarget extends PublishTargetConfig> {
   id: TTarget["provider"];
@@ -12,7 +28,10 @@ interface ProviderCatalogBase<TTarget extends PublishTargetConfig> {
 export type ProviderCatalogEntry =
   | ProviderCatalogBase<WordpressTargetConfig>
   | ProviderCatalogBase<YuqueTargetConfig>
-  | ProviderCatalogBase<LocalExportTargetConfig>;
+  | ProviderCatalogBase<LocalExportTargetConfig>
+  | ProviderCatalogBase<ZhihuTargetConfig>
+  | ProviderCatalogBase<CsdnTargetConfig>
+  | ProviderCatalogBase<JuejinTargetConfig>;
 
 const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
   {
@@ -35,6 +54,27 @@ const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
     description: "Write Markdown and copied assets to a local directory.",
     icon: "FS",
     createTarget: createLocalExportTarget,
+  },
+  {
+    id: "zhihu",
+    name: "Zhihu",
+    description: "Cookie-based desktop web publishing to Zhihu columns.",
+    icon: "ZH",
+    createTarget: createZhihuTarget,
+  },
+  {
+    id: "csdn",
+    name: "CSDN",
+    description: "Cookie-based desktop web publishing to CSDN articles.",
+    icon: "CS",
+    createTarget: createCsdnTarget,
+  },
+  {
+    id: "juejin",
+    name: "Juejin",
+    description: "Cookie-based desktop web publishing to Juejin posts.",
+    icon: "JJ",
+    createTarget: createJuejinTarget,
   },
 ];
 

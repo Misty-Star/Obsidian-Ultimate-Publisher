@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { UltimatePublisherSettings } from "../../types";
+import { ProviderId, UltimatePublisherSettings } from "../../types";
 import { getProviderCatalog } from "./providerCatalog";
 import { buildConfiguredTargetCards, buildMarketplaceCards } from "./settingsViewModel";
 import { ConfiguredTargetsTab } from "./ConfiguredTargetsTab";
@@ -9,7 +9,7 @@ import { SettingsTabId, TabBar } from "./TabBar";
 interface SettingsViewProps {
   settings: UltimatePublisherSettings;
   initialTab?: SettingsTabId;
-  onAddProvider: (providerId: "wordpress" | "yuque" | "local-export") => void;
+  onAddProvider: (providerId: ProviderId) => void;
   onEditTarget: (targetId: string) => void;
   onDeleteTarget: (targetId: string) => void;
 }

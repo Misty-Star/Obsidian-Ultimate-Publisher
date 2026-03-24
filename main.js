@@ -34395,7 +34395,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 
 // src/core/note.ts
 var import_obsidian = require("obsidian");
@@ -34694,6 +34694,42 @@ function createLocalExportTarget() {
     assetDirName: "assets"
   };
 }
+function createZhihuTarget() {
+  return {
+    id: (0, import_node_crypto2.randomUUID)(),
+    name: "Zhihu",
+    enabled: true,
+    provider: "zhihu",
+    cookie: "",
+    defaultColumnId: "",
+    defaultColumnTitle: ""
+  };
+}
+function createCsdnTarget() {
+  return {
+    id: (0, import_node_crypto2.randomUUID)(),
+    name: "CSDN",
+    enabled: true,
+    provider: "csdn",
+    cookie: "",
+    defaultCategories: [],
+    defaultTags: []
+  };
+}
+function createJuejinTarget() {
+  return {
+    id: (0, import_node_crypto2.randomUUID)(),
+    name: "Juejin",
+    enabled: true,
+    provider: "juejin",
+    cookie: "",
+    defaultCategoryId: "",
+    defaultCategoryName: "",
+    defaultTagIds: [],
+    defaultTagNames: [],
+    defaultBriefContent: ""
+  };
+}
 function getRecord(records, notePath, targetId) {
   return records.find((record) => record.notePath === notePath && record.targetId === targetId);
 }
@@ -34711,6 +34747,15 @@ function upsertRecord(records, nextRecord) {
 function cloneTarget(target) {
   return JSON.parse(JSON.stringify(target));
 }
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
 function normalizeTarget(target) {
   if (target.provider === "wordpress") {
     return {
@@ -34724,6 +34769,33 @@ function normalizeTarget(target) {
       ...target,
       baseUrl: target.baseUrl || "https://www.yuque.com",
       publicLevel: target.publicLevel ?? 0
+    };
+  }
+  if (target.provider === "zhihu") {
+    return {
+      ...target,
+      cookie: target.cookie || "",
+      defaultColumnId: target.defaultColumnId || "",
+      defaultColumnTitle: target.defaultColumnTitle || ""
+    };
+  }
+  if (target.provider === "csdn") {
+    return {
+      ...target,
+      cookie: target.cookie || "",
+      defaultCategories: normalizeStringList(target.defaultCategories),
+      defaultTags: normalizeStringList(target.defaultTags)
+    };
+  }
+  if (target.provider === "juejin") {
+    return {
+      ...target,
+      cookie: target.cookie || "",
+      defaultCategoryId: target.defaultCategoryId || "",
+      defaultCategoryName: target.defaultCategoryName || "",
+      defaultTagIds: normalizeStringList(target.defaultTagIds),
+      defaultTagNames: normalizeStringList(target.defaultTagNames),
+      defaultBriefContent: target.defaultBriefContent || ""
     };
   }
   return {
@@ -35273,12 +35345,550 @@ var YuqueProvider = class {
   }
 };
 
+// src/providers/csdnProvider.ts
+var import_obsidian7 = require("obsidian");
+
+// src/core/webPublishConfig.ts
+function getNestedValue(source, path) {
+  let current = source;
+  for (const segment of path) {
+    if (!current || typeof current !== "object" || !(segment in current)) {
+      return void 0;
+    }
+    current = current[segment];
+  }
+  return current;
+}
+function readString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+function readStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function pickFirstNonEmptyArray(...values) {
+  for (const value of values) {
+    const items = readStringArray(value);
+    if (items.length > 0) {
+      return items;
+    }
+  }
+  return [];
+}
+function resolveZhihuPublishInput(note, target) {
+  const columnId = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "zhihu", "columnId"])) || target.defaultColumnId;
+  if (!columnId) {
+    throw new Error("Zhihu publish requires a columnId.");
+  }
+  return { columnId };
+}
+function resolveCsdnPublishInput(note, target) {
+  const categories = pickFirstNonEmptyArray(
+    getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "categories"]),
+    note.categories,
+    target.defaultCategories
+  );
+  const tags = pickFirstNonEmptyArray(
+    getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "tags"]),
+    note.tags,
+    target.defaultTags
+  );
+  return {
+    categories,
+    tags
+  };
+}
+function resolveJuejinPublishInput(note, target) {
+  const categoryId = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "categoryId"])) || target.defaultCategoryId;
+  const tagIds = pickFirstNonEmptyArray(
+    getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tagIds"]),
+    target.defaultTagIds
+  );
+  const briefContent = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "briefContent"])) || target.defaultBriefContent || note.excerpt;
+  if (!categoryId) {
+    throw new Error("Juejin publish requires a categoryId.");
+  }
+  if (tagIds.length === 0) {
+    throw new Error("Juejin publish requires at least one tagId.");
+  }
+  return {
+    categoryId,
+    tagIds,
+    briefContent
+  };
+}
+
+// src/providers/csdnProvider.ts
+function buildHeaders(target) {
+  return {
+    "Content-Type": "application/json",
+    Cookie: target.cookie
+  };
+}
+function readJsonPayload(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+function readCookieValue(cookieHeader, key) {
+  const pairs = cookieHeader.split(";").map((item) => item.trim()).filter(Boolean);
+  for (const pair of pairs) {
+    const [name, ...rest] = pair.split("=");
+    if (name === key) {
+      return rest.join("=").trim();
+    }
+  }
+  return "";
+}
+async function requestCsdn(target, url, method = "GET", body) {
+  const response = await (0, import_obsidian7.requestUrl)({
+    url,
+    method,
+    headers: buildHeaders(target),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`CSDN request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload(response);
+}
+function buildPreviewUrl(target, articleId) {
+  const username = readCookieValue(target.cookie, "UserName");
+  if (!username) {
+    return void 0;
+  }
+  return `https://blog.csdn.net/${username}/article/details/${articleId}`;
+}
+var CsdnProvider = class {
+  constructor(app) {
+    this.app = app;
+    this.provider = "csdn";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("CSDN target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const response = await requestCsdn(target, "https://bizapi.csdn.net/blog-console-api/v1/user/info");
+    return {
+      accountId: response.data?.username,
+      accountName: response.data?.username,
+      accountAvatarUrl: response.data?.avatar
+    };
+  }
+  async publish(note, target) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveCsdnPublishInput(note, target);
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
+      "POST",
+      {
+        title: note.title,
+        markdowncontent: note.markdown,
+        content: html,
+        tags: input.tags.join(","),
+        categories: input.categories.join(","),
+        Description: note.excerpt
+      }
+    );
+    if (response.code !== 200 || !response.data?.id) {
+      throw new Error("CSDN publish failed.");
+    }
+    const articleId = String(response.data.id);
+    return {
+      remoteId: articleId,
+      remoteUrl: buildPreviewUrl(target, articleId)
+    };
+  }
+  async update(remoteId, note, target) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveCsdnPublishInput(note, target);
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
+      "POST",
+      {
+        id: remoteId,
+        title: note.title,
+        markdowncontent: note.markdown,
+        content: html,
+        tags: input.tags.join(","),
+        categories: input.categories.join(","),
+        Description: note.excerpt
+      }
+    );
+    if (response.code !== 200) {
+      throw new Error("CSDN update failed.");
+    }
+    return {
+      remoteId,
+      remoteUrl: buildPreviewUrl(target, remoteId)
+    };
+  }
+  async delete(remoteId, target) {
+    await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog/phoenix/console/v1/article/del",
+      "POST",
+      {
+        articleId: remoteId,
+        deep: false
+      }
+    );
+  }
+  async getPreviewUrl(remoteId, target) {
+    return buildPreviewUrl(target, remoteId);
+  }
+};
+
+// src/providers/juejinProvider.ts
+var import_obsidian8 = require("obsidian");
+function buildHeaders2(target) {
+  return {
+    "Content-Type": "application/json",
+    Cookie: target.cookie
+  };
+}
+function readJsonPayload2(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+function encodeRemoteId(articleId, draftId) {
+  return `${articleId}_${draftId}`;
+}
+function decodeRemoteId(remoteId) {
+  const [articleId, draftId] = remoteId.split("_");
+  return {
+    articleId,
+    draftId
+  };
+}
+async function requestJuejin(target, url, method = "POST", body) {
+  const response = await (0, import_obsidian8.requestUrl)({
+    url,
+    method,
+    headers: buildHeaders2(target),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`Juejin request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload2(response);
+}
+function buildPreviewUrl2(articleId) {
+  return `https://juejin.cn/post/${articleId}`;
+}
+var JuejinProvider = class {
+  constructor() {
+    this.provider = "juejin";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("Juejin target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const response = await requestJuejin(
+      target,
+      "https://api.juejin.cn/user_api/v1/user/get",
+      "GET"
+    );
+    if (response.err_no !== 0 || !response.data?.user_id) {
+      throw new Error(`Juejin validation failed: ${response.err_msg ?? "unknown error"}`);
+    }
+    return {
+      accountId: response.data.user_id,
+      accountName: response.data.user_name,
+      accountAvatarUrl: response.data.avatar_large
+    };
+  }
+  async publish(note, target) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveJuejinPublishInput(note, target);
+    const draftResponse = await requestJuejin(
+      target,
+      "https://api.juejin.cn/content_api/v1/article_draft/create",
+      "POST",
+      {
+        category_id: input.categoryId,
+        tag_ids: input.tagIds,
+        link_url: "",
+        cover_image: "",
+        title: note.title,
+        brief_content: input.briefContent,
+        edit_type: 10,
+        html_content: "deprecated",
+        mark_content: note.markdown,
+        theme_ids: []
+      }
+    );
+    const draftId = String(draftResponse.data?.id ?? "");
+    if (draftResponse.err_no !== 0 || !draftId) {
+      throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
+    }
+    const publishResponse = await requestJuejin(
+      target,
+      "https://api.juejin.cn/content_api/v1/article/publish",
+      "POST",
+      {
+        draft_id: draftId,
+        sync_to_org: false,
+        column_ids: [],
+        theme_ids: []
+      }
+    );
+    const articleId = String(publishResponse.data?.article_id ?? "");
+    if (publishResponse.err_no !== 0 || !articleId) {
+      throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+    }
+    return {
+      remoteId: encodeRemoteId(articleId, draftId),
+      remoteUrl: buildPreviewUrl2(articleId)
+    };
+  }
+  async update(remoteId, note, target) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveJuejinPublishInput(note, target);
+    const { articleId, draftId } = decodeRemoteId(remoteId);
+    const draftResponse = await requestJuejin(
+      target,
+      "https://api.juejin.cn/content_api/v1/article_draft/update",
+      "POST",
+      {
+        id: draftId,
+        category_id: input.categoryId,
+        tag_ids: input.tagIds,
+        link_url: "",
+        cover_image: "",
+        title: note.title,
+        brief_content: input.briefContent,
+        edit_type: 10,
+        html_content: "deprecated",
+        mark_content: note.markdown,
+        theme_ids: []
+      }
+    );
+    if (draftResponse.err_no !== 0) {
+      throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
+    }
+    const publishResponse = await requestJuejin(
+      target,
+      "https://api.juejin.cn/content_api/v1/article/publish",
+      "POST",
+      {
+        draft_id: draftId,
+        sync_to_org: false,
+        column_ids: [],
+        theme_ids: []
+      }
+    );
+    if (publishResponse.err_no !== 0) {
+      throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+    }
+    return {
+      remoteId: encodeRemoteId(articleId, draftId),
+      remoteUrl: buildPreviewUrl2(articleId)
+    };
+  }
+  async delete(remoteId, target) {
+    const { articleId } = decodeRemoteId(remoteId);
+    const response = await requestJuejin(
+      target,
+      "https://api.juejin.cn/content_api/v1/article/delete",
+      "POST",
+      {
+        article_id: articleId
+      }
+    );
+    if (response.err_no !== 0) {
+      throw new Error(`Juejin delete failed: ${response.err_msg ?? "unknown error"}`);
+    }
+  }
+  async getPreviewUrl(remoteId) {
+    const { articleId } = decodeRemoteId(remoteId);
+    return buildPreviewUrl2(articleId);
+  }
+};
+
+// src/providers/zhihuProvider.ts
+var import_obsidian9 = require("obsidian");
+function buildHeaders3(target) {
+  return {
+    "Content-Type": "application/json",
+    Cookie: target.cookie
+  };
+}
+function readJsonPayload3(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+async function requestZhihu(target, url, method = "GET", body) {
+  const response = await (0, import_obsidian9.requestUrl)({
+    url,
+    method,
+    headers: buildHeaders3(target),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`Zhihu request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload3(response);
+}
+function buildPreviewUrl3(articleId) {
+  return `https://zhuanlan.zhihu.com/p/${articleId}`;
+}
+var ZhihuProvider = class {
+  constructor(app) {
+    this.app = app;
+    this.provider = "zhihu";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("Zhihu target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const account = await requestZhihu(
+      target,
+      "https://www.zhihu.com/api/v4/me?include=account_status%2Cis_bind_phone%2Cis_force_renamed%2Cemail%2Crenamed_fullname"
+    );
+    return {
+      accountId: account.uid ? String(account.uid) : void 0,
+      accountName: account.name,
+      accountAvatarUrl: account.avatar_url
+    };
+  }
+  async publish(note, target) {
+    assertRemoteAssetsSupported(note, target.name);
+    const { columnId } = resolveZhihuPublishInput(note, target);
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const draft = await requestZhihu(
+      target,
+      "https://zhuanlan.zhihu.com/api/articles/drafts",
+      "POST",
+      {
+        title: note.title,
+        content: html
+      }
+    );
+    const articleId = String(draft.id ?? "");
+    if (!articleId) {
+      throw new Error("Zhihu publish failed: draft id missing.");
+    }
+    await requestZhihu(
+      target,
+      `https://zhuanlan.zhihu.com/api/articles/${articleId}/publish`,
+      "PUT",
+      {
+        column: null,
+        commentPermission: "anyone",
+        disclaimer_type: "none",
+        disclaimer_status: "close",
+        table_of_contents_enabled: false,
+        commercial_report_info: { commercial_types: [] },
+        commercial_zhitask_bind_info: null
+      }
+    );
+    await requestZhihu(
+      target,
+      `https://www.zhihu.com/api/v4/columns/${encodeURIComponent(columnId)}/items`,
+      "POST",
+      {
+        type: "article",
+        id: articleId
+      }
+    );
+    return {
+      remoteId: articleId,
+      remoteUrl: buildPreviewUrl3(articleId)
+    };
+  }
+  async update(remoteId, note, target) {
+    assertRemoteAssetsSupported(note, target.name);
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    await requestZhihu(
+      target,
+      `https://zhuanlan.zhihu.com/api/articles/${encodeURIComponent(remoteId)}/draft`,
+      "PATCH",
+      {
+        title: note.title,
+        content: html,
+        table_of_contents: false,
+        delta_time: 10
+      }
+    );
+    await requestZhihu(
+      target,
+      `https://zhuanlan.zhihu.com/api/articles/${encodeURIComponent(remoteId)}/publish`,
+      "PUT",
+      {
+        disclaimer_type: "none",
+        disclaimer_status: "close",
+        table_of_contents_enabled: false,
+        commercial_report_info: { commercial_types: [] },
+        commercial_zhitask_bind_info: null
+      }
+    );
+    return {
+      remoteId,
+      remoteUrl: buildPreviewUrl3(remoteId)
+    };
+  }
+  async delete(remoteId, target) {
+    await requestZhihu(target, `https://www.zhihu.com/api/v4/articles/${encodeURIComponent(remoteId)}`, "DELETE");
+  }
+  async getPreviewUrl(remoteId) {
+    return buildPreviewUrl3(remoteId);
+  }
+};
+
 // src/providers/registry.ts
 var ProviderRegistry = class {
   constructor(app) {
     this.yuque = new YuqueProvider();
+    this.juejin = new JuejinProvider();
     this.wordpress = new WordpressProvider(app);
     this.localExport = new LocalExportProvider(app);
+    this.csdn = new CsdnProvider(app);
+    this.zhihu = new ZhihuProvider(app);
   }
   get(target) {
     switch (target.provider) {
@@ -35288,6 +35898,12 @@ var ProviderRegistry = class {
         return this.yuque;
       case "local-export":
         return this.localExport;
+      case "csdn":
+        return this.csdn;
+      case "juejin":
+        return this.juejin;
+      case "zhihu":
+        return this.zhihu;
       default:
         throw new Error(`Unsupported provider: ${target.provider}`);
     }
@@ -35295,8 +35911,8 @@ var ProviderRegistry = class {
 };
 
 // src/ui/PublishTargetModal.ts
-var import_obsidian7 = require("obsidian");
-var PublishTargetModal = class extends import_obsidian7.SuggestModal {
+var import_obsidian10 = require("obsidian");
+var PublishTargetModal = class extends import_obsidian10.SuggestModal {
   constructor(app, targets, onChooseTarget) {
     super(app);
     this.targets = targets;
@@ -35322,13 +35938,159 @@ var PublishTargetModal = class extends import_obsidian7.SuggestModal {
 };
 
 // src/ui/UltimatePublisherSettingTab.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 
 // src/ui/settings/renderSettingsRoot.tsx
 var import_client = __toESM(require_client());
 
+// src/core/webProviderDescriptors.ts
+var WEB_PROVIDER_DESCRIPTORS = {
+  zhihu: {
+    provider: "zhihu",
+    displayName: "Zhihu",
+    loginUrl: "https://www.zhihu.com/signin",
+    cookieDomain: "zhihu.com"
+  },
+  csdn: {
+    provider: "csdn",
+    displayName: "CSDN",
+    loginUrl: "https://passport.csdn.net/login",
+    cookieDomain: "csdn.net"
+  },
+  juejin: {
+    provider: "juejin",
+    displayName: "Juejin",
+    loginUrl: "https://juejin.cn/login",
+    cookieDomain: "juejin.cn"
+  }
+};
+function getWebProviderDescriptor(provider) {
+  return WEB_PROVIDER_DESCRIPTORS[provider];
+}
+
+// src/core/desktopWebAuth.ts
+function filterCookiesForDomain(cookies, targetDomain) {
+  return cookies.filter((cookie) => {
+    const domain = cookie.domain.trim();
+    return domain === targetDomain || domain === `.${targetDomain}` || domain.endsWith(`.${targetDomain}`);
+  });
+}
+function buildCookieHeader(cookies) {
+  return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+}
+function getElectronRemote() {
+  if (typeof window === "undefined") {
+    return void 0;
+  }
+  const electronWindow = window;
+  return electronWindow.require?.("@electron/remote");
+}
+function defaultSleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+function createWindowClosedError(displayName) {
+  return new Error(`${displayName} authorization window was closed before cookies were captured.`);
+}
+function createDesktopWebAuthRuntime() {
+  return {
+    isSupported() {
+      const remote = getElectronRemote();
+      return Boolean(remote?.BrowserWindow && remote?.getCurrentWindow);
+    },
+    async openBrowserWindow(url) {
+      const remote = getElectronRemote();
+      if (!remote?.BrowserWindow || !remote?.getCurrentWindow) {
+        throw new Error("Desktop web authorization requires Electron BrowserWindow support.");
+      }
+      const parentWindow = remote.getCurrentWindow();
+      const authWindow = new remote.BrowserWindow({
+        parent: parentWindow,
+        width: 900,
+        height: 750,
+        show: true,
+        modal: true,
+        webPreferences: {
+          nativeWindowOpen: true,
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+      await authWindow.loadURL(url);
+      return authWindow;
+    },
+    waitForWindowClose(windowHandle) {
+      return new Promise((resolve) => {
+        windowHandle.once("closed", () => resolve());
+      });
+    },
+    closeWindow(windowHandle) {
+      if (windowHandle.isDestroyed?.()) {
+        return;
+      }
+      windowHandle.close?.();
+    },
+    readCookies(windowHandle) {
+      return windowHandle.webContents.session.cookies.get({});
+    }
+  };
+}
+function createDesktopWebAuthService() {
+  return new DesktopWebAuthService(createDesktopWebAuthRuntime());
+}
+var DesktopWebAuthService = class {
+  constructor(runtime, options = {}) {
+    this.runtime = runtime;
+    this.pollIntervalMs = options.pollIntervalMs ?? 250;
+    this.maxWaitMs = options.maxWaitMs ?? 12e4;
+    this.sleep = options.sleep ?? defaultSleep;
+  }
+  async authorize(provider) {
+    if (!this.runtime.isSupported()) {
+      throw new Error("Desktop web authorization requires the Obsidian desktop Electron runtime.");
+    }
+    const descriptor = getWebProviderDescriptor(provider);
+    const authWindow = await this.runtime.openBrowserWindow(descriptor.loginUrl);
+    let windowClosed = false;
+    void this.runtime.waitForWindowClose(authWindow).then(() => {
+      windowClosed = true;
+    });
+    const startedAt = Date.now();
+    while (Date.now() - startedAt <= this.maxWaitMs) {
+      if (windowClosed) {
+        throw createWindowClosedError(descriptor.displayName);
+      }
+      let cookies;
+      try {
+        cookies = await this.runtime.readCookies(authWindow);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (windowClosed || /destroyed/i.test(message)) {
+          throw createWindowClosedError(descriptor.displayName);
+        }
+        throw error;
+      }
+      const filteredCookies = filterCookiesForDomain(cookies, descriptor.cookieDomain);
+      const cookie = buildCookieHeader(filteredCookies);
+      if (cookie) {
+        await this.runtime.closeWindow(authWindow);
+        return {
+          provider,
+          descriptor,
+          cookie,
+          cookies: filteredCookies
+        };
+      }
+      await this.sleep(this.pollIntervalMs);
+    }
+    await this.runtime.closeWindow(authWindow);
+    throw new Error(`${descriptor.displayName} authorization timed out before cookies were captured.`);
+  }
+};
+
 // src/ui/settings/EditTargetModal.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 
 // src/ui/settings/providerCatalog.ts
 var PROVIDER_CATALOG = [
@@ -35352,6 +36114,27 @@ var PROVIDER_CATALOG = [
     description: "Write Markdown and copied assets to a local directory.",
     icon: "FS",
     createTarget: createLocalExportTarget
+  },
+  {
+    id: "zhihu",
+    name: "Zhihu",
+    description: "Cookie-based desktop web publishing to Zhihu columns.",
+    icon: "ZH",
+    createTarget: createZhihuTarget
+  },
+  {
+    id: "csdn",
+    name: "CSDN",
+    description: "Cookie-based desktop web publishing to CSDN articles.",
+    icon: "CS",
+    createTarget: createCsdnTarget
+  },
+  {
+    id: "juejin",
+    name: "Juejin",
+    description: "Cookie-based desktop web publishing to Juejin posts.",
+    icon: "JJ",
+    createTarget: createJuejinTarget
   }
 ];
 function getProviderCatalog() {
@@ -35365,6 +36148,14 @@ function getProviderCatalogEntry(providerId) {
 var COMMON_FIELDS = [
   { key: "enabled", label: "Enabled", type: "toggle" },
   { key: "name", label: "Display name", type: "text" }
+];
+var WEB_AUTH_COMMON_FIELDS = [
+  {
+    key: "cookie",
+    label: "Cookie",
+    description: "Paste Cookie manually if browser authorization fails.",
+    type: "password"
+  }
 ];
 var WORDPRESS_FIELDS = [
   { key: "endpoint", label: "Endpoint", description: "Example: https://example.com", type: "text" },
@@ -35420,12 +36211,37 @@ var LOCAL_EXPORT_FIELDS = [
   },
   { key: "assetDirName", label: "Asset directory name", type: "text" }
 ];
+var ZHIHU_FIELDS = [
+  { key: "defaultColumnId", label: "Default column ID", type: "text" },
+  { key: "defaultColumnTitle", label: "Default column title", type: "text" }
+];
+var CSDN_FIELDS = [
+  { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
+  { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" }
+];
+var JUEJIN_FIELDS = [
+  { key: "defaultCategoryId", label: "Default category ID", type: "text" },
+  { key: "defaultTagIds", label: "Default tag IDs", description: "Comma-separated tag IDs.", type: "text" },
+  { key: "defaultBriefContent", label: "Default brief content", type: "text" }
+];
+function splitCommaSeparatedValue(value) {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
 function getModalFieldDefinitions(target) {
   if (target.provider === "wordpress") {
     return [...COMMON_FIELDS, ...WORDPRESS_FIELDS];
   }
   if (target.provider === "yuque") {
     return [...COMMON_FIELDS, ...YUQUE_FIELDS];
+  }
+  if (target.provider === "zhihu") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS];
+  }
+  if (target.provider === "csdn") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS];
+  }
+  if (target.provider === "juejin") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS];
   }
   return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS];
 }
@@ -35435,6 +36251,8 @@ function readFieldValue(target, key) {
       return target.enabled;
     case "name":
       return target.name;
+    case "cookie":
+      return "cookie" in target ? target.cookie : "";
     case "endpoint":
       return target.provider === "wordpress" ? target.endpoint : "";
     case "username":
@@ -35453,6 +36271,20 @@ function readFieldValue(target, key) {
       return target.provider === "yuque" ? target.token : "";
     case "publicLevel":
       return target.provider === "yuque" ? String(target.publicLevel) : "";
+    case "defaultColumnId":
+      return target.provider === "zhihu" ? target.defaultColumnId : "";
+    case "defaultColumnTitle":
+      return target.provider === "zhihu" ? target.defaultColumnTitle ?? "" : "";
+    case "defaultCategories":
+      return target.provider === "csdn" ? target.defaultCategories.join(", ") : "";
+    case "defaultTags":
+      return target.provider === "csdn" ? target.defaultTags.join(", ") : "";
+    case "defaultCategoryId":
+      return target.provider === "juejin" ? target.defaultCategoryId : "";
+    case "defaultTagIds":
+      return target.provider === "juejin" ? target.defaultTagIds.join(", ") : "";
+    case "defaultBriefContent":
+      return target.provider === "juejin" ? target.defaultBriefContent : "";
     case "outputDir":
       return target.provider === "local-export" ? target.outputDir : "";
     case "yamlType":
@@ -35469,6 +36301,11 @@ function applyFieldValue(target, key, value) {
       return nextTarget;
     case "name":
       nextTarget.name = String(value).trim() || nextTarget.name;
+      return nextTarget;
+    case "cookie":
+      if ("cookie" in nextTarget) {
+        nextTarget.cookie = String(value).trim();
+      }
       return nextTarget;
     case "endpoint":
       if (nextTarget.provider === "wordpress") {
@@ -35515,6 +36352,41 @@ function applyFieldValue(target, key, value) {
         nextTarget.publicLevel = Number(value) === 1 ? 1 : 0;
       }
       return nextTarget;
+    case "defaultColumnId":
+      if (nextTarget.provider === "zhihu") {
+        nextTarget.defaultColumnId = String(value).trim();
+      }
+      return nextTarget;
+    case "defaultColumnTitle":
+      if (nextTarget.provider === "zhihu") {
+        nextTarget.defaultColumnTitle = String(value).trim();
+      }
+      return nextTarget;
+    case "defaultCategories":
+      if (nextTarget.provider === "csdn") {
+        nextTarget.defaultCategories = splitCommaSeparatedValue(String(value));
+      }
+      return nextTarget;
+    case "defaultTags":
+      if (nextTarget.provider === "csdn") {
+        nextTarget.defaultTags = splitCommaSeparatedValue(String(value));
+      }
+      return nextTarget;
+    case "defaultCategoryId":
+      if (nextTarget.provider === "juejin") {
+        nextTarget.defaultCategoryId = String(value).trim();
+      }
+      return nextTarget;
+    case "defaultTagIds":
+      if (nextTarget.provider === "juejin") {
+        nextTarget.defaultTagIds = splitCommaSeparatedValue(String(value));
+      }
+      return nextTarget;
+    case "defaultBriefContent":
+      if (nextTarget.provider === "juejin") {
+        nextTarget.defaultBriefContent = String(value).trim();
+      }
+      return nextTarget;
     case "outputDir":
       if (nextTarget.provider === "local-export") {
         nextTarget.outputDir = String(value).trim();
@@ -35533,14 +36405,62 @@ function applyFieldValue(target, key, value) {
   }
 }
 
+// src/ui/settings/webAuthTargetActions.ts
+function isWebAuthTarget(target) {
+  return target.provider === "zhihu" || target.provider === "csdn" || target.provider === "juejin";
+}
+async function authorizeWebAuthTarget(target, authorizer, loadAccountSummary) {
+  const authResult = await authorizer.authorize(target.provider);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const authorizedTarget = {
+    ...target,
+    cookie: authResult.cookie,
+    authSource: "browser",
+    lastAuthAt: now
+  };
+  const accountSummary = await loadAccountSummary(authorizedTarget);
+  return {
+    ...authorizedTarget,
+    ...accountSummary,
+    lastValidatedAt: now
+  };
+}
+async function validateWebAuthTarget(target, loadAccountSummary) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const accountSummary = await loadAccountSummary(target);
+  return {
+    ...target,
+    authSource: target.authSource ?? (target.cookie ? "manual" : void 0),
+    ...accountSummary,
+    lastValidatedAt: now
+  };
+}
+function clearWebAuthTarget(target) {
+  return {
+    ...target,
+    cookie: "",
+    authSource: void 0,
+    lastAuthAt: void 0,
+    lastValidatedAt: void 0,
+    accountId: void 0,
+    accountName: void 0,
+    accountAvatarUrl: void 0
+  };
+}
+
 // src/ui/settings/EditTargetModal.ts
-var EditTargetModal = class extends import_obsidian8.Modal {
+var EditTargetModal = class extends import_obsidian11.Modal {
   constructor(app, options) {
     super(app);
     this.options = options;
+    this.activeAction = null;
+    this.statusMessage = "";
     this.draft = options.target;
   }
   onOpen() {
+    this.render();
+  }
+  render() {
     const { contentEl } = this;
     contentEl.empty();
     const providerName = getProviderCatalogEntry(this.draft.provider)?.name ?? this.draft.name;
@@ -35548,7 +36468,7 @@ var EditTargetModal = class extends import_obsidian8.Modal {
       text: `${this.options.mode === "create" ? "Add" : "Edit"} ${providerName} Target`
     });
     for (const field of getModalFieldDefinitions(this.draft)) {
-      const setting = new import_obsidian8.Setting(contentEl).setName(field.label);
+      const setting = new import_obsidian11.Setting(contentEl).setName(field.label);
       if (field.description) {
         setting.setDesc(field.description);
       }
@@ -35580,15 +36500,75 @@ var EditTargetModal = class extends import_obsidian8.Modal {
         });
       });
     }
+    if (isWebAuthTarget(this.draft)) {
+      this.renderWebAuthSection(contentEl, this.draft);
+    }
     const actions = contentEl.createDiv({ cls: "ultimate-publisher-settings-modal-actions" });
     const cancelButton = actions.createEl("button", { text: "Cancel" });
+    cancelButton.disabled = this.activeAction !== null;
     cancelButton.addEventListener("click", () => this.close());
     const saveButton = actions.createEl("button", { text: "Save" });
     saveButton.addClass("mod-cta");
+    saveButton.disabled = this.activeAction !== null;
     saveButton.addEventListener("click", async () => {
       await this.options.onSave(this.draft);
       this.close();
     });
+  }
+  renderWebAuthSection(containerEl, target) {
+    const section = containerEl.createDiv({ cls: "ultimate-publisher-settings-web-auth" });
+    section.createEl("h3", { text: "Authorization" });
+    const status = section.createEl("p", {
+      text: target.cookie ? target.lastValidatedAt ? "Status: Authorized" : "Status: Cookie set, validation pending" : "Status: Not authorized"
+    });
+    status.addClass("ultimate-publisher-meta");
+    if (target.accountName || target.accountId) {
+      section.createEl("p", {
+        text: `Account: ${target.accountName ?? "Unknown"}${target.accountId ? ` (${target.accountId})` : ""}`
+      });
+    }
+    if (target.lastAuthAt) {
+      section.createEl("p", { text: `Last auth: ${target.lastAuthAt}` });
+    }
+    if (target.lastValidatedAt) {
+      section.createEl("p", { text: `Last validated: ${target.lastValidatedAt}` });
+    }
+    if (this.statusMessage) {
+      section.createEl("p", { text: this.statusMessage });
+    }
+    const actions = section.createDiv({ cls: "ultimate-publisher-settings-modal-actions" });
+    const authorizeButton = actions.createEl("button", { text: this.activeAction === "authorize" ? "Authorizing..." : "\u7F51\u9875\u6388\u6743" });
+    authorizeButton.disabled = this.activeAction !== null;
+    authorizeButton.addEventListener("click", () => {
+      void this.runDraftAction("authorize", this.options.onAuthorizeDraft, "Browser authorization completed.");
+    });
+    const validateButton = actions.createEl("button", { text: this.activeAction === "validate" ? "Validating..." : "\u6821\u9A8C\u914D\u7F6E" });
+    validateButton.disabled = this.activeAction !== null;
+    validateButton.addEventListener("click", () => {
+      void this.runDraftAction("validate", this.options.onValidateDraft, "Validation completed.");
+    });
+    const clearButton = actions.createEl("button", { text: this.activeAction === "clear" ? "Clearing..." : "\u6E05\u9664\u6388\u6743" });
+    clearButton.disabled = this.activeAction !== null;
+    clearButton.addEventListener("click", () => {
+      void this.runDraftAction("clear", this.options.onClearAuthDraft, "Authorization data cleared.");
+    });
+  }
+  async runDraftAction(action, handler, successMessage) {
+    if (!handler) {
+      return;
+    }
+    this.activeAction = action;
+    this.statusMessage = "";
+    this.render();
+    try {
+      this.draft = await handler(this.draft);
+      this.statusMessage = successMessage;
+    } catch (error) {
+      this.statusMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.activeAction = null;
+      this.render();
+    }
   }
 };
 
@@ -35748,6 +36728,15 @@ function SettingsView({
 var import_jsx_runtime7 = __toESM(require_jsx_runtime());
 function mountSettingsView(containerEl, options) {
   const root = (0, import_client.createRoot)(containerEl);
+  const providers = new ProviderRegistry(options.plugin.app);
+  const desktopWebAuthService = createDesktopWebAuthService();
+  const loadWebAuthAccountSummary = async (target) => {
+    const provider = providers.get(target);
+    if (!provider.getAccountSummary) {
+      throw new Error(`Provider ${target.provider} does not expose account summary loading.`);
+    }
+    return provider.getAccountSummary(target);
+  };
   const handleAddProvider = async (providerId) => {
     const entry = getProviderCatalogEntry(providerId);
     if (!entry) {
@@ -35756,6 +36745,24 @@ function mountSettingsView(containerEl, options) {
     new EditTargetModal(options.plugin.app, {
       mode: "create",
       target: entry.createTarget(),
+      onAuthorizeDraft: async (target) => {
+        if (!isWebAuthTarget(target)) {
+          return target;
+        }
+        return authorizeWebAuthTarget(target, desktopWebAuthService, loadWebAuthAccountSummary);
+      },
+      onValidateDraft: async (target) => {
+        if (!isWebAuthTarget(target)) {
+          return target;
+        }
+        return validateWebAuthTarget(target, loadWebAuthAccountSummary);
+      },
+      onClearAuthDraft: async (target) => {
+        if (!isWebAuthTarget(target)) {
+          return target;
+        }
+        return clearWebAuthTarget(target);
+      },
       onSave: async (target) => {
         await options.plugin.addTarget(target);
         options.requestRefresh();
@@ -35774,6 +36781,24 @@ function mountSettingsView(containerEl, options) {
     new EditTargetModal(options.plugin.app, {
       mode: "edit",
       target: normalizeTarget(cloneTarget(currentTarget)),
+      onAuthorizeDraft: async (target) => {
+        if (!isWebAuthTarget(target)) {
+          return target;
+        }
+        return authorizeWebAuthTarget(target, desktopWebAuthService, loadWebAuthAccountSummary);
+      },
+      onValidateDraft: async (target) => {
+        if (!isWebAuthTarget(target)) {
+          return target;
+        }
+        return validateWebAuthTarget(target, loadWebAuthAccountSummary);
+      },
+      onClearAuthDraft: async (target) => {
+        if (!isWebAuthTarget(target)) {
+          return target;
+        }
+        return clearWebAuthTarget(target);
+      },
       onSave: async (target) => {
         await options.plugin.updateTarget(targetId, (draft) => {
           Object.assign(draft, target);
@@ -35809,7 +36834,7 @@ function render(root, props) {
 }
 
 // src/ui/UltimatePublisherSettingTab.ts
-var UltimatePublisherSettingTab = class extends import_obsidian9.PluginSettingTab {
+var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
@@ -35829,7 +36854,7 @@ var UltimatePublisherSettingTab = class extends import_obsidian9.PluginSettingTa
 };
 
 // src/ui/modals/BatchPublishModal.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 
 // src/ui/publishSummary.ts
 var DEFAULT_DASHBOARD_RECORD_LIMIT = 10;
@@ -35908,7 +36933,7 @@ function summarizeBatchSelection(targets, selectedTargetIds) {
 }
 
 // src/ui/modals/BatchPublishModal.ts
-var BatchPublishModal = class extends import_obsidian10.Modal {
+var BatchPublishModal = class extends import_obsidian13.Modal {
   constructor(plugin, file, workflow) {
     super(plugin.app);
     this.plugin = plugin;
@@ -35983,7 +37008,7 @@ var BatchPublishModal = class extends import_obsidian10.Modal {
   async handleBatchPublish() {
     const selectedTargets = this.getSelectedTargets();
     if (selectedTargets.length === 0) {
-      new import_obsidian10.Notice("Select at least one target before running batch publish.", 6e3);
+      new import_obsidian13.Notice("Select at least one target before running batch publish.", 6e3);
       return;
     }
     this.isPublishing = true;
@@ -36001,13 +37026,13 @@ var BatchPublishModal = class extends import_obsidian10.Modal {
         successCount: result.successCount,
         failureCount: result.failureCount
       };
-      new import_obsidian10.Notice(
+      new import_obsidian13.Notice(
         `Batch publish finished: ${result.successCount} succeeded, ${result.failureCount} failed.`,
         6e3
       );
     } catch (error) {
       this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
-      new import_obsidian10.Notice(`Batch publish failed: ${this.fatalErrorMessage}`, 8e3);
+      new import_obsidian13.Notice(`Batch publish failed: ${this.fatalErrorMessage}`, 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -36091,8 +37116,8 @@ var BatchPublishModal = class extends import_obsidian10.Modal {
 };
 
 // src/ui/modals/NormalPublishModal.ts
-var import_obsidian11 = require("obsidian");
-var NormalPublishModal = class extends import_obsidian11.Modal {
+var import_obsidian14 = require("obsidian");
+var NormalPublishModal = class extends import_obsidian14.Modal {
   constructor(plugin, file, workflow) {
     super(plugin.app);
     this.plugin = plugin;
@@ -36129,10 +37154,10 @@ var NormalPublishModal = class extends import_obsidian11.Modal {
       const result = await this.workflow.runSingle(this.file, target, this.plugin.settings);
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
-      new import_obsidian11.Notice(`Publish succeeded: ${target.name} ${result.action}.`);
+      new import_obsidian14.Notice(`Publish succeeded: ${target.name} ${result.action}.`);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : String(error);
-      new import_obsidian11.Notice(`Publish failed: ${this.errorMessage}`, 8e3);
+      new import_obsidian14.Notice(`Publish failed: ${this.errorMessage}`, 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -36208,7 +37233,7 @@ var NormalPublishModal = class extends import_obsidian11.Modal {
       const target = this.getTargetById(this.selectedTargetId);
       if (!target || !target.enabled) {
         this.errorMessage = "Selected target is not available.";
-        new import_obsidian11.Notice(this.errorMessage, 6e3);
+        new import_obsidian14.Notice(this.errorMessage, 6e3);
         void this.render();
         return;
       }
@@ -36317,7 +37342,7 @@ function buildQuickPublishChildren(enabledTargets) {
 }
 
 // src/ui/views/PublisherDashboardView.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
 function formatTimestamp(timestamp) {
   if (!timestamp) {
@@ -36329,7 +37354,7 @@ function formatTimestamp(timestamp) {
   }
   return parsed.toLocaleString();
 }
-var PublisherDashboardView = class extends import_obsidian12.ItemView {
+var PublisherDashboardView = class extends import_obsidian15.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -36444,7 +37469,7 @@ var PublisherDashboardView = class extends import_obsidian12.ItemView {
 };
 
 // src/plugin.ts
-var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
+var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -36525,7 +37550,7 @@ var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new import_obsidian13.Notice("Unable to open the publisher dashboard.");
+      new import_obsidian16.Notice("Unable to open the publisher dashboard.");
       return;
     }
     await leaf.setViewState({
@@ -36540,7 +37565,7 @@ var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
   openNormalPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian13.Notice("Open a Markdown note before publishing.");
+      new import_obsidian16.Notice("Open a Markdown note before publishing.");
       return;
     }
     new NormalPublishModal(this, file, this.publishWorkflow).open();
@@ -36548,7 +37573,7 @@ var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
   openBatchPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian13.Notice("Open a Markdown note before publishing.");
+      new import_obsidian16.Notice("Open a Markdown note before publishing.");
       return;
     }
     new BatchPublishModal(this, file, this.publishWorkflow).open();
@@ -36556,12 +37581,12 @@ var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
   async runQuickPublishForTarget(targetId) {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian13.Notice("Open a Markdown note before publishing.");
+      new import_obsidian16.Notice("Open a Markdown note before publishing.");
       return;
     }
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new import_obsidian13.Notice("Enable the selected publish target before using Quick Publish.", 6e3);
+      new import_obsidian16.Notice("Enable the selected publish target before using Quick Publish.", 6e3);
       return;
     }
     await this.publishToTarget(file, target);
@@ -36574,12 +37599,12 @@ var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian13.Notice("Open a Markdown note before publishing.");
+      new import_obsidian16.Notice("Open a Markdown note before publishing.");
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian13.Notice("Configure at least one enabled publish target first.");
+      new import_obsidian16.Notice("Configure at least one enabled publish target first.");
       return;
     }
     if (targets.length === 1) {
@@ -36594,15 +37619,15 @@ var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
     return this.settings.targets.filter((target) => target.enabled);
   }
   getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian13.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
     const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian13.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian16.TFile) || file.extension !== "md") {
       return null;
     }
     return file;
   }
   showPublisherMenu(items, position) {
-    const menu = new import_obsidian13.Menu();
+    const menu = new import_obsidian16.Menu();
     menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -36675,16 +37700,16 @@ var UltimatePublisherPlugin = class extends import_obsidian13.Plugin {
     }
   }
   async publishToTarget(file, target) {
-    new import_obsidian13.Notice(`Publishing "${file.basename}" to ${target.name}...`);
+    new import_obsidian16.Notice(`Publishing "${file.basename}" to ${target.name}...`);
     try {
       const result = await this.publishWorkflow.runSingle(file, target, this.settings);
       this.settings = result.settings;
       await this.saveSettings();
       const actionLabel = result.action === "update" ? "updated" : "published";
-      new import_obsidian13.Notice(`Publish succeeded: ${target.name} ${actionLabel}.`);
+      new import_obsidian16.Notice(`Publish succeeded: ${target.name} ${actionLabel}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian13.Notice(`Publish failed: ${message}`, 8e3);
+      new import_obsidian16.Notice(`Publish failed: ${message}`, 8e3);
       throw error;
     }
   }

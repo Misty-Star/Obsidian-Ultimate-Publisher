@@ -36,4 +36,59 @@ describe("modalForm", () => {
     expect(localExportTarget.provider).toBe("local-export");
     expect(localExportTarget.yamlType).toBe("hexo");
   });
+
+  it("returns zhihu-specific fields for zhihu targets", () => {
+    const fields = getModalFieldDefinitions({
+      id: "zhihu-target",
+      name: "Zhihu",
+      enabled: true,
+      provider: "zhihu",
+      cookie: "",
+      defaultColumnId: "",
+      defaultColumnTitle: "",
+    } as any).map((field) => field.key);
+
+    expect(fields).toEqual([
+      "enabled",
+      "name",
+      "cookie",
+      "defaultColumnId",
+      "defaultColumnTitle",
+    ]);
+  });
+
+  it("parses csdn and juejin comma-separated default fields", () => {
+    const csdnTarget = applyFieldValue(
+      {
+        id: "csdn-target",
+        name: "CSDN",
+        enabled: true,
+        provider: "csdn",
+        cookie: "",
+        defaultCategories: [],
+        defaultTags: [],
+      } as any,
+      "defaultCategories",
+      "后端, 开发工具"
+    );
+    const juejinTarget = applyFieldValue(
+      {
+        id: "juejin-target",
+        name: "Juejin",
+        enabled: true,
+        provider: "juejin",
+        cookie: "",
+        defaultCategoryId: "",
+        defaultCategoryName: "",
+        defaultTagIds: [],
+        defaultTagNames: [],
+        defaultBriefContent: "",
+      } as any,
+      "defaultTagIds",
+      "1, 2,3"
+    );
+
+    expect(csdnTarget.defaultCategories).toEqual(["后端", "开发工具"]);
+    expect(juejinTarget.defaultTagIds).toEqual(["1", "2", "3"]);
+  });
 });

@@ -4,6 +4,7 @@ import { PublishContentFormat, PublishTargetConfig, WordpressStatus } from "../.
 export type ModalFieldKey =
   | "enabled"
   | "name"
+  | "cookie"
   | "endpoint"
   | "username"
   | "appPassword"
@@ -13,6 +14,13 @@ export type ModalFieldKey =
   | "repo"
   | "token"
   | "publicLevel"
+  | "defaultColumnId"
+  | "defaultColumnTitle"
+  | "defaultCategories"
+  | "defaultTags"
+  | "defaultCategoryId"
+  | "defaultTagIds"
+  | "defaultBriefContent"
   | "outputDir"
   | "yamlType"
   | "assetDirName";
@@ -35,6 +43,15 @@ export interface ModalFieldDefinition {
 const COMMON_FIELDS: ModalFieldDefinition[] = [
   { key: "enabled", label: "Enabled", type: "toggle" },
   { key: "name", label: "Display name", type: "text" },
+];
+
+const WEB_AUTH_COMMON_FIELDS: ModalFieldDefinition[] = [
+  {
+    key: "cookie",
+    label: "Cookie",
+    description: "Paste Cookie manually if browser authorization fails.",
+    type: "password",
+  },
 ];
 
 const WORDPRESS_FIELDS: ModalFieldDefinition[] = [
@@ -94,6 +111,29 @@ const LOCAL_EXPORT_FIELDS: ModalFieldDefinition[] = [
   { key: "assetDirName", label: "Asset directory name", type: "text" },
 ];
 
+const ZHIHU_FIELDS: ModalFieldDefinition[] = [
+  { key: "defaultColumnId", label: "Default column ID", type: "text" },
+  { key: "defaultColumnTitle", label: "Default column title", type: "text" },
+];
+
+const CSDN_FIELDS: ModalFieldDefinition[] = [
+  { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
+  { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" },
+];
+
+const JUEJIN_FIELDS: ModalFieldDefinition[] = [
+  { key: "defaultCategoryId", label: "Default category ID", type: "text" },
+  { key: "defaultTagIds", label: "Default tag IDs", description: "Comma-separated tag IDs.", type: "text" },
+  { key: "defaultBriefContent", label: "Default brief content", type: "text" },
+];
+
+function splitCommaSeparatedValue(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export function getModalFieldDefinitions(target: PublishTargetConfig): ModalFieldDefinition[] {
   if (target.provider === "wordpress") {
     return [...COMMON_FIELDS, ...WORDPRESS_FIELDS];
@@ -101,6 +141,18 @@ export function getModalFieldDefinitions(target: PublishTargetConfig): ModalFiel
 
   if (target.provider === "yuque") {
     return [...COMMON_FIELDS, ...YUQUE_FIELDS];
+  }
+
+  if (target.provider === "zhihu") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS];
+  }
+
+  if (target.provider === "csdn") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS];
+  }
+
+  if (target.provider === "juejin") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS];
   }
 
   return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS];
@@ -112,6 +164,8 @@ export function readFieldValue(target: PublishTargetConfig, key: ModalFieldKey):
       return target.enabled;
     case "name":
       return target.name;
+    case "cookie":
+      return "cookie" in target ? target.cookie : "";
     case "endpoint":
       return target.provider === "wordpress" ? target.endpoint : "";
     case "username":
@@ -130,6 +184,20 @@ export function readFieldValue(target: PublishTargetConfig, key: ModalFieldKey):
       return target.provider === "yuque" ? target.token : "";
     case "publicLevel":
       return target.provider === "yuque" ? String(target.publicLevel) : "";
+    case "defaultColumnId":
+      return target.provider === "zhihu" ? target.defaultColumnId : "";
+    case "defaultColumnTitle":
+      return target.provider === "zhihu" ? target.defaultColumnTitle ?? "" : "";
+    case "defaultCategories":
+      return target.provider === "csdn" ? target.defaultCategories.join(", ") : "";
+    case "defaultTags":
+      return target.provider === "csdn" ? target.defaultTags.join(", ") : "";
+    case "defaultCategoryId":
+      return target.provider === "juejin" ? target.defaultCategoryId : "";
+    case "defaultTagIds":
+      return target.provider === "juejin" ? target.defaultTagIds.join(", ") : "";
+    case "defaultBriefContent":
+      return target.provider === "juejin" ? target.defaultBriefContent : "";
     case "outputDir":
       return target.provider === "local-export" ? target.outputDir : "";
     case "yamlType":
@@ -152,6 +220,11 @@ export function applyFieldValue(
       return nextTarget;
     case "name":
       nextTarget.name = String(value).trim() || nextTarget.name;
+      return nextTarget;
+    case "cookie":
+      if ("cookie" in nextTarget) {
+        nextTarget.cookie = String(value).trim();
+      }
       return nextTarget;
     case "endpoint":
       if (nextTarget.provider === "wordpress") {
@@ -196,6 +269,41 @@ export function applyFieldValue(
     case "publicLevel":
       if (nextTarget.provider === "yuque") {
         nextTarget.publicLevel = Number(value) === 1 ? 1 : 0;
+      }
+      return nextTarget;
+    case "defaultColumnId":
+      if (nextTarget.provider === "zhihu") {
+        nextTarget.defaultColumnId = String(value).trim();
+      }
+      return nextTarget;
+    case "defaultColumnTitle":
+      if (nextTarget.provider === "zhihu") {
+        nextTarget.defaultColumnTitle = String(value).trim();
+      }
+      return nextTarget;
+    case "defaultCategories":
+      if (nextTarget.provider === "csdn") {
+        nextTarget.defaultCategories = splitCommaSeparatedValue(String(value));
+      }
+      return nextTarget;
+    case "defaultTags":
+      if (nextTarget.provider === "csdn") {
+        nextTarget.defaultTags = splitCommaSeparatedValue(String(value));
+      }
+      return nextTarget;
+    case "defaultCategoryId":
+      if (nextTarget.provider === "juejin") {
+        nextTarget.defaultCategoryId = String(value).trim();
+      }
+      return nextTarget;
+    case "defaultTagIds":
+      if (nextTarget.provider === "juejin") {
+        nextTarget.defaultTagIds = splitCommaSeparatedValue(String(value));
+      }
+      return nextTarget;
+    case "defaultBriefContent":
+      if (nextTarget.provider === "juejin") {
+        nextTarget.defaultBriefContent = String(value).trim();
       }
       return nextTarget;
     case "outputDir":

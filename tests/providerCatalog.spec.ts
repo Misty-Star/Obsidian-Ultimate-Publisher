@@ -7,6 +7,9 @@ describe("getProviderCatalog", () => {
       "wordpress",
       "yuque",
       "local-export",
+      "zhihu",
+      "csdn",
+      "juejin",
     ]);
   });
 });

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
+  CsdnTargetConfig,
+  JuejinTargetConfig,
   LocalExportTargetConfig,
   PublishContentFormat,
   PublishRecord,
@@ -7,6 +9,7 @@ import {
   UltimatePublisherSettings,
   WordpressTargetConfig,
   YuqueTargetConfig,
+  ZhihuTargetConfig,
 } from "./types";
 
 export const DEFAULT_SETTINGS: UltimatePublisherSettings = {
@@ -53,6 +56,45 @@ export function createLocalExportTarget(): LocalExportTargetConfig {
   };
 }
 
+export function createZhihuTarget(): ZhihuTargetConfig {
+  return {
+    id: randomUUID(),
+    name: "Zhihu",
+    enabled: true,
+    provider: "zhihu",
+    cookie: "",
+    defaultColumnId: "",
+    defaultColumnTitle: "",
+  };
+}
+
+export function createCsdnTarget(): CsdnTargetConfig {
+  return {
+    id: randomUUID(),
+    name: "CSDN",
+    enabled: true,
+    provider: "csdn",
+    cookie: "",
+    defaultCategories: [],
+    defaultTags: [],
+  };
+}
+
+export function createJuejinTarget(): JuejinTargetConfig {
+  return {
+    id: randomUUID(),
+    name: "Juejin",
+    enabled: true,
+    provider: "juejin",
+    cookie: "",
+    defaultCategoryId: "",
+    defaultCategoryName: "",
+    defaultTagIds: [],
+    defaultTagNames: [],
+    defaultBriefContent: "",
+  };
+}
+
 export function getRecord(records: PublishRecord[], notePath: string, targetId: string): PublishRecord | undefined {
   return records.find((record) => record.notePath === notePath && record.targetId === targetId);
 }
@@ -79,6 +121,23 @@ export function cloneTarget(target: PublishTargetConfig): PublishTargetConfig {
   return JSON.parse(JSON.stringify(target)) as PublishTargetConfig;
 }
 
+function normalizeStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export function normalizeTarget(target: PublishTargetConfig): PublishTargetConfig {
   if (target.provider === "wordpress") {
     return {
@@ -93,6 +152,36 @@ export function normalizeTarget(target: PublishTargetConfig): PublishTargetConfi
       ...target,
       baseUrl: target.baseUrl || "https://www.yuque.com",
       publicLevel: target.publicLevel ?? 0,
+    };
+  }
+
+  if (target.provider === "zhihu") {
+    return {
+      ...target,
+      cookie: target.cookie || "",
+      defaultColumnId: target.defaultColumnId || "",
+      defaultColumnTitle: target.defaultColumnTitle || "",
+    };
+  }
+
+  if (target.provider === "csdn") {
+    return {
+      ...target,
+      cookie: target.cookie || "",
+      defaultCategories: normalizeStringList(target.defaultCategories),
+      defaultTags: normalizeStringList(target.defaultTags),
+    };
+  }
+
+  if (target.provider === "juejin") {
+    return {
+      ...target,
+      cookie: target.cookie || "",
+      defaultCategoryId: target.defaultCategoryId || "",
+      defaultCategoryName: target.defaultCategoryName || "",
+      defaultTagIds: normalizeStringList(target.defaultTagIds),
+      defaultTagNames: normalizeStringList(target.defaultTagNames),
+      defaultBriefContent: target.defaultBriefContent || "",
     };
   }
 
