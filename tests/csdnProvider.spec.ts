@@ -65,6 +65,12 @@ describe("CsdnProvider", () => {
         url: "https://bizapi.csdn.net/blog-console-api/v1/user/info",
         headers: expect.objectContaining({
           Cookie: "UserName=demo;",
+          accept: "*/*",
+          "content-type": "application/json",
+          "x-ca-key": "203803574",
+          "x-ca-signature-headers": "x-ca-key,x-ca-nonce",
+          "x-ca-nonce": expect.any(String),
+          "x-ca-signature": expect.any(String),
         }),
       })
     );
@@ -89,6 +95,17 @@ describe("CsdnProvider", () => {
     const request = vi.mocked(requestUrl).mock.calls[0]?.[0];
     expect(request?.url).toBe("https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle");
     expect(request?.method).toBe("POST");
+    expect(request?.headers).toEqual(
+      expect.objectContaining({
+        Cookie: "UserName=demo;",
+        accept: "*/*",
+        "content-type": "application/json",
+        "x-ca-key": "203803574",
+        "x-ca-signature-headers": "x-ca-key,x-ca-nonce",
+        "x-ca-nonce": expect.any(String),
+        "x-ca-signature": expect.any(String),
+      })
+    );
     expect(JSON.parse(String(request?.body))).toMatchObject({
       title: "Post",
       markdowncontent: "# Post",

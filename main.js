@@ -35346,6 +35346,7 @@ var YuqueProvider = class {
 };
 
 // src/providers/csdnProvider.ts
+var import_node_crypto3 = require("node:crypto");
 var import_obsidian7 = require("obsidian");
 
 // src/core/webPublishConfig.ts
@@ -35426,8 +35427,36 @@ function resolveJuejinPublishInput(note, target) {
 // src/providers/csdnProvider.ts
 function buildHeaders(target) {
   return {
-    "Content-Type": "application/json",
     Cookie: target.cookie
+  };
+}
+var CSDN_X_CA_KEY = "203803574";
+var CSDN_APP_SECRET = "9znpamsyl2c7cdrr9sas0le9vbc3r6ba";
+function generateXCaSignature(url, method, accept, nonce, contentType) {
+  const parsedUrl = new URL(url);
+  const path = method === "GET" ? `${parsedUrl.pathname}${parsedUrl.search}` : parsedUrl.pathname;
+  const stringToSign = `${method}
+${accept}
+
+${contentType}
+
+x-ca-key:${CSDN_X_CA_KEY}
+x-ca-nonce:${nonce}
+${path}`;
+  return (0, import_node_crypto3.createHmac)("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
+}
+function buildSignedHeaders(target, url, method, contentType) {
+  const accept = "*/*";
+  const nonce = (0, import_node_crypto3.randomUUID)();
+  const signature = generateXCaSignature(url, method, accept, nonce, contentType);
+  return {
+    ...buildHeaders(target),
+    accept,
+    "content-type": contentType,
+    "x-ca-key": CSDN_X_CA_KEY,
+    "x-ca-nonce": nonce,
+    "x-ca-signature": signature,
+    "x-ca-signature-headers": "x-ca-key,x-ca-nonce"
   };
 }
 function readJsonPayload(response) {
@@ -35450,10 +35479,11 @@ function readCookieValue(cookieHeader, key) {
   return "";
 }
 async function requestCsdn(target, url, method = "GET", body) {
+  const contentType = "application/json";
   const response = await (0, import_obsidian7.requestUrl)({
     url,
     method,
-    headers: buildHeaders(target),
+    headers: buildSignedHeaders(target, url, method, contentType),
     body: body ? JSON.stringify(body) : void 0,
     throw: false
   });

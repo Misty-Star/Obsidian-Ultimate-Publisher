@@ -1,3 +1,4 @@
+import { createHmac, randomUUID } from "node:crypto";
 import { App, requestUrl } from "obsidian";
 import { renderMarkdownToHtml } from "../core/html";
 import { assertRemoteAssetsSupported, MediaSupport, PublisherProvider, PublishResult } from "../core/providers";
@@ -21,8 +22,49 @@ interface CsdnPublishResponse {
 
 function buildHeaders(target: CsdnTargetConfig): Record<string, string> {
   return {
-    "Content-Type": "application/json",
     Cookie: target.cookie,
+  };
+}
+
+const CSDN_X_CA_KEY = "203803574";
+const CSDN_APP_SECRET = "9znpamsyl2c7cdrr9sas0le9vbc3r6ba";
+
+function generateXCaSignature(
+  url: string,
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+  accept: string,
+  nonce: string,
+  contentType: string
+): string {
+  const parsedUrl = new URL(url);
+  const path = method === "GET" ? `${parsedUrl.pathname}${parsedUrl.search}` : parsedUrl.pathname;
+  const stringToSign =
+    `${method}\n${accept}\n\n${contentType}\n\n` +
+    `x-ca-key:${CSDN_X_CA_KEY}\n` +
+    `x-ca-nonce:${nonce}\n` +
+    `${path}`;
+
+  return createHmac("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
+}
+
+function buildSignedHeaders(
+  target: CsdnTargetConfig,
+  url: string,
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+  contentType: string
+): Record<string, string> {
+  const accept = "*/*";
+  const nonce = randomUUID();
+  const signature = generateXCaSignature(url, method, accept, nonce, contentType);
+
+  return {
+    ...buildHeaders(target),
+    accept,
+    "content-type": contentType,
+    "x-ca-key": CSDN_X_CA_KEY,
+    "x-ca-nonce": nonce,
+    "x-ca-signature": signature,
+    "x-ca-signature-headers": "x-ca-key,x-ca-nonce",
   };
 }
 
@@ -57,10 +99,11 @@ async function requestCsdn<T>(
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" = "GET",
   body?: unknown
 ): Promise<T> {
+  const contentType = "application/json";
   const response = await requestUrl({
     url,
     method,
-    headers: buildHeaders(target),
+    headers: buildSignedHeaders(target, url, method, contentType),
     body: body ? JSON.stringify(body) : undefined,
     throw: false,
   });
