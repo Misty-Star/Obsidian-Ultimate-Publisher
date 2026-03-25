@@ -1,6 +1,7 @@
 import { MarkdownView, Menu, Notice, Plugin, TFile } from "obsidian";
 import { PublishService } from "./core/publishService";
 import { PublishWorkflow } from "./core/publishWorkflow";
+import { createI18nFromObsidianLanguage, Translator } from "./i18n";
 import { ProviderRegistry } from "./providers/registry";
 import { cloneTarget, DEFAULT_SETTINGS, normalizeTarget } from "./settings";
 import { PublishTargetConfig, UltimatePublisherSettings } from "./types";
@@ -43,9 +44,11 @@ export default class UltimatePublisherPlugin extends Plugin {
   settings: UltimatePublisherSettings = DEFAULT_SETTINGS;
   private publishService!: PublishService;
   private publishWorkflow!: PublishWorkflow;
+  private i18n: Translator = createI18nFromObsidianLanguage();
 
   async onload(): Promise<void> {
     await this.loadSettings();
+    this.i18n = createI18nFromObsidianLanguage();
 
     const providers = new ProviderRegistry(this.app);
     this.publishService = new PublishService(this.app, providers);
@@ -53,7 +56,7 @@ export default class UltimatePublisherPlugin extends Plugin {
 
     this.registerView(PUBLISHER_DASHBOARD_VIEW_TYPE, (leaf) => new PublisherDashboardView(leaf, this));
 
-    this.addRibbonIcon("upload", "Ultimate Publisher", (event) => {
+    this.addRibbonIcon("upload", this.i18n.t("menu.publish"), (event) => {
       const anchorEl = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
       this.openRibbonMenu(anchorEl);
     });
@@ -124,7 +127,7 @@ export default class UltimatePublisherPlugin extends Plugin {
         name,
         provider,
       })),
-    });
+    }, this.i18n);
 
     this.showPublisherMenu(menuModel, this.getRootMenuPosition(anchorEl));
   }
@@ -133,7 +136,7 @@ export default class UltimatePublisherPlugin extends Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new Notice("Unable to open the publisher dashboard.");
+      new Notice(this.i18n.t("notice.dashboard.openFailed"));
       return;
     }
 
@@ -151,7 +154,7 @@ export default class UltimatePublisherPlugin extends Plugin {
   openNormalPublishForActiveNote(): void {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new Notice("Open a Markdown note before publishing.");
+      new Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
 
@@ -161,7 +164,7 @@ export default class UltimatePublisherPlugin extends Plugin {
   openBatchPublishForActiveNote(): void {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new Notice("Open a Markdown note before publishing.");
+      new Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
 
@@ -171,13 +174,13 @@ export default class UltimatePublisherPlugin extends Plugin {
   async runQuickPublishForTarget(targetId: string): Promise<void> {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new Notice("Open a Markdown note before publishing.");
+      new Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
 
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new Notice("Enable the selected publish target before using Quick Publish.", 6000);
+      new Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6000);
       return;
     }
 
@@ -193,13 +196,13 @@ export default class UltimatePublisherPlugin extends Plugin {
   async publishActiveNote(): Promise<void> {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new Notice("Open a Markdown note before publishing.");
+      new Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
 
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new Notice("Configure at least one enabled publish target first.");
+      new Notice(this.i18n.t("notice.publish.noEnabledTargets"));
       return;
     }
 
@@ -317,17 +320,20 @@ export default class UltimatePublisherPlugin extends Plugin {
   }
 
   private async publishToTarget(file: TFile, target: PublishTargetConfig): Promise<void> {
-    new Notice(`Publishing "${file.basename}" to ${target.name}...`);
+    new Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
 
     try {
       const result = await this.publishWorkflow.runSingle(file, target, this.settings);
       this.settings = result.settings;
       await this.saveSettings();
-      const actionLabel = result.action === "update" ? "updated" : "published";
-      new Notice(`Publish succeeded: ${target.name} ${actionLabel}.`);
+      const actionLabel =
+        result.action === "update"
+          ? this.i18n.t("notice.publish.action.updated")
+          : this.i18n.t("notice.publish.action.published");
+      new Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      new Notice(`Publish failed: ${message}`, 8000);
+      new Notice(this.i18n.t("notice.publish.failed", { error: message }), 8000);
       throw error;
     }
   }
