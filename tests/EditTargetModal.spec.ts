@@ -38,6 +38,21 @@ describe("modalForm", () => {
     ]);
   });
 
+  it("uses locale fallback for modal labels when translator returns en fallback", () => {
+    const zhWithEnFallback = {
+      locale: "zh-CN" as const,
+      t(key: string): string {
+        if (key === "settings.modal.field.name.label") {
+          return "Display name";
+        }
+        return key;
+      },
+    };
+
+    const fields = getModalFieldDefinitions(createWordpressTarget(), zhWithEnFallback);
+    expect(fields.find((field) => field.key === "name")?.label).toBe("显示名称");
+  });
+
   it("trims text input and ignores fields from other providers", () => {
     const wordpressTarget = createWordpressTarget();
     const nextTarget = applyFieldValue(wordpressTarget, "endpoint", " https://example.com ");

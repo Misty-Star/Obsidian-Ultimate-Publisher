@@ -1,6 +1,7 @@
 import { cloneTarget, normalizeTarget } from "../../settings";
 import { PublishContentFormat, PublishTargetConfig, WordpressStatus } from "../../types";
 import { createI18n, Translator } from "../../i18n";
+import { messages } from "../../i18n/messages";
 
 export type ModalFieldKey =
   | "enabled"
@@ -193,9 +194,8 @@ function resolveTranslation(
   key: string,
   fallback: { en: string; "zh-CN": string }
 ): string {
-  const translated = i18n.t(key);
-  if (translated !== key) {
-    return translated;
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
   }
   return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
 }
@@ -241,20 +241,33 @@ export function getModalFieldDefinitions(
   target: PublishTargetConfig,
   i18n: Translator = DEFAULT_I18N
 ): ModalFieldDefinition[] {
-  const fieldsByProvider =
-    target.provider === "wordpress"
-      ? [...COMMON_FIELDS, ...WORDPRESS_FIELDS]
-      : target.provider === "yuque"
-        ? [...COMMON_FIELDS, ...YUQUE_FIELDS]
-        : target.provider === "zhihu"
-          ? [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS]
-          : target.provider === "csdn"
-            ? [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS]
-            : target.provider === "juejin"
-              ? [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS]
-              : [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS];
+  if (target.provider === "wordpress") {
+    return [...COMMON_FIELDS, ...WORDPRESS_FIELDS].map((field) => localizeField(field, i18n));
+  }
 
-  return fieldsByProvider.map((field) => localizeField(field, i18n));
+  if (target.provider === "yuque") {
+    return [...COMMON_FIELDS, ...YUQUE_FIELDS].map((field) => localizeField(field, i18n));
+  }
+
+  if (target.provider === "zhihu") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS].map((field) =>
+      localizeField(field, i18n)
+    );
+  }
+
+  if (target.provider === "csdn") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS].map((field) =>
+      localizeField(field, i18n)
+    );
+  }
+
+  if (target.provider === "juejin") {
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS].map((field) =>
+      localizeField(field, i18n)
+    );
+  }
+
+  return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS].map((field) => localizeField(field, i18n));
 }
 
 export function readFieldValue(target: PublishTargetConfig, key: ModalFieldKey): string | boolean {

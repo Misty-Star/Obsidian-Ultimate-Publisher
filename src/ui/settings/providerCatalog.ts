@@ -17,6 +17,7 @@ import {
   ZhihuTargetConfig,
 } from "../../types";
 import { createI18n, Translator } from "../../i18n";
+import { messages } from "../../i18n/messages";
 
 interface ProviderCatalogBase<TTarget extends PublishTargetConfig> {
   id: TTarget["provider"];
@@ -38,6 +39,14 @@ interface ProviderCatalogSeed<TTarget extends PublishTargetConfig> {
   createTarget: () => TTarget;
 }
 
+type ProviderCatalogSeedEntry =
+  | ProviderCatalogSeed<WordpressTargetConfig>
+  | ProviderCatalogSeed<YuqueTargetConfig>
+  | ProviderCatalogSeed<LocalExportTargetConfig>
+  | ProviderCatalogSeed<ZhihuTargetConfig>
+  | ProviderCatalogSeed<CsdnTargetConfig>
+  | ProviderCatalogSeed<JuejinTargetConfig>;
+
 export type ProviderCatalogEntry =
   | ProviderCatalogBase<WordpressTargetConfig>
   | ProviderCatalogBase<YuqueTargetConfig>
@@ -46,7 +55,7 @@ export type ProviderCatalogEntry =
   | ProviderCatalogBase<CsdnTargetConfig>
   | ProviderCatalogBase<JuejinTargetConfig>;
 
-const PROVIDER_CATALOG: ProviderCatalogSeed<PublishTargetConfig>[] = [
+const PROVIDER_CATALOG: ProviderCatalogSeedEntry[] = [
   {
     id: "wordpress",
     name: "WordPress",
@@ -64,7 +73,7 @@ const PROVIDER_CATALOG: ProviderCatalogSeed<PublishTargetConfig>[] = [
     descriptionKey: "settings.providers.yuque.description",
     descriptionFallback: {
       en: "Token-based publishing to a Yuque knowledge base.",
-      "zh-CN": "使用 Token 向语雀知识库发布内容。",
+      "zh-CN": "使用 Token 向 Yuque 知识库发布内容。",
     },
     icon: "YQ",
     createTarget: createYuqueTarget,
@@ -86,7 +95,7 @@ const PROVIDER_CATALOG: ProviderCatalogSeed<PublishTargetConfig>[] = [
     descriptionKey: "settings.providers.zhihu.description",
     descriptionFallback: {
       en: "Cookie-based desktop web publishing to Zhihu columns.",
-      "zh-CN": "使用 Cookie，通过桌面网页发布到知乎专栏。",
+      "zh-CN": "使用 Cookie，通过桌面网页发布到 Zhihu 专栏。",
     },
     icon: "ZH",
     createTarget: createZhihuTarget,
@@ -108,7 +117,7 @@ const PROVIDER_CATALOG: ProviderCatalogSeed<PublishTargetConfig>[] = [
     descriptionKey: "settings.providers.juejin.description",
     descriptionFallback: {
       en: "Cookie-based desktop web publishing to Juejin posts.",
-      "zh-CN": "使用 Cookie，通过桌面网页发布到掘金文章。",
+      "zh-CN": "使用 Cookie，通过桌面网页发布到 Juejin 文章。",
     },
     icon: "JJ",
     createTarget: createJuejinTarget,
@@ -122,21 +131,40 @@ function resolveTranslation(
   key: string,
   fallback: { en: string; "zh-CN": string }
 ): string {
-  const translated = i18n.t(key);
-  if (translated !== key) {
-    return translated;
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
   }
   return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
 }
 
-export function getProviderCatalog(i18n: Translator = DEFAULT_I18N): ProviderCatalogEntry[] {
-  return PROVIDER_CATALOG.map((entry) => ({
-    id: entry.id,
+function localizeProviderCatalogEntry(
+  entry: ProviderCatalogSeedEntry,
+  i18n: Translator
+): ProviderCatalogEntry {
+  const base = {
     name: entry.name,
     description: resolveTranslation(i18n, entry.descriptionKey, entry.descriptionFallback),
     icon: entry.icon,
-    createTarget: entry.createTarget,
-  })) as ProviderCatalogEntry[];
+  };
+
+  switch (entry.id) {
+    case "wordpress":
+      return { id: "wordpress", ...base, createTarget: entry.createTarget };
+    case "yuque":
+      return { id: "yuque", ...base, createTarget: entry.createTarget };
+    case "local-export":
+      return { id: "local-export", ...base, createTarget: entry.createTarget };
+    case "zhihu":
+      return { id: "zhihu", ...base, createTarget: entry.createTarget };
+    case "csdn":
+      return { id: "csdn", ...base, createTarget: entry.createTarget };
+    case "juejin":
+      return { id: "juejin", ...base, createTarget: entry.createTarget };
+  }
+}
+
+export function getProviderCatalog(i18n: Translator = DEFAULT_I18N): ProviderCatalogEntry[] {
+  return PROVIDER_CATALOG.map((entry) => localizeProviderCatalogEntry(entry, i18n));
 }
 
 export function getProviderCatalogEntry(
