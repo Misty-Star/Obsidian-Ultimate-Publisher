@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { createDesktopWebAuthService } from "../../core/desktopWebAuth";
+import { createI18nFromObsidianLanguage, Translator } from "../../i18n";
 import UltimatePublisherPlugin from "../../plugin";
 import { cloneTarget, normalizeTarget } from "../../settings";
 import { ProviderId, UltimatePublisherSettings } from "../../types";
@@ -30,6 +31,7 @@ export function mountSettingsView(containerEl: HTMLElement, options: MountSettin
   const root = createRoot(containerEl);
   const providers = new ProviderRegistry(options.plugin.app);
   const desktopWebAuthService = createDesktopWebAuthService();
+  const i18n = createI18nFromObsidianLanguage();
 
   const loadWebAuthAccountSummary = async (target: WebAuthTargetConfig) => {
     const provider = providers.get(target) as {
@@ -129,6 +131,7 @@ export function mountSettingsView(containerEl: HTMLElement, options: MountSettin
   };
 
   render(root, {
+    i18n,
     settings: options.settings,
     onAddProvider: handleAddProvider,
     onDeleteTarget: handleDeleteTarget,
@@ -145,6 +148,7 @@ export function mountSettingsView(containerEl: HTMLElement, options: MountSettin
 function render(
   root: Root,
   props: {
+    i18n: Translator;
     settings: UltimatePublisherSettings;
     onAddProvider: (providerId: ProviderId) => void | Promise<void>;
     onDeleteTarget: (targetId: string) => void | Promise<void>;
@@ -153,6 +157,7 @@ function render(
 ): void {
   root.render(
     <SettingsView
+      i18n={props.i18n}
       settings={props.settings}
       onAddProvider={props.onAddProvider}
       onDeleteTarget={props.onDeleteTarget}

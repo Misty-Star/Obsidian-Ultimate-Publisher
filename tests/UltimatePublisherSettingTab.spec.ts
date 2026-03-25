@@ -38,6 +38,7 @@ describe("UltimatePublisherSettingTab", () => {
       expect.objectContaining({
         plugin,
         settings: plugin.settings,
+        requestRefresh: expect.any(Function),
       })
     );
   });
