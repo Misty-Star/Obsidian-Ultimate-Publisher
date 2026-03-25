@@ -1,4 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
+import { createI18nFromObsidianLanguage, Translator } from "../../i18n";
 import { PublishTargetConfig } from "../../types";
 import { getProviderCatalogEntry } from "./providerCatalog";
 import { applyFieldValue, getModalFieldDefinitions, readFieldValue } from "./modalForm";
@@ -33,13 +34,17 @@ export class EditTargetModal extends Modal {
   private render(): void {
     const { contentEl } = this;
     contentEl.empty();
+    const i18n = createI18nFromObsidianLanguage();
 
     const providerName = getProviderCatalogEntry(this.draft.provider)?.name ?? this.draft.name;
     contentEl.createEl("h2", {
-      text: `${this.options.mode === "create" ? "Add" : "Edit"} ${providerName} Target`,
+      text:
+        this.options.mode === "create"
+          ? i18n.t("settings.modal.title.addTarget", { provider: providerName })
+          : i18n.t("settings.modal.title.editTarget", { provider: providerName }),
     });
 
-    for (const field of getModalFieldDefinitions(this.draft)) {
+    for (const field of getModalFieldDefinitions(this.draft, i18n)) {
       const setting = new Setting(contentEl).setName(field.label);
       if (field.description) {
         setting.setDesc(field.description);
@@ -79,15 +84,15 @@ export class EditTargetModal extends Modal {
     }
 
     if (isWebAuthTarget(this.draft)) {
-      this.renderWebAuthSection(contentEl, this.draft);
+      this.renderWebAuthSection(contentEl, this.draft, i18n);
     }
 
     const actions = contentEl.createDiv({ cls: "ultimate-publisher-settings-modal-actions" });
-    const cancelButton = actions.createEl("button", { text: "Cancel" });
+    const cancelButton = actions.createEl("button", { text: i18n.t("settings.modal.action.cancel") });
     cancelButton.disabled = this.activeAction !== null;
     cancelButton.addEventListener("click", () => this.close());
 
-    const saveButton = actions.createEl("button", { text: "Save" });
+    const saveButton = actions.createEl("button", { text: i18n.t("settings.modal.action.save") });
     saveButton.addClass("mod-cta");
     saveButton.disabled = this.activeAction !== null;
     saveButton.addEventListener("click", async () => {
@@ -96,31 +101,38 @@ export class EditTargetModal extends Modal {
     });
   }
 
-  private renderWebAuthSection(containerEl: HTMLElement, target: WebAuthTargetConfig): void {
+  private renderWebAuthSection(containerEl: HTMLElement, target: WebAuthTargetConfig, i18n: Translator): void {
     const section = containerEl.createDiv({ cls: "ultimate-publisher-settings-web-auth" });
-    section.createEl("h3", { text: "Authorization" });
+    section.createEl("h3", { text: i18n.t("settings.modal.auth.title") });
 
     const status = section.createEl("p", {
       text: target.cookie
         ? target.lastValidatedAt
-          ? "Status: Authorized"
-          : "Status: Cookie set, validation pending"
-        : "Status: Not authorized",
+          ? i18n.t("settings.modal.auth.status.authorized")
+          : i18n.t("settings.modal.auth.status.cookiePending")
+        : i18n.t("settings.modal.auth.status.notAuthorized"),
     });
     status.addClass("ultimate-publisher-meta");
 
     if (target.accountName || target.accountId) {
+      const accountName = target.accountName ?? i18n.t("settings.modal.auth.unknownAccount");
       section.createEl("p", {
-        text: `Account: ${target.accountName ?? "Unknown"}${target.accountId ? ` (${target.accountId})` : ""}`,
+        text: i18n.t("settings.modal.auth.account", {
+          name: `${accountName}${target.accountId ? ` (${target.accountId})` : ""}`,
+        }),
       });
     }
 
     if (target.lastAuthAt) {
-      section.createEl("p", { text: `Last auth: ${target.lastAuthAt}` });
+      section.createEl("p", {
+        text: i18n.t("settings.modal.auth.lastAuth", { timestamp: target.lastAuthAt }),
+      });
     }
 
     if (target.lastValidatedAt) {
-      section.createEl("p", { text: `Last validated: ${target.lastValidatedAt}` });
+      section.createEl("p", {
+        text: i18n.t("settings.modal.auth.lastValidated", { timestamp: target.lastValidatedAt }),
+      });
     }
 
     if (this.statusMessage) {
@@ -128,22 +140,49 @@ export class EditTargetModal extends Modal {
     }
 
     const actions = section.createDiv({ cls: "ultimate-publisher-settings-modal-actions" });
-    const authorizeButton = actions.createEl("button", { text: this.activeAction === "authorize" ? "Authorizing..." : "网页授权" });
+    const authorizeButton = actions.createEl("button", {
+      text:
+        this.activeAction === "authorize"
+          ? i18n.t("settings.modal.auth.action.authorizing")
+          : i18n.t("settings.modal.auth.action.authorize"),
+    });
     authorizeButton.disabled = this.activeAction !== null;
     authorizeButton.addEventListener("click", () => {
-      void this.runDraftAction("authorize", this.options.onAuthorizeDraft, "Browser authorization completed.");
+      void this.runDraftAction(
+        "authorize",
+        this.options.onAuthorizeDraft,
+        i18n.t("settings.modal.auth.success.authorized")
+      );
     });
 
-    const validateButton = actions.createEl("button", { text: this.activeAction === "validate" ? "Validating..." : "校验配置" });
+    const validateButton = actions.createEl("button", {
+      text:
+        this.activeAction === "validate"
+          ? i18n.t("settings.modal.auth.action.validating")
+          : i18n.t("settings.modal.auth.action.validate"),
+    });
     validateButton.disabled = this.activeAction !== null;
     validateButton.addEventListener("click", () => {
-      void this.runDraftAction("validate", this.options.onValidateDraft, "Validation completed.");
+      void this.runDraftAction(
+        "validate",
+        this.options.onValidateDraft,
+        i18n.t("settings.modal.auth.success.validated")
+      );
     });
 
-    const clearButton = actions.createEl("button", { text: this.activeAction === "clear" ? "Clearing..." : "清除授权" });
+    const clearButton = actions.createEl("button", {
+      text:
+        this.activeAction === "clear"
+          ? i18n.t("settings.modal.auth.action.clearing")
+          : i18n.t("settings.modal.auth.action.clear"),
+    });
     clearButton.disabled = this.activeAction !== null;
     clearButton.addEventListener("click", () => {
-      void this.runDraftAction("clear", this.options.onClearAuthDraft, "Authorization data cleared.");
+      void this.runDraftAction(
+        "clear",
+        this.options.onClearAuthDraft,
+        i18n.t("settings.modal.auth.success.cleared")
+      );
     });
   }
 

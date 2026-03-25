@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, FakeElement } from "obsidian";
+import { WorkspaceLeaf, FakeElement, resetObsidianTestState, setObsidianTestLanguage } from "obsidian";
 import { describe, expect, it, vi } from "vitest";
 import { deriveDashboardSummary, deriveNoteTargetSummaries, summarizeBatchSelection } from "../src/ui/publishSummary";
 import { createLocalExportTarget, createWordpressTarget, createYuqueTarget } from "../src/settings";
@@ -119,6 +119,8 @@ describe("publishSummary", () => {
   });
 
   it("renders the dashboard view with summary cards, lists, and shortcut buttons", async () => {
+    resetObsidianTestState();
+    setObsidianTestLanguage("en");
     const plugin = {
       settings: {
         targets: [
@@ -165,6 +167,41 @@ describe("publishSummary", () => {
     findButton(view.contentEl, "Normal Publish").click();
     findButton(view.contentEl, "Batch Publish").click();
     findButton(view.contentEl, "Publish Settings").click();
+
+    expect(plugin.openNormalPublishForActiveNote).toHaveBeenCalledTimes(1);
+    expect(plugin.openBatchPublishForActiveNote).toHaveBeenCalledTimes(1);
+    expect(plugin.openPublishSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders zh-CN dashboard headings and shortcut buttons", async () => {
+    resetObsidianTestState();
+    setObsidianTestLanguage("zh-CN");
+
+    const plugin = {
+      settings: {
+        targets: [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }],
+        records: [],
+      },
+      openNormalPublishForActiveNote: vi.fn(),
+      openBatchPublishForActiveNote: vi.fn(),
+      openPublishSettings: vi.fn(),
+    };
+
+    const view = new PublisherDashboardView(new WorkspaceLeaf(), plugin as never);
+    await view.onOpen();
+
+    const renderedText = collectText(view.contentEl).join(" ");
+    expect(renderedText).toContain("已配置目标");
+    expect(renderedText).toContain("启用目标");
+    expect(renderedText).toContain("最近发布");
+    expect(renderedText).toContain("目标状态");
+    expect(renderedText).toContain("快捷操作");
+    expect(renderedText).toContain("最近记录");
+    expect(renderedText).toContain("尚无发布记录。");
+
+    findButton(view.contentEl, "普通发布").click();
+    findButton(view.contentEl, "批量发布").click();
+    findButton(view.contentEl, "发布设置").click();
 
     expect(plugin.openNormalPublishForActiveNote).toHaveBeenCalledTimes(1);
     expect(plugin.openBatchPublishForActiveNote).toHaveBeenCalledTimes(1);
