@@ -1,4 +1,5 @@
 ﻿import { PublishTargetConfig } from "../types";
+import { Translator } from "../i18n";
 
 export interface PublisherMenuContext {
   hasActiveMarkdown: boolean;
@@ -26,60 +27,65 @@ export interface PublisherMenuItem {
 const ROOT_MENU_ITEMS = [
   {
     key: "dashboard" as const,
-    title: "Dashboard",
+    titleKey: "menu.dashboard",
     icon: "layout-dashboard",
     section: "ultimate-publisher-dashboard",
   },
   {
     key: "quick-publish" as const,
-    title: "Quick Publish",
+    titleKey: "menu.quickPublish",
     icon: "zap",
     section: "ultimate-publisher-quick-publish",
   },
   {
     key: "normal-publish" as const,
-    title: "Normal Publish",
+    titleKey: "menu.normalPublish",
     icon: "send",
     section: "ultimate-publisher-normal-publish",
   },
   {
     key: "batch-publish" as const,
-    title: "Batch Publish",
+    titleKey: "menu.batchPublish",
     icon: "layers-3",
     section: "ultimate-publisher-batch-publish",
   },
   {
     key: "publish-settings" as const,
-    title: "Publish Settings",
+    titleKey: "menu.publishSettings",
     icon: "settings",
     section: "ultimate-publisher-settings",
   },
 ];
 
-export function buildPublisherMenuModel(context: PublisherMenuContext): PublisherMenuItem[] {
+export function buildPublisherMenuModel(context: PublisherMenuContext, i18n: Translator): PublisherMenuItem[] {
   const noteDependentDisabled = !context.hasActiveMarkdown;
-  const quickPublishChildren = buildQuickPublishChildren(context.enabledTargets);
+  const quickPublishChildren = buildQuickPublishChildren(context.enabledTargets, i18n);
 
   return [
     {
       ...ROOT_MENU_ITEMS[0],
+      title: i18n.t(ROOT_MENU_ITEMS[0].titleKey),
       disabled: false,
     },
     {
       ...ROOT_MENU_ITEMS[1],
+      title: i18n.t(ROOT_MENU_ITEMS[1].titleKey),
       disabled: noteDependentDisabled,
       children: quickPublishChildren,
     },
     {
       ...ROOT_MENU_ITEMS[2],
+      title: i18n.t(ROOT_MENU_ITEMS[2].titleKey),
       disabled: noteDependentDisabled,
     },
     {
       ...ROOT_MENU_ITEMS[3],
+      title: i18n.t(ROOT_MENU_ITEMS[3].titleKey),
       disabled: noteDependentDisabled,
     },
     {
       ...ROOT_MENU_ITEMS[4],
+      title: i18n.t(ROOT_MENU_ITEMS[4].titleKey),
     },
   ];
 }
@@ -99,15 +105,16 @@ function getProviderIcon(provider: string): string {
 
 function buildQuickPublishChildren(
   enabledTargets: PublisherMenuContext["enabledTargets"],
+  i18n: Translator,
 ): PublisherMenuItem[] {
   if (enabledTargets.length === 0) {
     return [
       {
         key: "quick-publish-empty",
-        title: "Enable at least one publish target",
+        title: i18n.t("menu.quickPublish.empty.title"),
         icon: "circle-alert",
         section: "ultimate-publisher-quick-publish-empty",
-        helpText: "No quick publish targets are enabled",
+        helpText: i18n.t("menu.quickPublish.empty.help"),
         disabled: true,
       },
     ];

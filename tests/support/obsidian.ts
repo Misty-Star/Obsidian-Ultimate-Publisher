@@ -480,7 +480,18 @@ export function normalizePath(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
+let testLanguage = "en";
+
+export function getLanguage(): string {
+  return testLanguage;
+}
+
+export function setObsidianTestLanguage(next: string): void {
+  testLanguage = next;
+}
+
 export function resetObsidianTestState(): void {
   Menu.instances.splice(0, Menu.instances.length);
   Notice.instances.splice(0, Notice.instances.length);
+  testLanguage = "en";
 }

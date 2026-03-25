@@ -1,5 +1,7 @@
 import { cloneTarget, normalizeTarget } from "../../settings";
 import { PublishContentFormat, PublishTargetConfig, WordpressStatus } from "../../types";
+import { createI18n, Translator } from "../../i18n";
+import { messages } from "../../i18n/messages";
 
 export type ModalFieldKey =
   | "enabled"
@@ -127,6 +129,107 @@ const JUEJIN_FIELDS: ModalFieldDefinition[] = [
   { key: "defaultBriefContent", label: "Default brief content", type: "text" },
 ];
 
+const DEFAULT_I18N = createI18n("en");
+
+const FIELD_LABEL_ZH: Partial<Record<ModalFieldKey, string>> = {
+  enabled: "启用",
+  name: "显示名称",
+  cookie: "Cookie",
+  endpoint: "Endpoint",
+  username: "用户名",
+  appPassword: "应用密码",
+  defaultStatus: "默认状态",
+  contentFormat: "发布格式",
+  baseUrl: "基础 URL",
+  repo: "仓库",
+  token: "Token",
+  publicLevel: "公开级别",
+  defaultColumnId: "默认专栏 ID",
+  defaultColumnTitle: "默认专栏标题",
+  defaultCategories: "默认分类",
+  defaultTags: "默认标签",
+  defaultCategoryId: "默认分类 ID",
+  defaultTagIds: "默认标签 ID",
+  defaultBriefContent: "默认摘要",
+  outputDir: "输出目录",
+  yamlType: "YAML 类型",
+  assetDirName: "资源目录名",
+};
+
+const FIELD_DESCRIPTION_ZH: Partial<Record<ModalFieldKey, string>> = {
+  cookie: "如果浏览器授权失败，可手动粘贴 Cookie。",
+  endpoint: "示例: https://example.com",
+  contentFormat: "选择向 WordPress 发布 Markdown 文本或渲染后的 HTML。",
+  repo: "示例: namespace/repo",
+  publicLevel: "0 = 私有, 1 = 公开",
+  outputDir: "本地机器上的绝对目录路径。",
+  defaultCategories: "用逗号分隔分类名。",
+  defaultTags: "用逗号分隔标签名。",
+  defaultTagIds: "用逗号分隔标签 ID。",
+};
+
+const FIELD_OPTION_LABEL_ZH: Partial<Record<ModalFieldKey, Record<string, string>>> = {
+  defaultStatus: {
+    draft: "草稿",
+    publish: "发布",
+    private: "私密",
+    pending: "待审核",
+  },
+  contentFormat: {
+    markdown: "Markdown",
+    html: "HTML",
+  },
+  publicLevel: {
+    "0": "私有",
+    "1": "公开",
+  },
+  yamlType: {
+    default: "默认",
+    hexo: "Hexo",
+  },
+};
+
+function resolveTranslation(
+  i18n: Translator,
+  key: string,
+  fallback: { en: string; "zh-CN": string }
+): string {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+
+function localizeField(field: ModalFieldDefinition, i18n: Translator): ModalFieldDefinition {
+  const label = resolveTranslation(i18n, `settings.modal.field.${field.key}.label`, {
+    en: field.label,
+    "zh-CN": FIELD_LABEL_ZH[field.key] ?? field.label,
+  });
+
+  const description = field.description
+    ? resolveTranslation(i18n, `settings.modal.field.${field.key}.description`, {
+        en: field.description,
+        "zh-CN": FIELD_DESCRIPTION_ZH[field.key] ?? field.description,
+      })
+    : undefined;
+
+  const options = field.options?.map((option) => ({
+    value: option.value,
+    label: resolveTranslation(i18n, `settings.modal.field.${field.key}.options.${option.value}`, {
+      en: option.label,
+      "zh-CN": FIELD_OPTION_LABEL_ZH[field.key]?.[option.value] ?? option.label,
+    }),
+  }));
+
+  return {
+    key: field.key,
+    label,
+    description,
+    type: field.type,
+    options,
+  };
+}
+
 function splitCommaSeparatedValue(value: string): string[] {
   return value
     .split(",")
@@ -134,28 +237,37 @@ function splitCommaSeparatedValue(value: string): string[] {
     .filter(Boolean);
 }
 
-export function getModalFieldDefinitions(target: PublishTargetConfig): ModalFieldDefinition[] {
+export function getModalFieldDefinitions(
+  target: PublishTargetConfig,
+  i18n: Translator = DEFAULT_I18N
+): ModalFieldDefinition[] {
   if (target.provider === "wordpress") {
-    return [...COMMON_FIELDS, ...WORDPRESS_FIELDS];
+    return [...COMMON_FIELDS, ...WORDPRESS_FIELDS].map((field) => localizeField(field, i18n));
   }
 
   if (target.provider === "yuque") {
-    return [...COMMON_FIELDS, ...YUQUE_FIELDS];
+    return [...COMMON_FIELDS, ...YUQUE_FIELDS].map((field) => localizeField(field, i18n));
   }
 
   if (target.provider === "zhihu") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS];
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS].map((field) =>
+      localizeField(field, i18n)
+    );
   }
 
   if (target.provider === "csdn") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS];
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS].map((field) =>
+      localizeField(field, i18n)
+    );
   }
 
   if (target.provider === "juejin") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS];
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS].map((field) =>
+      localizeField(field, i18n)
+    );
   }
 
-  return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS];
+  return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS].map((field) => localizeField(field, i18n));
 }
 
 export function readFieldValue(target: PublishTargetConfig, key: ModalFieldKey): string | boolean {

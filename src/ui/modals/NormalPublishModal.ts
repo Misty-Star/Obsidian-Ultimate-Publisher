@@ -1,5 +1,6 @@
 import { Modal, Notice, TFile } from "obsidian";
 import { PublishWorkflow } from "../../core/publishWorkflow";
+import { createI18nFromObsidianLanguage } from "../../i18n";
 import UltimatePublisherPlugin from "../../plugin";
 import { PublishTargetConfig } from "../../types";
 import { deriveNoteTargetSummaries } from "../publishSummary";
@@ -51,6 +52,7 @@ export class NormalPublishModal extends Modal {
   }
 
   private async handlePublish(target: PublishTargetConfig): Promise<void> {
+    const i18n = createI18nFromObsidianLanguage();
     this.isPublishing = true;
     this.errorMessage = null;
     await this.render();
@@ -59,10 +61,19 @@ export class NormalPublishModal extends Modal {
       const result = await this.workflow.runSingle(this.file, target, this.plugin.settings);
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
-      new Notice(`Publish succeeded: ${target.name} ${result.action}.`);
+      const actionLabel =
+        result.action === "update"
+          ? i18n.t("notice.publish.action.updated")
+          : i18n.t("notice.publish.action.published");
+      new Notice(
+        i18n.t("notice.publish.succeeded", {
+          target: target.name,
+          action: actionLabel,
+        })
+      );
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : String(error);
-      new Notice(`Publish failed: ${this.errorMessage}`, 8000);
+      new Notice(i18n.t("notice.publish.failed", { error: this.errorMessage }), 8000);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -72,12 +83,13 @@ export class NormalPublishModal extends Modal {
   private async render(): Promise<void> {
     const { contentEl } = this;
     contentEl.empty();
+    const i18n = createI18nFromObsidianLanguage();
 
-    contentEl.createEl("h2", { text: "Normal Publish" });
+    contentEl.createEl("h2", { text: i18n.t("publish.normal.title") });
 
     const noteInfo = contentEl.createDiv();
-    this.createInfoRow(noteInfo, "Note", this.file.basename);
-    this.createInfoRow(noteInfo, "Path", this.file.path);
+    this.createInfoRow(noteInfo, i18n.t("publish.shared.note"), this.file.basename);
+    this.createInfoRow(noteInfo, i18n.t("publish.shared.path"), this.file.path);
 
     const summaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path);
     this.selectedTargetId ??= summaries.find((item) => item.enabled)?.targetId ?? null;
@@ -86,10 +98,10 @@ export class NormalPublishModal extends Modal {
     if (enabledSummaries.length === 0) {
       contentEl.createEl("p", {
         cls: "ultimate-publisher-empty-state",
-        text: "No enabled publish targets. Open settings to enable at least one target.",
+        text: i18n.t("publish.shared.empty.noEnabledTargets"),
       });
 
-      const settingsButton = contentEl.createEl("button", { text: "Open Publish Settings" });
+      const settingsButton = contentEl.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
       settingsButton.addEventListener("click", () => {
         this.openPublishSettings();
       });
@@ -101,7 +113,7 @@ export class NormalPublishModal extends Modal {
     }
 
     const targetList = contentEl.createDiv();
-    targetList.createEl("h3", { text: "Target" });
+    targetList.createEl("h3", { text: i18n.t("publish.shared.target") });
 
     for (const summary of summaries) {
       const row = targetList.createEl("label");
@@ -121,28 +133,34 @@ export class NormalPublishModal extends Modal {
       });
 
       row.appendText(` ${summary.name} (${summary.provider})`);
+      const actionLabel =
+        summary.action === "update"
+          ? i18n.t("publish.shared.summary.updateExistingPost")
+          : i18n.t("publish.shared.summary.publishNewPost");
       row.createEl("small", {
-        text: ` - ${summary.action === "update" ? "Update existing post" : "Publish new post"}${summary.enabled ? "" : " (disabled)"}`,
+        text: ` - ${actionLabel}${summary.enabled ? "" : i18n.t("publish.shared.summary.disabledSuffix")}`,
       });
     }
 
     const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
     const selectedAction = selectedSummary?.action ?? "publish";
     contentEl.createEl("p", {
-      text: `Selected action: ${selectedAction === "update" ? "update" : "publish"}`,
+      text: i18n.t("publish.normal.summary.selectedAction", {
+        action: i18n.t(`publish.shared.summary.action.${selectedAction}`),
+      }),
     });
 
     if (this.errorMessage) {
       contentEl.createEl("p", {
         cls: "mod-warning",
-        text: `Last error: ${this.errorMessage}`,
+        text: i18n.t("publish.shared.error.last", { error: this.errorMessage }),
       });
     }
 
     const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
 
     const publishButton = actions.createEl("button", {
-      text: selectedAction === "update" ? "Update" : "Publish",
+      text: i18n.t(`publish.shared.summary.action.${selectedAction}`),
     });
     publishButton.toggleClass("mod-cta", true);
     publishButton.disabled = this.isPublishing || !this.selectedTargetId;
@@ -152,7 +170,7 @@ export class NormalPublishModal extends Modal {
       }
       const target = this.getTargetById(this.selectedTargetId);
       if (!target || !target.enabled) {
-        this.errorMessage = "Selected target is not available.";
+        this.errorMessage = i18n.t("publish.shared.error.targetUnavailable");
         new Notice(this.errorMessage, 6000);
         void this.render();
         return;
@@ -160,7 +178,7 @@ export class NormalPublishModal extends Modal {
       void this.handlePublish(target);
     });
 
-    const settingsButton = actions.createEl("button", { text: "Open Publish Settings" });
+    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
     settingsButton.disabled = this.isPublishing;
     settingsButton.addEventListener("click", () => {
       this.openPublishSettings();

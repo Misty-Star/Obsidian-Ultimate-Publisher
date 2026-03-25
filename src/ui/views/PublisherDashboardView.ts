@@ -1,12 +1,13 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
+import { createI18nFromObsidianLanguage, Translator } from "../../i18n";
 import type UltimatePublisherPlugin from "../../plugin";
 import { DashboardTargetSummary, deriveDashboardSummary } from "../publishSummary";
 
 export const PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
 
-function formatTimestamp(timestamp?: string): string {
+function formatTimestamp(timestamp: string | undefined, i18n: Translator): string {
   if (!timestamp) {
-    return "Never";
+    return i18n.t("dashboard.timestamp.never");
   }
 
   const parsed = new Date(timestamp);
@@ -43,6 +44,7 @@ export class PublisherDashboardView extends ItemView {
 
   async render(): Promise<void> {
     const summary = deriveDashboardSummary(this.plugin.settings, 10);
+    const i18n = createI18nFromObsidianLanguage();
     const { contentEl } = this;
     const lastPublishedAt = summary.recentRecords[0]?.lastPublishedAt;
 
@@ -52,32 +54,47 @@ export class PublisherDashboardView extends ItemView {
     contentEl.createEl("h2", { text: "Ultimate Publisher" });
 
     const cards = contentEl.createDiv({ cls: "ultimate-publisher-dashboard-cards" });
-    this.renderCard(cards, "Configured Targets", String(summary.configuredCount), "All saved publish destinations");
-    this.renderCard(cards, "Enabled Targets", String(summary.enabledCount), "Targets available to publish now");
-    this.renderCard(cards, "Last Publish", formatTimestamp(lastPublishedAt), "Most recent publish record");
+    this.renderCard(
+      cards,
+      i18n.t("dashboard.card.configuredTargets.label"),
+      String(summary.configuredCount),
+      i18n.t("dashboard.card.configuredTargets.help")
+    );
+    this.renderCard(
+      cards,
+      i18n.t("dashboard.card.enabledTargets.label"),
+      String(summary.enabledCount),
+      i18n.t("dashboard.card.enabledTargets.help")
+    );
+    this.renderCard(
+      cards,
+      i18n.t("dashboard.card.lastPublish.label"),
+      formatTimestamp(lastPublishedAt, i18n),
+      i18n.t("dashboard.card.lastPublish.help")
+    );
 
     const statusSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
-    statusSection.createEl("h3", { text: "Target Status" });
+    statusSection.createEl("h3", { text: i18n.t("dashboard.section.targetStatus") });
     if (summary.targetSummaries.length === 0) {
       statusSection.createEl("p", {
         cls: "ultimate-publisher-empty-state",
-        text: "No publish targets configured yet.",
+        text: i18n.t("dashboard.empty.targets"),
       });
     } else {
       const statusList = statusSection.createDiv({
         cls: "ultimate-publisher-status-list ultimate-publisher-target-list",
       });
       for (const target of summary.targetSummaries) {
-        this.renderTargetStatus(statusList, target);
+        this.renderTargetStatus(statusList, target, i18n);
       }
     }
 
     const recordSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
-    recordSection.createEl("h3", { text: "Recent Records" });
+    recordSection.createEl("h3", { text: i18n.t("dashboard.section.recentRecords") });
     if (summary.recentRecords.length === 0) {
       recordSection.createEl("p", {
         cls: "ultimate-publisher-empty-state",
-        text: "No publish activity recorded yet.",
+        text: i18n.t("dashboard.empty.records"),
       });
     } else {
       const targetNames = new Map(summary.targetSummaries.map((target) => [target.targetId, target.name]));
@@ -90,7 +107,7 @@ export class PublisherDashboardView extends ItemView {
         meta.createSpan({
           text: `${targetNames.get(record.targetId) ?? record.targetId} (${record.provider})`,
         });
-        meta.createSpan({ text: formatTimestamp(record.lastPublishedAt) });
+        meta.createSpan({ text: formatTimestamp(record.lastPublishedAt, i18n) });
 
         if (record.remoteUrl) {
           meta.createSpan({ text: record.remoteUrl });
@@ -99,20 +116,20 @@ export class PublisherDashboardView extends ItemView {
     }
 
     const shortcutSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
-    shortcutSection.createEl("h3", { text: "Shortcuts" });
+    shortcutSection.createEl("h3", { text: i18n.t("dashboard.section.shortcuts") });
     const shortcuts = shortcutSection.createDiv({ cls: "ultimate-publisher-shortcuts" });
 
-    const normalPublishButton = shortcuts.createEl("button", { text: "Normal Publish" });
+    const normalPublishButton = shortcuts.createEl("button", { text: i18n.t("dashboard.shortcuts.normalPublish") });
     normalPublishButton.addEventListener("click", () => {
       this.plugin.openNormalPublishForActiveNote();
     });
 
-    const batchPublishButton = shortcuts.createEl("button", { text: "Batch Publish" });
+    const batchPublishButton = shortcuts.createEl("button", { text: i18n.t("dashboard.shortcuts.batchPublish") });
     batchPublishButton.addEventListener("click", () => {
       this.plugin.openBatchPublishForActiveNote();
     });
 
-    const settingsButton = shortcuts.createEl("button", { text: "Publish Settings" });
+    const settingsButton = shortcuts.createEl("button", { text: i18n.t("dashboard.shortcuts.publishSettings") });
     settingsButton.addEventListener("click", () => {
       this.plugin.openPublishSettings();
     });
@@ -134,18 +151,20 @@ export class PublisherDashboardView extends ItemView {
     });
   }
 
-  private renderTargetStatus(container: HTMLElement, target: DashboardTargetSummary): void {
+  private renderTargetStatus(container: HTMLElement, target: DashboardTargetSummary, i18n: Translator): void {
     const row = container.createDiv({ cls: "ultimate-publisher-status-row" });
     const details = row.createDiv({ cls: "ultimate-publisher-status-row-main" });
     details.createEl("strong", { text: target.name });
     details.createDiv({
       cls: "ultimate-publisher-meta",
-      text: `${target.provider} - ${target.lastPublishedAt ? formatTimestamp(target.lastPublishedAt) : "Never published"}`,
+      text: `${target.provider} - ${
+        target.lastPublishedAt ? formatTimestamp(target.lastPublishedAt, i18n) : i18n.t("dashboard.status.neverPublished")
+      }`,
     });
 
     const badge = row.createSpan({
       cls: "ultimate-publisher-status-badge",
-      text: target.enabled ? "Enabled" : "Disabled",
+      text: target.enabled ? i18n.t("dashboard.status.enabled") : i18n.t("dashboard.status.disabled"),
     });
     badge.toggleClass("is-enabled", target.enabled);
     badge.toggleClass("is-disabled", !target.enabled);

@@ -1,5 +1,6 @@
-import { MarkdownView, Menu, TFile, resetObsidianTestState } from "obsidian";
+import { MarkdownView, Menu, Notice, TFile, resetObsidianTestState, setObsidianTestLanguage } from "obsidian";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createI18n } from "../src/i18n";
 import UltimatePublisherPlugin from "../src/plugin";
 import { createLocalExportTarget, createWordpressTarget } from "../src/settings";
 import { buildPublisherMenuModel } from "../src/ui/publisherMenu";
@@ -48,7 +49,7 @@ describe("buildPublisherMenuModel", () => {
         { id: "wp", name: "WordPress", provider: "wordpress" },
         { id: "local", name: "Local Export", provider: "local-export" },
       ],
-    });
+    }, createI18n("en"));
 
     expect(model.map((item) => ({
       key: item.key,
@@ -99,7 +100,7 @@ describe("buildPublisherMenuModel", () => {
     const model = buildPublisherMenuModel({
       hasActiveMarkdown: false,
       enabledTargets: [{ id: "wp", name: "WordPress", provider: "wordpress" }],
-    });
+    }, createI18n("en"));
 
     expect(model.find((item) => item.key === "dashboard")?.disabled).toBe(false);
     expect(model.find((item) => item.key === "normal-publish")?.disabled).toBe(true);
@@ -110,15 +111,40 @@ describe("buildPublisherMenuModel", () => {
     const model = buildPublisherMenuModel({
       hasActiveMarkdown: true,
       enabledTargets: [],
-    });
+    }, createI18n("en"));
 
     const quickPublish = model.find((item) => item.key === "quick-publish");
     expect(quickPublish?.children).toEqual([
       expect.objectContaining({
         key: "quick-publish-empty",
+        title: "Enable at least one publish target",
         icon: "circle-alert",
         section: "ultimate-publisher-quick-publish-empty",
         disabled: true,
+      }),
+    ]);
+  });
+
+  it("localizes menu titles and empty placeholder in zh-CN", () => {
+    const model = buildPublisherMenuModel({
+      hasActiveMarkdown: true,
+      enabledTargets: [],
+    }, createI18n("zh-CN"));
+
+    expect(model.map((item) => item.title)).toEqual([
+      "仪表盘",
+      "快速发布",
+      "普通发布",
+      "批量发布",
+      "发布设置",
+    ]);
+
+    const quickPublish = model.find((item) => item.key === "quick-publish");
+    expect(quickPublish?.children).toEqual([
+      expect.objectContaining({
+        key: "quick-publish-empty",
+        title: "请至少启用一个发布目标",
+        helpText: "当前没有可用的快速发布目标",
       }),
     ]);
   });
@@ -233,5 +259,14 @@ describe("buildPublisherMenuModel", () => {
 
     expect(plugin.app.setting?.open).toHaveBeenCalledTimes(1);
     expect(plugin.app.setting?.openTabById).toHaveBeenCalledWith("ultimate-publisher");
+  });
+
+  it("shows zh-CN notice when publishing without an active markdown note", async () => {
+    setObsidianTestLanguage("zh-CN");
+    const plugin = new UltimatePublisherPlugin(createApp(null) as never, { id: "ultimate-publisher" } as never);
+
+    await plugin.publishActiveNote();
+
+    expect(Notice.instances.at(-1)?.message).toBe("请先打开一个 Markdown 笔记再发布。");
   });
 });

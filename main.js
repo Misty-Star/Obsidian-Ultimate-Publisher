@@ -34395,7 +34395,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/core/note.ts
 var import_obsidian = require("obsidian");
@@ -34900,10 +34900,228 @@ var PublishWorkflow = class {
   }
 };
 
+// src/i18n/index.ts
+var import_obsidian2 = require("obsidian");
+
+// src/i18n/locales.ts
+function normalizeLocale(input) {
+  if (!input) {
+    return "en";
+  }
+  const value = input.toLowerCase();
+  if (value.startsWith("zh")) {
+    return "zh-CN";
+  }
+  return "en";
+}
+
+// src/i18n/messages.ts
+var messages = {
+  en: {
+    "menu.publish": "Publish",
+    "menu.dashboard": "Dashboard",
+    "menu.quickPublish": "Quick Publish",
+    "menu.normalPublish": "Normal Publish",
+    "menu.batchPublish": "Batch Publish",
+    "menu.publishSettings": "Publish Settings",
+    "menu.quickPublish.empty.title": "Enable at least one publish target",
+    "menu.quickPublish.empty.help": "No quick publish targets are enabled",
+    "notice.dashboard.openFailed": "Unable to open the publisher dashboard.",
+    "notice.publish.noActiveMarkdown": "Open a Markdown note before publishing.",
+    "notice.publish.noEnabledTargets": "Configure at least one enabled publish target first.",
+    "notice.quickPublish.targetUnavailable": "Enable the selected publish target before using Quick Publish.",
+    "notice.publish.action.published": "published",
+    "notice.publish.action.updated": "updated",
+    "notice.publish.started": 'Publishing "{note}" to {target}...',
+    "notice.publish.succeeded": "Publish succeeded: {target} {action}.",
+    "notice.publish.failed": "Publish failed: {error}",
+    "notice.batch.selectOne": "Select at least one target before running batch publish.",
+    "notice.batch.finished": "Batch publish finished: {successCount} succeeded, {failureCount} failed.",
+    "notice.batch.failed": "Batch publish failed: {error}",
+    "settings.modal.title.addTarget": "Add {provider} Target",
+    "settings.modal.title.editTarget": "Edit {provider} Target",
+    "settings.modal.auth.title": "Authorization",
+    "settings.modal.auth.status.authorized": "Status: Authorized",
+    "settings.modal.auth.status.cookiePending": "Status: Cookie set, validation pending",
+    "settings.modal.auth.status.notAuthorized": "Status: Not authorized",
+    "settings.modal.auth.account": "Account: {name}",
+    "settings.modal.auth.unknownAccount": "Unknown",
+    "settings.modal.auth.lastAuth": "Last auth: {timestamp}",
+    "settings.modal.auth.lastValidated": "Last validated: {timestamp}",
+    "settings.modal.auth.action.authorize": "Browser Authorization",
+    "settings.modal.auth.action.authorizing": "Authorizing...",
+    "settings.modal.auth.action.validate": "Validate",
+    "settings.modal.auth.action.validating": "Validating...",
+    "settings.modal.auth.action.clear": "Clear Authorization",
+    "settings.modal.auth.action.clearing": "Clearing...",
+    "settings.modal.auth.success.authorized": "Browser authorization completed.",
+    "settings.modal.auth.success.validated": "Validation completed.",
+    "settings.modal.auth.success.cleared": "Authorization data cleared.",
+    "settings.modal.action.cancel": "Cancel",
+    "settings.modal.action.save": "Save",
+    "dashboard.card.configuredTargets.label": "Configured Targets",
+    "dashboard.card.configuredTargets.help": "All saved publish destinations",
+    "dashboard.card.enabledTargets.label": "Enabled Targets",
+    "dashboard.card.enabledTargets.help": "Targets available to publish now",
+    "dashboard.card.lastPublish.label": "Last Publish",
+    "dashboard.card.lastPublish.help": "Most recent publish record",
+    "dashboard.section.targetStatus": "Target Status",
+    "dashboard.section.recentRecords": "Recent Records",
+    "dashboard.section.shortcuts": "Shortcuts",
+    "dashboard.empty.targets": "No publish targets configured yet.",
+    "dashboard.empty.records": "No publish activity recorded yet.",
+    "dashboard.status.neverPublished": "Never published",
+    "dashboard.status.enabled": "Enabled",
+    "dashboard.status.disabled": "Disabled",
+    "dashboard.timestamp.never": "Never",
+    "dashboard.shortcuts.normalPublish": "Normal Publish",
+    "dashboard.shortcuts.batchPublish": "Batch Publish",
+    "dashboard.shortcuts.publishSettings": "Publish Settings",
+    "publish.shared.note": "Note",
+    "publish.shared.path": "Path",
+    "publish.shared.target": "Target",
+    "publish.shared.targets": "Targets",
+    "publish.shared.empty.noEnabledTargets": "No enabled publish targets. Open settings to enable at least one target.",
+    "publish.shared.action.openSettings": "Open Publish Settings",
+    "publish.shared.summary.action.publish": "Publish",
+    "publish.shared.summary.action.update": "Update",
+    "publish.shared.summary.publishNewPost": "Publish new post",
+    "publish.shared.summary.updateExistingPost": "Update existing post",
+    "publish.shared.summary.disabledSuffix": " (disabled)",
+    "publish.shared.error.last": "Last error: {error}",
+    "publish.shared.error.targetUnavailable": "Selected target is not available.",
+    "publish.normal.title": "Normal Publish",
+    "publish.normal.summary.selectedAction": "Selected action: {action}",
+    "publish.batch.title": "Batch Publish",
+    "publish.batch.button.run": "Run Batch Publish",
+    "publish.batch.summary.selected": "Selected {selectedCount} targets ({publishCount} publish, {updateCount} update).",
+    "publish.batch.running": "Batch publish is running sequentially. Please wait...",
+    "publish.batch.error.fatal": "Batch failed before completion: {error}",
+    "publish.batch.results.title": "Batch Results",
+    "publish.batch.results.summary": "Completed {totalCount} targets: {successCount} succeeded, {failureCount} failed.",
+    "publish.batch.results.item.success": "{targetName}: success ({action}){remoteDetail}",
+    "publish.batch.results.item.failed": "{targetName}: failed ({action}) - {error}",
+    "publish.batch.results.unknownError": "Unknown error",
+    "i18n.only-en.demo": "English only message"
+  },
+  "zh-CN": {
+    "menu.publish": "\u53D1\u5E03",
+    "menu.dashboard": "\u4EEA\u8868\u76D8",
+    "menu.quickPublish": "\u5FEB\u901F\u53D1\u5E03",
+    "menu.normalPublish": "\u666E\u901A\u53D1\u5E03",
+    "menu.batchPublish": "\u6279\u91CF\u53D1\u5E03",
+    "menu.publishSettings": "\u53D1\u5E03\u8BBE\u7F6E",
+    "menu.quickPublish.empty.title": "\u8BF7\u81F3\u5C11\u542F\u7528\u4E00\u4E2A\u53D1\u5E03\u76EE\u6807",
+    "menu.quickPublish.empty.help": "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684\u5FEB\u901F\u53D1\u5E03\u76EE\u6807",
+    "notice.dashboard.openFailed": "\u65E0\u6CD5\u6253\u5F00\u53D1\u5E03\u4EEA\u8868\u76D8\u3002",
+    "notice.publish.noActiveMarkdown": "\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A Markdown \u7B14\u8BB0\u518D\u53D1\u5E03\u3002",
+    "notice.publish.noEnabledTargets": "\u8BF7\u5148\u914D\u7F6E\u5E76\u542F\u7528\u81F3\u5C11\u4E00\u4E2A\u53D1\u5E03\u76EE\u6807\u3002",
+    "notice.quickPublish.targetUnavailable": "\u8BF7\u5148\u542F\u7528\u6240\u9009\u53D1\u5E03\u76EE\u6807\u540E\u518D\u4F7F\u7528\u5FEB\u901F\u53D1\u5E03\u3002",
+    "notice.publish.action.published": "\u53D1\u5E03",
+    "notice.publish.action.updated": "\u66F4\u65B0",
+    "notice.publish.started": "\u6B63\u5728\u53D1\u5E03\u201C{note}\u201D\u5230 {target}...",
+    "notice.publish.succeeded": "\u53D1\u5E03\u6210\u529F\uFF1A{target} {action}\u3002",
+    "notice.publish.failed": "\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
+    "notice.batch.selectOne": "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E00\u4E2A\u76EE\u6807\u540E\u518D\u6267\u884C\u6279\u91CF\u53D1\u5E03\u3002",
+    "notice.batch.finished": "\u6279\u91CF\u53D1\u5E03\u5B8C\u6210\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
+    "notice.batch.failed": "\u6279\u91CF\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
+    "settings.modal.title.addTarget": "\u6DFB\u52A0 {provider} \u76EE\u6807",
+    "settings.modal.title.editTarget": "\u7F16\u8F91 {provider} \u76EE\u6807",
+    "settings.modal.auth.title": "\u6388\u6743",
+    "settings.modal.auth.status.authorized": "\u72B6\u6001\uFF1A\u5DF2\u6388\u6743",
+    "settings.modal.auth.status.cookiePending": "\u72B6\u6001\uFF1A\u5DF2\u8BBE\u7F6E Cookie\uFF0C\u5F85\u6821\u9A8C",
+    "settings.modal.auth.status.notAuthorized": "\u72B6\u6001\uFF1A\u672A\u6388\u6743",
+    "settings.modal.auth.account": "\u8D26\u53F7\uFF1A{name}",
+    "settings.modal.auth.unknownAccount": "\u672A\u77E5",
+    "settings.modal.auth.lastAuth": "\u4E0A\u6B21\u6388\u6743\uFF1A{timestamp}",
+    "settings.modal.auth.lastValidated": "\u4E0A\u6B21\u6821\u9A8C\uFF1A{timestamp}",
+    "settings.modal.auth.action.authorize": "\u7F51\u9875\u6388\u6743",
+    "settings.modal.auth.action.authorizing": "\u6388\u6743\u4E2D...",
+    "settings.modal.auth.action.validate": "\u6821\u9A8C\u914D\u7F6E",
+    "settings.modal.auth.action.validating": "\u6821\u9A8C\u4E2D...",
+    "settings.modal.auth.action.clear": "\u6E05\u9664\u6388\u6743",
+    "settings.modal.auth.action.clearing": "\u6E05\u9664\u4E2D...",
+    "settings.modal.auth.success.authorized": "\u7F51\u9875\u6388\u6743\u5B8C\u6210\u3002",
+    "settings.modal.auth.success.validated": "\u6821\u9A8C\u5B8C\u6210\u3002",
+    "settings.modal.auth.success.cleared": "\u6388\u6743\u4FE1\u606F\u5DF2\u6E05\u9664\u3002",
+    "settings.modal.action.cancel": "\u53D6\u6D88",
+    "settings.modal.action.save": "\u4FDD\u5B58",
+    "dashboard.card.configuredTargets.label": "\u5DF2\u914D\u7F6E\u76EE\u6807",
+    "dashboard.card.configuredTargets.help": "\u6240\u6709\u5DF2\u4FDD\u5B58\u7684\u53D1\u5E03\u76EE\u6807",
+    "dashboard.card.enabledTargets.label": "\u542F\u7528\u76EE\u6807",
+    "dashboard.card.enabledTargets.help": "\u5F53\u524D\u53EF\u76F4\u63A5\u53D1\u5E03\u7684\u76EE\u6807",
+    "dashboard.card.lastPublish.label": "\u6700\u8FD1\u53D1\u5E03",
+    "dashboard.card.lastPublish.help": "\u6700\u65B0\u4E00\u6761\u53D1\u5E03\u8BB0\u5F55",
+    "dashboard.section.targetStatus": "\u76EE\u6807\u72B6\u6001",
+    "dashboard.section.recentRecords": "\u6700\u8FD1\u8BB0\u5F55",
+    "dashboard.section.shortcuts": "\u5FEB\u6377\u64CD\u4F5C",
+    "dashboard.empty.targets": "\u5C1A\u672A\u914D\u7F6E\u4EFB\u4F55\u53D1\u5E03\u76EE\u6807\u3002",
+    "dashboard.empty.records": "\u5C1A\u65E0\u53D1\u5E03\u8BB0\u5F55\u3002",
+    "dashboard.status.neverPublished": "\u4ECE\u672A\u53D1\u5E03",
+    "dashboard.status.enabled": "\u5DF2\u542F\u7528",
+    "dashboard.status.disabled": "\u5DF2\u7981\u7528",
+    "dashboard.timestamp.never": "\u4ECE\u672A",
+    "dashboard.shortcuts.normalPublish": "\u666E\u901A\u53D1\u5E03",
+    "dashboard.shortcuts.batchPublish": "\u6279\u91CF\u53D1\u5E03",
+    "dashboard.shortcuts.publishSettings": "\u53D1\u5E03\u8BBE\u7F6E",
+    "publish.shared.note": "\u7B14\u8BB0",
+    "publish.shared.path": "\u8DEF\u5F84",
+    "publish.shared.target": "\u76EE\u6807",
+    "publish.shared.targets": "\u76EE\u6807\u5217\u8868",
+    "publish.shared.empty.noEnabledTargets": "\u5F53\u524D\u6CA1\u6709\u542F\u7528\u7684\u53D1\u5E03\u76EE\u6807\u3002\u8BF7\u5148\u6253\u5F00\u8BBE\u7F6E\u542F\u7528\u81F3\u5C11\u4E00\u4E2A\u76EE\u6807\u3002",
+    "publish.shared.action.openSettings": "\u6253\u5F00\u53D1\u5E03\u8BBE\u7F6E",
+    "publish.shared.summary.action.publish": "\u53D1\u5E03",
+    "publish.shared.summary.action.update": "\u66F4\u65B0",
+    "publish.shared.summary.publishNewPost": "\u53D1\u5E03\u65B0\u6587\u7AE0",
+    "publish.shared.summary.updateExistingPost": "\u66F4\u65B0\u5DF2\u6709\u6587\u7AE0",
+    "publish.shared.summary.disabledSuffix": "\uFF08\u5DF2\u7981\u7528\uFF09",
+    "publish.shared.error.last": "\u6700\u8FD1\u9519\u8BEF\uFF1A{error}",
+    "publish.shared.error.targetUnavailable": "\u6240\u9009\u76EE\u6807\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
+    "publish.normal.title": "\u666E\u901A\u53D1\u5E03",
+    "publish.normal.summary.selectedAction": "\u5F53\u524D\u64CD\u4F5C\uFF1A{action}",
+    "publish.batch.title": "\u6279\u91CF\u53D1\u5E03",
+    "publish.batch.button.run": "\u6267\u884C\u6279\u91CF\u53D1\u5E03",
+    "publish.batch.summary.selected": "\u5DF2\u9009\u62E9 {selectedCount} \u4E2A\u76EE\u6807\uFF08\u53D1\u5E03 {publishCount} \u4E2A\uFF0C\u66F4\u65B0 {updateCount} \u4E2A\uFF09\u3002",
+    "publish.batch.running": "\u6279\u91CF\u53D1\u5E03\u6B63\u5728\u6309\u987A\u5E8F\u6267\u884C\uFF0C\u8BF7\u7A0D\u5019...",
+    "publish.batch.error.fatal": "\u6279\u91CF\u53D1\u5E03\u672A\u5B8C\u6210\u5373\u5931\u8D25\uFF1A{error}",
+    "publish.batch.results.title": "\u6279\u91CF\u7ED3\u679C",
+    "publish.batch.results.summary": "\u5171\u5B8C\u6210 {totalCount} \u4E2A\u76EE\u6807\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
+    "publish.batch.results.item.success": "{targetName}\uFF1A\u6210\u529F\uFF08{action}\uFF09{remoteDetail}",
+    "publish.batch.results.item.failed": "{targetName}\uFF1A\u5931\u8D25\uFF08{action}\uFF09- {error}",
+    "publish.batch.results.unknownError": "\u672A\u77E5\u9519\u8BEF"
+  }
+};
+
+// src/i18n/index.ts
+function interpolate(template, params) {
+  if (!params) {
+    return template;
+  }
+  return template.replace(/\{(\w+)\}/g, (_match, name) => {
+    if (name in params) {
+      return String(params[name]);
+    }
+    return `{${name}}`;
+  });
+}
+function createI18n(localeInput) {
+  const locale = normalizeLocale(localeInput);
+  return {
+    locale,
+    t(key, params) {
+      const template = messages[locale][key] ?? messages.en[key] ?? key;
+      return interpolate(template, params);
+    }
+  };
+}
+function createI18nFromObsidianLanguage() {
+  return createI18n((0, import_obsidian2.getLanguage)());
+}
+
 // src/providers/localExportProvider.ts
 var import_promises = require("node:fs/promises");
 var import_node_path2 = require("node:path");
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/core/yaml.ts
 function escapeScalar(value) {
@@ -35044,7 +35262,7 @@ ${note.markdown.trim()}
     };
   }
   async copyAsset(asset, note, target) {
-    const sourceData = await this.app.vault.adapter.readBinary((0, import_obsidian2.normalizePath)(asset.sourcePath));
+    const sourceData = await this.app.vault.adapter.readBinary((0, import_obsidian3.normalizePath)(asset.sourcePath));
     const slug = sanitizeFileName(note.slug || note.title, "note");
     const assetDir = (0, import_node_path2.join)(target.outputDir, target.assetDirName || "assets");
     await (0, import_promises.mkdir)(assetDir, { recursive: true });
@@ -35061,16 +35279,16 @@ ${note.markdown.trim()}
 };
 
 // src/providers/wordpressProvider.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/core/html.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 async function renderMarkdownToHtml(app, markdown, sourcePath) {
   const container = document.createElement("div");
-  const component = new import_obsidian3.Component();
+  const component = new import_obsidian4.Component();
   component.load();
   try {
-    await import_obsidian3.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
+    await import_obsidian4.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
     container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
       copyButton.remove();
     });
@@ -35112,7 +35330,7 @@ function normalizeEndpoint(target) {
   return `${trimTrailingSlash(target.endpoint)}/wp-json/wp/v2`;
 }
 async function requestJson(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian4.requestUrl)({
+  const response = await (0, import_obsidian5.requestUrl)({
     url: `${normalizeEndpoint(target)}${path}`,
     method,
     headers: {
@@ -35214,9 +35432,9 @@ var WordpressProvider = class {
     return response.link;
   }
   async uploadAsset(asset, _note, target) {
-    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian4.normalizePath)(asset.sourcePath));
+    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian5.normalizePath)(asset.sourcePath));
     const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
-    const response = await (0, import_obsidian4.requestUrl)({
+    const response = await (0, import_obsidian5.requestUrl)({
       url: `${normalizeEndpoint(target)}/media`,
       method: "POST",
       headers: {
@@ -35247,10 +35465,10 @@ var WordpressProvider = class {
 };
 
 // src/providers/yuqueProvider.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/core/providers.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 function assertRemoteAssetsSupported(note, targetName) {
   if (note.attachments.length === 0) {
     return;
@@ -35267,7 +35485,7 @@ function normalizeBaseUrl(baseUrl) {
   return trimTrailingSlash2(baseUrl || "https://www.yuque.com");
 }
 async function requestYuque(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian6.requestUrl)({
+  const response = await (0, import_obsidian7.requestUrl)({
     url: `${normalizeBaseUrl(target.baseUrl)}${path}`,
     method,
     headers: {
@@ -35347,7 +35565,7 @@ var YuqueProvider = class {
 
 // src/providers/csdnProvider.ts
 var import_node_crypto3 = require("node:crypto");
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 
 // src/core/webPublishConfig.ts
 function getNestedValue(source, path) {
@@ -35508,7 +35726,7 @@ function getResponseMessage(response) {
 }
 async function requestCsdn(target, url, method = "GET", body) {
   const contentType = "application/json";
-  const response = await (0, import_obsidian7.requestUrl)({
+  const response = await (0, import_obsidian8.requestUrl)({
     url,
     method,
     headers: buildSignedHeaders(target, url, method, contentType),
@@ -35611,7 +35829,7 @@ var CsdnProvider = class {
 };
 
 // src/providers/juejinProvider.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 function buildHeaders2(target) {
   return {
     "Content-Type": "application/json",
@@ -35638,7 +35856,7 @@ function decodeRemoteId(remoteId) {
   };
 }
 async function requestJuejin(target, url, method = "POST", body) {
-  const response = await (0, import_obsidian8.requestUrl)({
+  const response = await (0, import_obsidian9.requestUrl)({
     url,
     method,
     headers: buildHeaders2(target),
@@ -35790,7 +36008,7 @@ var JuejinProvider = class {
 };
 
 // src/providers/zhihuProvider.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 function buildHeaders3(target) {
   return {
     "Content-Type": "application/json",
@@ -35807,7 +36025,7 @@ function readJsonPayload3(response) {
   return {};
 }
 async function requestZhihu(target, url, method = "GET", body) {
-  const response = await (0, import_obsidian9.requestUrl)({
+  const response = await (0, import_obsidian10.requestUrl)({
     url,
     method,
     headers: buildHeaders3(target),
@@ -35962,8 +36180,8 @@ var ProviderRegistry = class {
 };
 
 // src/ui/PublishTargetModal.ts
-var import_obsidian10 = require("obsidian");
-var PublishTargetModal = class extends import_obsidian10.SuggestModal {
+var import_obsidian11 = require("obsidian");
+var PublishTargetModal = class extends import_obsidian11.SuggestModal {
   constructor(app, targets, onChooseTarget) {
     super(app);
     this.targets = targets;
@@ -35989,7 +36207,7 @@ var PublishTargetModal = class extends import_obsidian10.SuggestModal {
 };
 
 // src/ui/UltimatePublisherSettingTab.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 
 // src/ui/settings/renderSettingsRoot.tsx
 var import_client = __toESM(require_client());
@@ -36141,58 +36359,110 @@ var DesktopWebAuthService = class {
 };
 
 // src/ui/settings/EditTargetModal.ts
-var import_obsidian11 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 
 // src/ui/settings/providerCatalog.ts
 var PROVIDER_CATALOG = [
   {
     id: "wordpress",
     name: "WordPress",
-    description: "REST API publishing with application password auth.",
+    descriptionKey: "settings.providers.wordpress.description",
+    descriptionFallback: {
+      en: "REST API publishing with application password auth.",
+      "zh-CN": "\u4F7F\u7528\u5E94\u7528\u5BC6\u7801\u8BA4\u8BC1\uFF0C\u901A\u8FC7 REST API \u53D1\u5E03\u5185\u5BB9\u3002"
+    },
     icon: "WP",
     createTarget: createWordpressTarget
   },
   {
     id: "yuque",
     name: "Yuque",
-    description: "Token-based publishing to a Yuque knowledge base.",
+    descriptionKey: "settings.providers.yuque.description",
+    descriptionFallback: {
+      en: "Token-based publishing to a Yuque knowledge base.",
+      "zh-CN": "\u4F7F\u7528 Token \u5411 Yuque \u77E5\u8BC6\u5E93\u53D1\u5E03\u5185\u5BB9\u3002"
+    },
     icon: "YQ",
     createTarget: createYuqueTarget
   },
   {
     id: "local-export",
     name: "Local Export",
-    description: "Write Markdown and copied assets to a local directory.",
+    descriptionKey: "settings.providers.local-export.description",
+    descriptionFallback: {
+      en: "Write Markdown and copied assets to a local directory.",
+      "zh-CN": "\u5C06 Markdown \u4E0E\u590D\u5236\u7684\u8D44\u6E90\u5199\u5165\u672C\u5730\u76EE\u5F55\u3002"
+    },
     icon: "FS",
     createTarget: createLocalExportTarget
   },
   {
     id: "zhihu",
     name: "Zhihu",
-    description: "Cookie-based desktop web publishing to Zhihu columns.",
+    descriptionKey: "settings.providers.zhihu.description",
+    descriptionFallback: {
+      en: "Cookie-based desktop web publishing to Zhihu columns.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 Zhihu \u4E13\u680F\u3002"
+    },
     icon: "ZH",
     createTarget: createZhihuTarget
   },
   {
     id: "csdn",
     name: "CSDN",
-    description: "Cookie-based desktop web publishing to CSDN articles.",
+    descriptionKey: "settings.providers.csdn.description",
+    descriptionFallback: {
+      en: "Cookie-based desktop web publishing to CSDN articles.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 CSDN \u6587\u7AE0\u3002"
+    },
     icon: "CS",
     createTarget: createCsdnTarget
   },
   {
     id: "juejin",
     name: "Juejin",
-    description: "Cookie-based desktop web publishing to Juejin posts.",
+    descriptionKey: "settings.providers.juejin.description",
+    descriptionFallback: {
+      en: "Cookie-based desktop web publishing to Juejin posts.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 Juejin \u6587\u7AE0\u3002"
+    },
     icon: "JJ",
     createTarget: createJuejinTarget
   }
 ];
-function getProviderCatalog() {
-  return PROVIDER_CATALOG.slice();
+var DEFAULT_I18N = createI18n("en");
+function resolveTranslation(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
 }
-function getProviderCatalogEntry(providerId) {
-  return PROVIDER_CATALOG.find((entry) => entry.id === providerId);
+function localizeProviderCatalogEntry(entry, i18n) {
+  const base = {
+    name: entry.name,
+    description: resolveTranslation(i18n, entry.descriptionKey, entry.descriptionFallback),
+    icon: entry.icon
+  };
+  switch (entry.id) {
+    case "wordpress":
+      return { id: "wordpress", ...base, createTarget: entry.createTarget };
+    case "yuque":
+      return { id: "yuque", ...base, createTarget: entry.createTarget };
+    case "local-export":
+      return { id: "local-export", ...base, createTarget: entry.createTarget };
+    case "zhihu":
+      return { id: "zhihu", ...base, createTarget: entry.createTarget };
+    case "csdn":
+      return { id: "csdn", ...base, createTarget: entry.createTarget };
+    case "juejin":
+      return { id: "juejin", ...base, createTarget: entry.createTarget };
+  }
+}
+function getProviderCatalog(i18n = DEFAULT_I18N) {
+  return PROVIDER_CATALOG.map((entry) => localizeProviderCatalogEntry(entry, i18n));
+}
+function getProviderCatalogEntry(providerId, i18n = DEFAULT_I18N) {
+  return getProviderCatalog(i18n).find((entry) => entry.id === providerId);
 }
 
 // src/ui/settings/modalForm.ts
@@ -36275,26 +36545,118 @@ var JUEJIN_FIELDS = [
   { key: "defaultTagIds", label: "Default tag IDs", description: "Comma-separated tag IDs.", type: "text" },
   { key: "defaultBriefContent", label: "Default brief content", type: "text" }
 ];
+var DEFAULT_I18N2 = createI18n("en");
+var FIELD_LABEL_ZH = {
+  enabled: "\u542F\u7528",
+  name: "\u663E\u793A\u540D\u79F0",
+  cookie: "Cookie",
+  endpoint: "Endpoint",
+  username: "\u7528\u6237\u540D",
+  appPassword: "\u5E94\u7528\u5BC6\u7801",
+  defaultStatus: "\u9ED8\u8BA4\u72B6\u6001",
+  contentFormat: "\u53D1\u5E03\u683C\u5F0F",
+  baseUrl: "\u57FA\u7840 URL",
+  repo: "\u4ED3\u5E93",
+  token: "Token",
+  publicLevel: "\u516C\u5F00\u7EA7\u522B",
+  defaultColumnId: "\u9ED8\u8BA4\u4E13\u680F ID",
+  defaultColumnTitle: "\u9ED8\u8BA4\u4E13\u680F\u6807\u9898",
+  defaultCategories: "\u9ED8\u8BA4\u5206\u7C7B",
+  defaultTags: "\u9ED8\u8BA4\u6807\u7B7E",
+  defaultCategoryId: "\u9ED8\u8BA4\u5206\u7C7B ID",
+  defaultTagIds: "\u9ED8\u8BA4\u6807\u7B7E ID",
+  defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981",
+  outputDir: "\u8F93\u51FA\u76EE\u5F55",
+  yamlType: "YAML \u7C7B\u578B",
+  assetDirName: "\u8D44\u6E90\u76EE\u5F55\u540D"
+};
+var FIELD_DESCRIPTION_ZH = {
+  cookie: "\u5982\u679C\u6D4F\u89C8\u5668\u6388\u6743\u5931\u8D25\uFF0C\u53EF\u624B\u52A8\u7C98\u8D34 Cookie\u3002",
+  endpoint: "\u793A\u4F8B: https://example.com",
+  contentFormat: "\u9009\u62E9\u5411 WordPress \u53D1\u5E03 Markdown \u6587\u672C\u6216\u6E32\u67D3\u540E\u7684 HTML\u3002",
+  repo: "\u793A\u4F8B: namespace/repo",
+  publicLevel: "0 = \u79C1\u6709, 1 = \u516C\u5F00",
+  outputDir: "\u672C\u5730\u673A\u5668\u4E0A\u7684\u7EDD\u5BF9\u76EE\u5F55\u8DEF\u5F84\u3002",
+  defaultCategories: "\u7528\u9017\u53F7\u5206\u9694\u5206\u7C7B\u540D\u3002",
+  defaultTags: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E\u540D\u3002",
+  defaultTagIds: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E ID\u3002"
+};
+var FIELD_OPTION_LABEL_ZH = {
+  defaultStatus: {
+    draft: "\u8349\u7A3F",
+    publish: "\u53D1\u5E03",
+    private: "\u79C1\u5BC6",
+    pending: "\u5F85\u5BA1\u6838"
+  },
+  contentFormat: {
+    markdown: "Markdown",
+    html: "HTML"
+  },
+  publicLevel: {
+    "0": "\u79C1\u6709",
+    "1": "\u516C\u5F00"
+  },
+  yamlType: {
+    default: "\u9ED8\u8BA4",
+    hexo: "Hexo"
+  }
+};
+function resolveTranslation2(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+function localizeField(field, i18n) {
+  const label = resolveTranslation2(i18n, `settings.modal.field.${field.key}.label`, {
+    en: field.label,
+    "zh-CN": FIELD_LABEL_ZH[field.key] ?? field.label
+  });
+  const description = field.description ? resolveTranslation2(i18n, `settings.modal.field.${field.key}.description`, {
+    en: field.description,
+    "zh-CN": FIELD_DESCRIPTION_ZH[field.key] ?? field.description
+  }) : void 0;
+  const options = field.options?.map((option) => ({
+    value: option.value,
+    label: resolveTranslation2(i18n, `settings.modal.field.${field.key}.options.${option.value}`, {
+      en: option.label,
+      "zh-CN": FIELD_OPTION_LABEL_ZH[field.key]?.[option.value] ?? option.label
+    })
+  }));
+  return {
+    key: field.key,
+    label,
+    description,
+    type: field.type,
+    options
+  };
+}
 function splitCommaSeparatedValue(value) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
-function getModalFieldDefinitions(target) {
+function getModalFieldDefinitions(target, i18n = DEFAULT_I18N2) {
   if (target.provider === "wordpress") {
-    return [...COMMON_FIELDS, ...WORDPRESS_FIELDS];
+    return [...COMMON_FIELDS, ...WORDPRESS_FIELDS].map((field) => localizeField(field, i18n));
   }
   if (target.provider === "yuque") {
-    return [...COMMON_FIELDS, ...YUQUE_FIELDS];
+    return [...COMMON_FIELDS, ...YUQUE_FIELDS].map((field) => localizeField(field, i18n));
   }
   if (target.provider === "zhihu") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS];
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS].map(
+      (field) => localizeField(field, i18n)
+    );
   }
   if (target.provider === "csdn") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS];
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS].map(
+      (field) => localizeField(field, i18n)
+    );
   }
   if (target.provider === "juejin") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS];
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS].map(
+      (field) => localizeField(field, i18n)
+    );
   }
-  return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS];
+  return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS].map((field) => localizeField(field, i18n));
 }
 function readFieldValue(target, key) {
   switch (key) {
@@ -36500,7 +36862,7 @@ function clearWebAuthTarget(target) {
 }
 
 // src/ui/settings/EditTargetModal.ts
-var EditTargetModal = class extends import_obsidian11.Modal {
+var EditTargetModal = class extends import_obsidian12.Modal {
   constructor(app, options) {
     super(app);
     this.options = options;
@@ -36514,12 +36876,13 @@ var EditTargetModal = class extends import_obsidian11.Modal {
   render() {
     const { contentEl } = this;
     contentEl.empty();
+    const i18n = createI18nFromObsidianLanguage();
     const providerName = getProviderCatalogEntry(this.draft.provider)?.name ?? this.draft.name;
     contentEl.createEl("h2", {
-      text: `${this.options.mode === "create" ? "Add" : "Edit"} ${providerName} Target`
+      text: this.options.mode === "create" ? i18n.t("settings.modal.title.addTarget", { provider: providerName }) : i18n.t("settings.modal.title.editTarget", { provider: providerName })
     });
-    for (const field of getModalFieldDefinitions(this.draft)) {
-      const setting = new import_obsidian11.Setting(contentEl).setName(field.label);
+    for (const field of getModalFieldDefinitions(this.draft, i18n)) {
+      const setting = new import_obsidian12.Setting(contentEl).setName(field.label);
       if (field.description) {
         setting.setDesc(field.description);
       }
@@ -36552,13 +36915,13 @@ var EditTargetModal = class extends import_obsidian11.Modal {
       });
     }
     if (isWebAuthTarget(this.draft)) {
-      this.renderWebAuthSection(contentEl, this.draft);
+      this.renderWebAuthSection(contentEl, this.draft, i18n);
     }
     const actions = contentEl.createDiv({ cls: "ultimate-publisher-settings-modal-actions" });
-    const cancelButton = actions.createEl("button", { text: "Cancel" });
+    const cancelButton = actions.createEl("button", { text: i18n.t("settings.modal.action.cancel") });
     cancelButton.disabled = this.activeAction !== null;
     cancelButton.addEventListener("click", () => this.close());
-    const saveButton = actions.createEl("button", { text: "Save" });
+    const saveButton = actions.createEl("button", { text: i18n.t("settings.modal.action.save") });
     saveButton.addClass("mod-cta");
     saveButton.disabled = this.activeAction !== null;
     saveButton.addEventListener("click", async () => {
@@ -36566,42 +36929,67 @@ var EditTargetModal = class extends import_obsidian11.Modal {
       this.close();
     });
   }
-  renderWebAuthSection(containerEl, target) {
+  renderWebAuthSection(containerEl, target, i18n) {
     const section = containerEl.createDiv({ cls: "ultimate-publisher-settings-web-auth" });
-    section.createEl("h3", { text: "Authorization" });
+    section.createEl("h3", { text: i18n.t("settings.modal.auth.title") });
     const status = section.createEl("p", {
-      text: target.cookie ? target.lastValidatedAt ? "Status: Authorized" : "Status: Cookie set, validation pending" : "Status: Not authorized"
+      text: target.cookie ? target.lastValidatedAt ? i18n.t("settings.modal.auth.status.authorized") : i18n.t("settings.modal.auth.status.cookiePending") : i18n.t("settings.modal.auth.status.notAuthorized")
     });
     status.addClass("ultimate-publisher-meta");
     if (target.accountName || target.accountId) {
+      const accountName = target.accountName ?? i18n.t("settings.modal.auth.unknownAccount");
       section.createEl("p", {
-        text: `Account: ${target.accountName ?? "Unknown"}${target.accountId ? ` (${target.accountId})` : ""}`
+        text: i18n.t("settings.modal.auth.account", {
+          name: `${accountName}${target.accountId ? ` (${target.accountId})` : ""}`
+        })
       });
     }
     if (target.lastAuthAt) {
-      section.createEl("p", { text: `Last auth: ${target.lastAuthAt}` });
+      section.createEl("p", {
+        text: i18n.t("settings.modal.auth.lastAuth", { timestamp: target.lastAuthAt })
+      });
     }
     if (target.lastValidatedAt) {
-      section.createEl("p", { text: `Last validated: ${target.lastValidatedAt}` });
+      section.createEl("p", {
+        text: i18n.t("settings.modal.auth.lastValidated", { timestamp: target.lastValidatedAt })
+      });
     }
     if (this.statusMessage) {
       section.createEl("p", { text: this.statusMessage });
     }
     const actions = section.createDiv({ cls: "ultimate-publisher-settings-modal-actions" });
-    const authorizeButton = actions.createEl("button", { text: this.activeAction === "authorize" ? "Authorizing..." : "\u7F51\u9875\u6388\u6743" });
+    const authorizeButton = actions.createEl("button", {
+      text: this.activeAction === "authorize" ? i18n.t("settings.modal.auth.action.authorizing") : i18n.t("settings.modal.auth.action.authorize")
+    });
     authorizeButton.disabled = this.activeAction !== null;
     authorizeButton.addEventListener("click", () => {
-      void this.runDraftAction("authorize", this.options.onAuthorizeDraft, "Browser authorization completed.");
+      void this.runDraftAction(
+        "authorize",
+        this.options.onAuthorizeDraft,
+        i18n.t("settings.modal.auth.success.authorized")
+      );
     });
-    const validateButton = actions.createEl("button", { text: this.activeAction === "validate" ? "Validating..." : "\u6821\u9A8C\u914D\u7F6E" });
+    const validateButton = actions.createEl("button", {
+      text: this.activeAction === "validate" ? i18n.t("settings.modal.auth.action.validating") : i18n.t("settings.modal.auth.action.validate")
+    });
     validateButton.disabled = this.activeAction !== null;
     validateButton.addEventListener("click", () => {
-      void this.runDraftAction("validate", this.options.onValidateDraft, "Validation completed.");
+      void this.runDraftAction(
+        "validate",
+        this.options.onValidateDraft,
+        i18n.t("settings.modal.auth.success.validated")
+      );
     });
-    const clearButton = actions.createEl("button", { text: this.activeAction === "clear" ? "Clearing..." : "\u6E05\u9664\u6388\u6743" });
+    const clearButton = actions.createEl("button", {
+      text: this.activeAction === "clear" ? i18n.t("settings.modal.auth.action.clearing") : i18n.t("settings.modal.auth.action.clear")
+    });
     clearButton.disabled = this.activeAction !== null;
     clearButton.addEventListener("click", () => {
-      void this.runDraftAction("clear", this.options.onClearAuthDraft, "Authorization data cleared.");
+      void this.runDraftAction(
+        "clear",
+        this.options.onClearAuthDraft,
+        i18n.t("settings.modal.auth.success.cleared")
+      );
     });
   }
   async runDraftAction(action, handler, successMessage) {
@@ -36655,14 +37043,36 @@ function buildMarketplaceCards(settings, catalog) {
 
 // src/ui/settings/TargetCard.tsx
 var import_jsx_runtime = __toESM(require_jsx_runtime());
-function TargetCard({ target, onEdit, onDelete }) {
+function resolveTranslation3(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+function TargetCard({ i18n, target, onEdit, onDelete }) {
+  const enabledAria = resolveTranslation3(i18n, "settings.target.status.enabled", {
+    en: "Enabled",
+    "zh-CN": "\u5DF2\u542F\u7528"
+  });
+  const disabledAria = resolveTranslation3(i18n, "settings.target.status.disabled", {
+    en: "Disabled",
+    "zh-CN": "\u5DF2\u7981\u7528"
+  });
+  const editLabel = resolveTranslation3(i18n, "settings.target.action.edit", {
+    en: "Edit",
+    "zh-CN": "\u7F16\u8F91"
+  });
+  const deleteLabel = resolveTranslation3(i18n, "settings.target.action.delete", {
+    en: "Delete",
+    "zh-CN": "\u5220\u9664"
+  });
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "ultimate-publisher-target-card", children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ultimate-publisher-target-card-header", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
         "span",
         {
           className: `ultimate-publisher-target-status ${target.enabled ? "is-enabled" : "is-disabled"}`.trim(),
-          "aria-label": target.enabled ? "Enabled" : "Disabled"
+          "aria-label": target.enabled ? enabledAria : disabledAria
         }
       ),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ultimate-publisher-target-card-copy", children: [
@@ -36671,31 +37081,60 @@ function TargetCard({ target, onEdit, onDelete }) {
       ] })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ultimate-publisher-target-card-actions", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", onClick: () => onEdit(target.id), children: "Edit" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", onClick: () => onDelete(target.id), children: "Delete" })
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", onClick: () => onEdit(target.id), children: editLabel }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", onClick: () => onDelete(target.id), children: deleteLabel })
     ] })
   ] });
 }
 
 // src/ui/settings/ConfiguredTargetsTab.tsx
 var import_jsx_runtime2 = __toESM(require_jsx_runtime());
+function resolveTranslation4(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
 function ConfiguredTargetsTab({
+  i18n,
   targets,
   onEditTarget,
   onDeleteTarget
 }) {
   if (targets.length === 0) {
+    const emptyTitle = resolveTranslation4(i18n, "settings.empty.title", {
+      en: "No targets configured yet.",
+      "zh-CN": "\u5C1A\u672A\u914D\u7F6E\u4EFB\u4F55\u76EE\u6807\u3002"
+    });
+    const emptyDescription = resolveTranslation4(i18n, "settings.empty.description", {
+      en: "Switch to Marketplace tab to add one.",
+      "zh-CN": "\u5207\u6362\u5230\u201C\u5E02\u573A\u201D\u6807\u7B7E\u4EE5\u6DFB\u52A0\u76EE\u6807\u3002"
+    });
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "ultimate-publisher-settings-empty-state", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: "No targets configured yet." }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: "Switch to Marketplace tab to add one." })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: emptyTitle }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: emptyDescription })
     ] });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "ultimate-publisher-target-grid", children: targets.map((target) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TargetCard, { target, onEdit: onEditTarget, onDelete: onDeleteTarget }, target.id)) });
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "ultimate-publisher-target-grid", children: targets.map((target) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TargetCard, { i18n, target, onEdit: onEditTarget, onDelete: onDeleteTarget }, target.id)) });
 }
 
 // src/ui/settings/ProviderCard.tsx
 var import_jsx_runtime3 = __toESM(require_jsx_runtime());
-function ProviderCard({ provider, onAdd }) {
+function resolveTranslation5(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+function ProviderCard({ i18n, provider, onAdd }) {
+  const addLabel = resolveTranslation5(i18n, "settings.provider.add", {
+    en: "Add",
+    "zh-CN": "\u6DFB\u52A0"
+  });
+  const configuredLabel = resolveTranslation5(i18n, "settings.provider.configured", {
+    en: "Configured",
+    "zh-CN": "\u5DF2\u914D\u7F6E"
+  });
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("article", { className: "ultimate-publisher-provider-card", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "ultimate-publisher-provider-icon", "aria-hidden": "true", children: provider.icon }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ultimate-publisher-provider-copy", children: [
@@ -36703,9 +37142,12 @@ function ProviderCard({ provider, onAdd }) {
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: provider.description })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ultimate-publisher-provider-card-footer", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", onClick: () => onAdd(provider.id), children: "+ Add" }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("button", { type: "button", onClick: () => onAdd(provider.id), children: [
+        "+ ",
+        addLabel
+      ] }),
       provider.configured ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "ultimate-publisher-provider-badge", children: [
-        "Configured",
+        configuredLabel,
         provider.configuredCount > 1 ? ` (${provider.configuredCount})` : ""
       ] }) : null
     ] })
@@ -36714,18 +37156,40 @@ function ProviderCard({ provider, onAdd }) {
 
 // src/ui/settings/MarketplaceTab.tsx
 var import_jsx_runtime4 = __toESM(require_jsx_runtime());
-function MarketplaceTab({ providers, onAddProvider }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ultimate-publisher-provider-grid", children: providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ProviderCard, { provider, onAdd: onAddProvider }, provider.id)) });
+function MarketplaceTab({ i18n, providers, onAddProvider }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ultimate-publisher-provider-grid", children: providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ProviderCard, { i18n, provider, onAdd: onAddProvider }, provider.id)) });
 }
 
 // src/ui/settings/TabBar.tsx
 var import_jsx_runtime5 = __toESM(require_jsx_runtime());
-var TABS = [
-  { id: "configured", label: "Configured Targets" },
-  { id: "marketplace", label: "Marketplace" }
-];
-function TabBar({ activeTab, onSelectTab }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ultimate-publisher-settings-tabs", role: "tablist", "aria-label": "Ultimate Publisher settings tabs", children: TABS.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+function resolveTranslation6(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+function TabBar({ i18n, activeTab, onSelectTab }) {
+  const tabs = [
+    {
+      id: "configured",
+      label: resolveTranslation6(i18n, "settings.tab.configured", {
+        en: "Configured Targets",
+        "zh-CN": "\u5DF2\u914D\u7F6E\u76EE\u6807"
+      })
+    },
+    {
+      id: "marketplace",
+      label: resolveTranslation6(i18n, "settings.tab.marketplace", {
+        en: "Marketplace",
+        "zh-CN": "\u5E02\u573A"
+      })
+    }
+  ];
+  const tabAriaLabel = resolveTranslation6(i18n, "settings.tab.aria", {
+    en: "Ultimate Publisher settings tabs",
+    "zh-CN": "Ultimate Publisher \u8BBE\u7F6E\u6807\u7B7E\u9875"
+  });
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ultimate-publisher-settings-tabs", role: "tablist", "aria-label": tabAriaLabel, children: tabs.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
     "button",
     {
       type: "button",
@@ -36741,7 +37205,15 @@ function TabBar({ activeTab, onSelectTab }) {
 
 // src/ui/settings/SettingsView.tsx
 var import_jsx_runtime6 = __toESM(require_jsx_runtime());
+var DEFAULT_I18N3 = createI18n("en");
+function resolveTranslation7(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
 function SettingsView({
+  i18n = DEFAULT_I18N3,
   settings,
   initialTab = "configured",
   onAddProvider,
@@ -36749,7 +37221,7 @@ function SettingsView({
   onDeleteTarget
 }) {
   const [activeTab, setActiveTab] = (0, import_react.useState)(initialTab);
-  const providerCatalog = (0, import_react.useMemo)(() => getProviderCatalog(), []);
+  const providerCatalog = (0, import_react.useMemo)(() => getProviderCatalog(i18n), [i18n]);
   const configuredTargets = (0, import_react.useMemo)(
     () => buildConfiguredTargetCards(settings, providerCatalog),
     [providerCatalog, settings]
@@ -36758,20 +37230,29 @@ function SettingsView({
     () => buildMarketplaceCards(settings, providerCatalog),
     [providerCatalog, settings]
   );
+  const headerDescription = resolveTranslation7(
+    i18n,
+    "settings.view.description",
+    {
+      en: "Configure one or more targets, then publish the active note through the command palette or ribbon menu.",
+      "zh-CN": "\u5148\u914D\u7F6E\u4E00\u4E2A\u6216\u591A\u4E2A\u76EE\u6807\uFF0C\u518D\u901A\u8FC7\u547D\u4EE4\u9762\u677F\u6216\u529F\u80FD\u533A\u83DC\u5355\u53D1\u5E03\u5F53\u524D\u7B14\u8BB0\u3002"
+    }
+  );
   return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("section", { className: "ultimate-publisher-settings-page", children: [
     /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("header", { className: "ultimate-publisher-settings-header", children: [
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h2", { children: "Ultimate Publisher" }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: "Configure one or more targets, then publish the active note through the command palette or ribbon menu." })
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: headerDescription })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(TabBar, { activeTab, onSelectTab: setActiveTab }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(TabBar, { i18n, activeTab, onSelectTab: setActiveTab }),
     /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ultimate-publisher-settings-panel", children: activeTab === "configured" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
       ConfiguredTargetsTab,
       {
+        i18n,
         targets: configuredTargets,
         onEditTarget,
         onDeleteTarget
       }
-    ) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(MarketplaceTab, { providers: marketplaceProviders, onAddProvider }) })
+    ) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(MarketplaceTab, { i18n, providers: marketplaceProviders, onAddProvider }) })
   ] });
 }
 
@@ -36781,6 +37262,7 @@ function mountSettingsView(containerEl, options) {
   const root = (0, import_client.createRoot)(containerEl);
   const providers = new ProviderRegistry(options.plugin.app);
   const desktopWebAuthService = createDesktopWebAuthService();
+  const i18n = createI18nFromObsidianLanguage();
   const loadWebAuthAccountSummary = async (target) => {
     const provider = providers.get(target);
     if (!provider.getAccountSummary) {
@@ -36859,6 +37341,7 @@ function mountSettingsView(containerEl, options) {
     }).open();
   };
   render(root, {
+    i18n,
     settings: options.settings,
     onAddProvider: handleAddProvider,
     onDeleteTarget: handleDeleteTarget,
@@ -36875,6 +37358,7 @@ function render(root, props) {
     /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
       SettingsView,
       {
+        i18n: props.i18n,
         settings: props.settings,
         onAddProvider: props.onAddProvider,
         onDeleteTarget: props.onDeleteTarget,
@@ -36885,7 +37369,7 @@ function render(root, props) {
 }
 
 // src/ui/UltimatePublisherSettingTab.ts
-var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingTab {
+var UltimatePublisherSettingTab = class extends import_obsidian13.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
@@ -36905,7 +37389,7 @@ var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingT
 };
 
 // src/ui/modals/BatchPublishModal.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 
 // src/ui/publishSummary.ts
 var DEFAULT_DASHBOARD_RECORD_LIMIT = 10;
@@ -36984,7 +37468,7 @@ function summarizeBatchSelection(targets, selectedTargetIds) {
 }
 
 // src/ui/modals/BatchPublishModal.ts
-var BatchPublishModal = class extends import_obsidian13.Modal {
+var BatchPublishModal = class extends import_obsidian14.Modal {
   constructor(plugin, file, workflow) {
     super(plugin.app);
     this.plugin = plugin;
@@ -37031,35 +37515,53 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
     this.selectedTargetIds.delete(targetId);
   }
   renderResultSection(container) {
+    const i18n = createI18nFromObsidianLanguage();
     if (this.results.length === 0) {
       return;
     }
-    container.createEl("h3", { text: "Batch Results" });
+    container.createEl("h3", { text: i18n.t("publish.batch.results.title") });
     const summary = this.lastRunSummary ?? {
       totalCount: this.results.length,
       successCount: this.results.filter((item) => item.status === "success").length,
       failureCount: this.results.filter((item) => item.status === "failure").length
     };
     container.createEl("p", {
-      text: `Completed ${summary.totalCount} targets: ${summary.successCount} succeeded, ${summary.failureCount} failed.`
+      text: i18n.t("publish.batch.results.summary", {
+        totalCount: summary.totalCount,
+        successCount: summary.successCount,
+        failureCount: summary.failureCount
+      })
     });
     const list = container.createEl("ul");
     for (const result of this.results) {
       const item = list.createEl("li");
-      const actionLabel = result.action === "update" ? "update" : "publish";
+      const actionLabel = i18n.t(`publish.shared.summary.action.${result.action}`);
       if (result.status === "success") {
         const remoteDetail = result.remoteUrl ? ` (${result.remoteUrl})` : "";
-        item.setText(`${result.targetName}: success (${actionLabel})${remoteDetail}`);
+        item.setText(
+          i18n.t("publish.batch.results.item.success", {
+            targetName: result.targetName,
+            action: actionLabel,
+            remoteDetail
+          })
+        );
         continue;
       }
-      const failure = result.error?.message ?? "Unknown error";
-      item.setText(`${result.targetName}: failed (${actionLabel}) - ${failure}`);
+      const failure = result.error?.message ?? i18n.t("publish.batch.results.unknownError");
+      item.setText(
+        i18n.t("publish.batch.results.item.failed", {
+          targetName: result.targetName,
+          action: actionLabel,
+          error: failure
+        })
+      );
     }
   }
   async handleBatchPublish() {
+    const i18n = createI18nFromObsidianLanguage();
     const selectedTargets = this.getSelectedTargets();
     if (selectedTargets.length === 0) {
-      new import_obsidian13.Notice("Select at least one target before running batch publish.", 6e3);
+      new import_obsidian14.Notice(i18n.t("notice.batch.selectOne"), 6e3);
       return;
     }
     this.isPublishing = true;
@@ -37077,13 +37579,16 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
         successCount: result.successCount,
         failureCount: result.failureCount
       };
-      new import_obsidian13.Notice(
-        `Batch publish finished: ${result.successCount} succeeded, ${result.failureCount} failed.`,
+      new import_obsidian14.Notice(
+        i18n.t("notice.batch.finished", {
+          successCount: this.lastRunSummary.successCount,
+          failureCount: this.lastRunSummary.failureCount
+        }),
         6e3
       );
     } catch (error) {
       this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
-      new import_obsidian13.Notice(`Batch publish failed: ${this.fatalErrorMessage}`, 8e3);
+      new import_obsidian14.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -37092,28 +37597,29 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
   async render() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Batch Publish" });
+    const i18n = createI18nFromObsidianLanguage();
+    contentEl.createEl("h2", { text: i18n.t("publish.batch.title") });
     if (this.noteSnapshot) {
       const noteInfo = contentEl.createDiv();
-      noteInfo.createEl("strong", { text: "Note: " });
+      noteInfo.createEl("strong", { text: `${i18n.t("publish.shared.note")}: ` });
       noteInfo.createSpan({ text: this.noteSnapshot.basename });
       noteInfo.createEl("br");
-      noteInfo.createEl("strong", { text: "Path: " });
+      noteInfo.createEl("strong", { text: `${i18n.t("publish.shared.path")}: ` });
       noteInfo.createSpan({ text: this.noteSnapshot.path });
     }
     if (this.enabledSummaries.length === 0) {
       contentEl.createEl("p", {
         cls: "ultimate-publisher-empty-state",
-        text: "No enabled publish targets. Open settings to enable at least one target."
+        text: i18n.t("publish.shared.empty.noEnabledTargets")
       });
-      const settingsButton2 = contentEl.createEl("button", { text: "Open Publish Settings" });
+      const settingsButton2 = contentEl.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
       settingsButton2.addEventListener("click", () => {
         this.openPublishSettings();
       });
       return;
     }
     const targetSection = contentEl.createDiv();
-    targetSection.createEl("h3", { text: "Targets" });
+    targetSection.createEl("h3", { text: i18n.t("publish.shared.targets") });
     for (const summary of this.enabledSummaries) {
       const row = targetSection.createEl("label");
       row.style.display = "block";
@@ -37125,7 +37631,7 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
         this.toggleTargetSelection(summary.targetId, input.checked);
         void this.render();
       });
-      const actionLabel = summary.action === "update" ? "Update existing post" : "Publish new post";
+      const actionLabel = summary.action === "update" ? i18n.t("publish.shared.summary.updateExistingPost") : i18n.t("publish.shared.summary.publishNewPost");
       row.appendText(` ${summary.name} (${summary.provider}) - ${actionLabel}`);
     }
     const selectionSummary = summarizeBatchSelection(
@@ -37137,28 +37643,32 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
       Array.from(this.selectedTargetIds)
     );
     contentEl.createEl("p", {
-      text: `Selected ${selectionSummary.selectedCount} targets (${selectionSummary.publishCount} publish, ${selectionSummary.updateCount} update).`
+      text: i18n.t("publish.batch.summary.selected", {
+        selectedCount: selectionSummary.selectedCount,
+        publishCount: selectionSummary.publishCount,
+        updateCount: selectionSummary.updateCount
+      })
     });
     if (this.isPublishing) {
       contentEl.createEl("p", {
-        text: "Batch publish is running sequentially. Please wait..."
+        text: i18n.t("publish.batch.running")
       });
     }
     if (this.fatalErrorMessage) {
       contentEl.createEl("p", {
         cls: "mod-warning",
-        text: `Batch failed before completion: ${this.fatalErrorMessage}`
+        text: i18n.t("publish.batch.error.fatal", { error: this.fatalErrorMessage })
       });
     }
     this.renderResultSection(contentEl);
     const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
-    const runButton = actions.createEl("button", { text: "Run Batch Publish" });
+    const runButton = actions.createEl("button", { text: i18n.t("publish.batch.button.run") });
     runButton.toggleClass("mod-cta", true);
     runButton.disabled = this.isPublishing || this.selectedTargetIds.size === 0;
     runButton.addEventListener("click", () => {
       void this.handleBatchPublish();
     });
-    const settingsButton = actions.createEl("button", { text: "Open Publish Settings" });
+    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
     settingsButton.disabled = this.isPublishing;
     settingsButton.addEventListener("click", () => {
       this.openPublishSettings();
@@ -37167,8 +37677,8 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
 };
 
 // src/ui/modals/NormalPublishModal.ts
-var import_obsidian14 = require("obsidian");
-var NormalPublishModal = class extends import_obsidian14.Modal {
+var import_obsidian15 = require("obsidian");
+var NormalPublishModal = class extends import_obsidian15.Modal {
   constructor(plugin, file, workflow) {
     super(plugin.app);
     this.plugin = plugin;
@@ -37198,6 +37708,7 @@ var NormalPublishModal = class extends import_obsidian14.Modal {
     row.createSpan({ text: value });
   }
   async handlePublish(target) {
+    const i18n = createI18nFromObsidianLanguage();
     this.isPublishing = true;
     this.errorMessage = null;
     await this.render();
@@ -37205,10 +37716,16 @@ var NormalPublishModal = class extends import_obsidian14.Modal {
       const result = await this.workflow.runSingle(this.file, target, this.plugin.settings);
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
-      new import_obsidian14.Notice(`Publish succeeded: ${target.name} ${result.action}.`);
+      const actionLabel = result.action === "update" ? i18n.t("notice.publish.action.updated") : i18n.t("notice.publish.action.published");
+      new import_obsidian15.Notice(
+        i18n.t("notice.publish.succeeded", {
+          target: target.name,
+          action: actionLabel
+        })
+      );
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : String(error);
-      new import_obsidian14.Notice(`Publish failed: ${this.errorMessage}`, 8e3);
+      new import_obsidian15.Notice(i18n.t("notice.publish.failed", { error: this.errorMessage }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -37217,19 +37734,20 @@ var NormalPublishModal = class extends import_obsidian14.Modal {
   async render() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Normal Publish" });
+    const i18n = createI18nFromObsidianLanguage();
+    contentEl.createEl("h2", { text: i18n.t("publish.normal.title") });
     const noteInfo = contentEl.createDiv();
-    this.createInfoRow(noteInfo, "Note", this.file.basename);
-    this.createInfoRow(noteInfo, "Path", this.file.path);
+    this.createInfoRow(noteInfo, i18n.t("publish.shared.note"), this.file.basename);
+    this.createInfoRow(noteInfo, i18n.t("publish.shared.path"), this.file.path);
     const summaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path);
     this.selectedTargetId ?? (this.selectedTargetId = summaries.find((item) => item.enabled)?.targetId ?? null);
     const enabledSummaries = summaries.filter((item) => item.enabled);
     if (enabledSummaries.length === 0) {
       contentEl.createEl("p", {
         cls: "ultimate-publisher-empty-state",
-        text: "No enabled publish targets. Open settings to enable at least one target."
+        text: i18n.t("publish.shared.empty.noEnabledTargets")
       });
-      const settingsButton2 = contentEl.createEl("button", { text: "Open Publish Settings" });
+      const settingsButton2 = contentEl.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
       settingsButton2.addEventListener("click", () => {
         this.openPublishSettings();
       });
@@ -37239,7 +37757,7 @@ var NormalPublishModal = class extends import_obsidian14.Modal {
       this.selectedTargetId = enabledSummaries[0].targetId;
     }
     const targetList = contentEl.createDiv();
-    targetList.createEl("h3", { text: "Target" });
+    targetList.createEl("h3", { text: i18n.t("publish.shared.target") });
     for (const summary of summaries) {
       const row = targetList.createEl("label");
       row.style.display = "block";
@@ -37256,24 +37774,27 @@ var NormalPublishModal = class extends import_obsidian14.Modal {
         }
       });
       row.appendText(` ${summary.name} (${summary.provider})`);
+      const actionLabel = summary.action === "update" ? i18n.t("publish.shared.summary.updateExistingPost") : i18n.t("publish.shared.summary.publishNewPost");
       row.createEl("small", {
-        text: ` - ${summary.action === "update" ? "Update existing post" : "Publish new post"}${summary.enabled ? "" : " (disabled)"}`
+        text: ` - ${actionLabel}${summary.enabled ? "" : i18n.t("publish.shared.summary.disabledSuffix")}`
       });
     }
     const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
     const selectedAction = selectedSummary?.action ?? "publish";
     contentEl.createEl("p", {
-      text: `Selected action: ${selectedAction === "update" ? "update" : "publish"}`
+      text: i18n.t("publish.normal.summary.selectedAction", {
+        action: i18n.t(`publish.shared.summary.action.${selectedAction}`)
+      })
     });
     if (this.errorMessage) {
       contentEl.createEl("p", {
         cls: "mod-warning",
-        text: `Last error: ${this.errorMessage}`
+        text: i18n.t("publish.shared.error.last", { error: this.errorMessage })
       });
     }
     const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
     const publishButton = actions.createEl("button", {
-      text: selectedAction === "update" ? "Update" : "Publish"
+      text: i18n.t(`publish.shared.summary.action.${selectedAction}`)
     });
     publishButton.toggleClass("mod-cta", true);
     publishButton.disabled = this.isPublishing || !this.selectedTargetId;
@@ -37283,14 +37804,14 @@ var NormalPublishModal = class extends import_obsidian14.Modal {
       }
       const target = this.getTargetById(this.selectedTargetId);
       if (!target || !target.enabled) {
-        this.errorMessage = "Selected target is not available.";
-        new import_obsidian14.Notice(this.errorMessage, 6e3);
+        this.errorMessage = i18n.t("publish.shared.error.targetUnavailable");
+        new import_obsidian15.Notice(this.errorMessage, 6e3);
         void this.render();
         return;
       }
       void this.handlePublish(target);
     });
-    const settingsButton = actions.createEl("button", { text: "Open Publish Settings" });
+    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
     settingsButton.disabled = this.isPublishing;
     settingsButton.addEventListener("click", () => {
       this.openPublishSettings();
@@ -37302,58 +37823,63 @@ var NormalPublishModal = class extends import_obsidian14.Modal {
 var ROOT_MENU_ITEMS = [
   {
     key: "dashboard",
-    title: "Dashboard",
+    titleKey: "menu.dashboard",
     icon: "layout-dashboard",
     section: "ultimate-publisher-dashboard"
   },
   {
     key: "quick-publish",
-    title: "Quick Publish",
+    titleKey: "menu.quickPublish",
     icon: "zap",
     section: "ultimate-publisher-quick-publish"
   },
   {
     key: "normal-publish",
-    title: "Normal Publish",
+    titleKey: "menu.normalPublish",
     icon: "send",
     section: "ultimate-publisher-normal-publish"
   },
   {
     key: "batch-publish",
-    title: "Batch Publish",
+    titleKey: "menu.batchPublish",
     icon: "layers-3",
     section: "ultimate-publisher-batch-publish"
   },
   {
     key: "publish-settings",
-    title: "Publish Settings",
+    titleKey: "menu.publishSettings",
     icon: "settings",
     section: "ultimate-publisher-settings"
   }
 ];
-function buildPublisherMenuModel(context) {
+function buildPublisherMenuModel(context, i18n) {
   const noteDependentDisabled = !context.hasActiveMarkdown;
-  const quickPublishChildren = buildQuickPublishChildren(context.enabledTargets);
+  const quickPublishChildren = buildQuickPublishChildren(context.enabledTargets, i18n);
   return [
     {
       ...ROOT_MENU_ITEMS[0],
+      title: i18n.t(ROOT_MENU_ITEMS[0].titleKey),
       disabled: false
     },
     {
       ...ROOT_MENU_ITEMS[1],
+      title: i18n.t(ROOT_MENU_ITEMS[1].titleKey),
       disabled: noteDependentDisabled,
       children: quickPublishChildren
     },
     {
       ...ROOT_MENU_ITEMS[2],
+      title: i18n.t(ROOT_MENU_ITEMS[2].titleKey),
       disabled: noteDependentDisabled
     },
     {
       ...ROOT_MENU_ITEMS[3],
+      title: i18n.t(ROOT_MENU_ITEMS[3].titleKey),
       disabled: noteDependentDisabled
     },
     {
-      ...ROOT_MENU_ITEMS[4]
+      ...ROOT_MENU_ITEMS[4],
+      title: i18n.t(ROOT_MENU_ITEMS[4].titleKey)
     }
   ];
 }
@@ -37369,15 +37895,15 @@ function getProviderIcon(provider) {
       return "upload";
   }
 }
-function buildQuickPublishChildren(enabledTargets) {
+function buildQuickPublishChildren(enabledTargets, i18n) {
   if (enabledTargets.length === 0) {
     return [
       {
         key: "quick-publish-empty",
-        title: "Enable at least one publish target",
+        title: i18n.t("menu.quickPublish.empty.title"),
         icon: "circle-alert",
         section: "ultimate-publisher-quick-publish-empty",
-        helpText: "No quick publish targets are enabled",
+        helpText: i18n.t("menu.quickPublish.empty.help"),
         disabled: true
       }
     ];
@@ -37393,11 +37919,11 @@ function buildQuickPublishChildren(enabledTargets) {
 }
 
 // src/ui/views/PublisherDashboardView.ts
-var import_obsidian15 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
-function formatTimestamp(timestamp) {
+function formatTimestamp(timestamp, i18n) {
   if (!timestamp) {
-    return "Never";
+    return i18n.t("dashboard.timestamp.never");
   }
   const parsed = new Date(timestamp);
   if (Number.isNaN(parsed.getTime())) {
@@ -37405,7 +37931,7 @@ function formatTimestamp(timestamp) {
   }
   return parsed.toLocaleString();
 }
-var PublisherDashboardView = class extends import_obsidian15.ItemView {
+var PublisherDashboardView = class extends import_obsidian16.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -37424,36 +37950,52 @@ var PublisherDashboardView = class extends import_obsidian15.ItemView {
   }
   async render() {
     const summary = deriveDashboardSummary(this.plugin.settings, 10);
+    const i18n = createI18nFromObsidianLanguage();
     const { contentEl } = this;
     const lastPublishedAt = summary.recentRecords[0]?.lastPublishedAt;
     contentEl.empty();
     contentEl.toggleClass("ultimate-publisher-dashboard", true);
     contentEl.createEl("h2", { text: "Ultimate Publisher" });
     const cards = contentEl.createDiv({ cls: "ultimate-publisher-dashboard-cards" });
-    this.renderCard(cards, "Configured Targets", String(summary.configuredCount), "All saved publish destinations");
-    this.renderCard(cards, "Enabled Targets", String(summary.enabledCount), "Targets available to publish now");
-    this.renderCard(cards, "Last Publish", formatTimestamp(lastPublishedAt), "Most recent publish record");
+    this.renderCard(
+      cards,
+      i18n.t("dashboard.card.configuredTargets.label"),
+      String(summary.configuredCount),
+      i18n.t("dashboard.card.configuredTargets.help")
+    );
+    this.renderCard(
+      cards,
+      i18n.t("dashboard.card.enabledTargets.label"),
+      String(summary.enabledCount),
+      i18n.t("dashboard.card.enabledTargets.help")
+    );
+    this.renderCard(
+      cards,
+      i18n.t("dashboard.card.lastPublish.label"),
+      formatTimestamp(lastPublishedAt, i18n),
+      i18n.t("dashboard.card.lastPublish.help")
+    );
     const statusSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
-    statusSection.createEl("h3", { text: "Target Status" });
+    statusSection.createEl("h3", { text: i18n.t("dashboard.section.targetStatus") });
     if (summary.targetSummaries.length === 0) {
       statusSection.createEl("p", {
         cls: "ultimate-publisher-empty-state",
-        text: "No publish targets configured yet."
+        text: i18n.t("dashboard.empty.targets")
       });
     } else {
       const statusList = statusSection.createDiv({
         cls: "ultimate-publisher-status-list ultimate-publisher-target-list"
       });
       for (const target of summary.targetSummaries) {
-        this.renderTargetStatus(statusList, target);
+        this.renderTargetStatus(statusList, target, i18n);
       }
     }
     const recordSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
-    recordSection.createEl("h3", { text: "Recent Records" });
+    recordSection.createEl("h3", { text: i18n.t("dashboard.section.recentRecords") });
     if (summary.recentRecords.length === 0) {
       recordSection.createEl("p", {
         cls: "ultimate-publisher-empty-state",
-        text: "No publish activity recorded yet."
+        text: i18n.t("dashboard.empty.records")
       });
     } else {
       const targetNames = new Map(summary.targetSummaries.map((target) => [target.targetId, target.name]));
@@ -37465,24 +38007,24 @@ var PublisherDashboardView = class extends import_obsidian15.ItemView {
         meta.createSpan({
           text: `${targetNames.get(record.targetId) ?? record.targetId} (${record.provider})`
         });
-        meta.createSpan({ text: formatTimestamp(record.lastPublishedAt) });
+        meta.createSpan({ text: formatTimestamp(record.lastPublishedAt, i18n) });
         if (record.remoteUrl) {
           meta.createSpan({ text: record.remoteUrl });
         }
       }
     }
     const shortcutSection = contentEl.createEl("section", { cls: "ultimate-publisher-panel" });
-    shortcutSection.createEl("h3", { text: "Shortcuts" });
+    shortcutSection.createEl("h3", { text: i18n.t("dashboard.section.shortcuts") });
     const shortcuts = shortcutSection.createDiv({ cls: "ultimate-publisher-shortcuts" });
-    const normalPublishButton = shortcuts.createEl("button", { text: "Normal Publish" });
+    const normalPublishButton = shortcuts.createEl("button", { text: i18n.t("dashboard.shortcuts.normalPublish") });
     normalPublishButton.addEventListener("click", () => {
       this.plugin.openNormalPublishForActiveNote();
     });
-    const batchPublishButton = shortcuts.createEl("button", { text: "Batch Publish" });
+    const batchPublishButton = shortcuts.createEl("button", { text: i18n.t("dashboard.shortcuts.batchPublish") });
     batchPublishButton.addEventListener("click", () => {
       this.plugin.openBatchPublishForActiveNote();
     });
-    const settingsButton = shortcuts.createEl("button", { text: "Publish Settings" });
+    const settingsButton = shortcuts.createEl("button", { text: i18n.t("dashboard.shortcuts.publishSettings") });
     settingsButton.addEventListener("click", () => {
       this.plugin.openPublishSettings();
     });
@@ -37502,17 +38044,17 @@ var PublisherDashboardView = class extends import_obsidian15.ItemView {
       text: helpText
     });
   }
-  renderTargetStatus(container, target) {
+  renderTargetStatus(container, target, i18n) {
     const row = container.createDiv({ cls: "ultimate-publisher-status-row" });
     const details = row.createDiv({ cls: "ultimate-publisher-status-row-main" });
     details.createEl("strong", { text: target.name });
     details.createDiv({
       cls: "ultimate-publisher-meta",
-      text: `${target.provider} - ${target.lastPublishedAt ? formatTimestamp(target.lastPublishedAt) : "Never published"}`
+      text: `${target.provider} - ${target.lastPublishedAt ? formatTimestamp(target.lastPublishedAt, i18n) : i18n.t("dashboard.status.neverPublished")}`
     });
     const badge = row.createSpan({
       cls: "ultimate-publisher-status-badge",
-      text: target.enabled ? "Enabled" : "Disabled"
+      text: target.enabled ? i18n.t("dashboard.status.enabled") : i18n.t("dashboard.status.disabled")
     });
     badge.toggleClass("is-enabled", target.enabled);
     badge.toggleClass("is-disabled", !target.enabled);
@@ -37520,18 +38062,20 @@ var PublisherDashboardView = class extends import_obsidian15.ItemView {
 };
 
 // src/plugin.ts
-var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
+var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
+    this.i18n = createI18nFromObsidianLanguage();
   }
   async onload() {
     await this.loadSettings();
+    this.i18n = createI18nFromObsidianLanguage();
     const providers = new ProviderRegistry(this.app);
     this.publishService = new PublishService(this.app, providers);
     this.publishWorkflow = new PublishWorkflow(this.publishService);
     this.registerView(PUBLISHER_DASHBOARD_VIEW_TYPE, (leaf) => new PublisherDashboardView(leaf, this));
-    this.addRibbonIcon("upload", "Ultimate Publisher", (event) => {
+    this.addRibbonIcon("upload", this.i18n.t("menu.publish"), (event) => {
       const anchorEl = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
       this.openRibbonMenu(anchorEl);
     });
@@ -37594,14 +38138,14 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
         name,
         provider
       }))
-    });
+    }, this.i18n);
     this.showPublisherMenu(menuModel, this.getRootMenuPosition(anchorEl));
   }
   async openDashboard() {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new import_obsidian16.Notice("Unable to open the publisher dashboard.");
+      new import_obsidian17.Notice(this.i18n.t("notice.dashboard.openFailed"));
       return;
     }
     await leaf.setViewState({
@@ -37616,7 +38160,7 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
   openNormalPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian16.Notice("Open a Markdown note before publishing.");
+      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new NormalPublishModal(this, file, this.publishWorkflow).open();
@@ -37624,7 +38168,7 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
   openBatchPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian16.Notice("Open a Markdown note before publishing.");
+      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new BatchPublishModal(this, file, this.publishWorkflow).open();
@@ -37632,12 +38176,12 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
   async runQuickPublishForTarget(targetId) {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian16.Notice("Open a Markdown note before publishing.");
+      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new import_obsidian16.Notice("Enable the selected publish target before using Quick Publish.", 6e3);
+      new import_obsidian17.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
       return;
     }
     await this.publishToTarget(file, target);
@@ -37650,12 +38194,12 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian16.Notice("Open a Markdown note before publishing.");
+      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian16.Notice("Configure at least one enabled publish target first.");
+      new import_obsidian17.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
       return;
     }
     if (targets.length === 1) {
@@ -37670,15 +38214,15 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
     return this.settings.targets.filter((target) => target.enabled);
   }
   getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian17.MarkdownView);
     const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian16.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian17.TFile) || file.extension !== "md") {
       return null;
     }
     return file;
   }
   showPublisherMenu(items, position) {
-    const menu = new import_obsidian16.Menu();
+    const menu = new import_obsidian17.Menu();
     menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -37751,16 +38295,16 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
     }
   }
   async publishToTarget(file, target) {
-    new import_obsidian16.Notice(`Publishing "${file.basename}" to ${target.name}...`);
+    new import_obsidian17.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
     try {
       const result = await this.publishWorkflow.runSingle(file, target, this.settings);
       this.settings = result.settings;
       await this.saveSettings();
-      const actionLabel = result.action === "update" ? "updated" : "published";
-      new import_obsidian16.Notice(`Publish succeeded: ${target.name} ${actionLabel}.`);
+      const actionLabel = result.action === "update" ? this.i18n.t("notice.publish.action.updated") : this.i18n.t("notice.publish.action.published");
+      new import_obsidian17.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian16.Notice(`Publish failed: ${message}`, 8e3);
+      new import_obsidian17.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
   }
