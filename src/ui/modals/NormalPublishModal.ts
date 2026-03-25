@@ -61,10 +61,14 @@ export class NormalPublishModal extends Modal {
       const result = await this.workflow.runSingle(this.file, target, this.plugin.settings);
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
+      const actionLabel =
+        result.action === "update"
+          ? i18n.t("notice.publish.action.updated")
+          : i18n.t("notice.publish.action.published");
       new Notice(
         i18n.t("notice.publish.succeeded", {
           target: target.name,
-          action: i18n.t(`publish.shared.summary.action.${result.action}`),
+          action: actionLabel,
         })
       );
     } catch (error) {
