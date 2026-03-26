@@ -67,4 +67,38 @@ describe("LocalExportProvider", () => {
     const bytes = await readFile(join(outputDir, "assets", "post-cover.png"));
     expect([...bytes]).toEqual([1, 2, 3]);
   });
+
+  it("writes override note metadata into frontmatter and output path", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "obsidian-publisher-"));
+    const provider = new LocalExportProvider(createApp([1, 2, 3]));
+    const target: LocalExportTargetConfig = {
+      id: "local-target",
+      name: "Local Export",
+      enabled: true,
+      provider: "local-export",
+      outputDir,
+      yamlType: "default",
+      assetDirName: "assets",
+    };
+
+    const result = await provider.publish(
+      {
+        ...createNote(),
+        title: "Override Title",
+        slug: "custom-post",
+        excerpt: "Custom excerpt",
+        tags: ["one"],
+        categories: ["notes"],
+      },
+      target
+    );
+
+    expect(result.remoteId).toBe(join(outputDir, "custom-post.md"));
+    const content = await readFile(result.remoteId, "utf8");
+    expect(content).toContain("title: Override Title");
+    expect(content).toContain("slug: custom-post");
+    expect(content).toContain("description: Custom excerpt");
+    expect(content).toContain("- one");
+    expect(content).toContain("- notes");
+  });
 });

@@ -1,4 +1,5 @@
 import { requestUrl } from "obsidian";
+import { NormalPublishExecutionContext } from "../core/normalPublish/types";
 import { MediaSupport, PublisherProvider, PublishResult, assertRemoteAssetsSupported } from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { YuqueTargetConfig } from "../types";
@@ -45,11 +46,16 @@ async function requestYuque<T>(target: YuqueTargetConfig, path: string, method =
   return payload as T;
 }
 
-function buildPayload(note: PublishableNote, target: YuqueTargetConfig): Record<string, unknown> {
+function buildPayload(
+  note: PublishableNote,
+  target: YuqueTargetConfig,
+  context?: NormalPublishExecutionContext
+): Record<string, unknown> {
+  const providerContext = context?.provider.provider === "yuque" ? context.provider : undefined;
   return {
-    title: note.title,
-    slug: note.slug,
-    public: target.publicLevel,
+    title: context?.common.title || note.title,
+    slug: providerContext?.slug ?? note.slug,
+    public: providerContext?.publicLevel ?? target.publicLevel,
     format: "markdown",
     body: note.markdown,
   };
@@ -73,9 +79,18 @@ export class YuqueProvider implements PublisherProvider<YuqueTargetConfig> {
     await requestYuque(target, `/api/v2/repos/${encodeURIComponent(target.repo)}`);
   }
 
-  async publish(note: PublishableNote, target: YuqueTargetConfig): Promise<PublishResult> {
+  async publish(
+    note: PublishableNote,
+    target: YuqueTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const doc = await requestYuque<YuqueDoc>(target, `/api/v2/repos/${encodeURIComponent(target.repo)}/docs`, "POST", buildPayload(note, target));
+    const doc = await requestYuque<YuqueDoc>(
+      target,
+      `/api/v2/repos/${encodeURIComponent(target.repo)}/docs`,
+      "POST",
+      buildPayload(note, target, context)
+    );
     const remoteId = String(doc.id ?? doc.slug ?? note.slug);
     return {
       remoteId,
@@ -83,13 +98,18 @@ export class YuqueProvider implements PublisherProvider<YuqueTargetConfig> {
     };
   }
 
-  async update(remoteId: string, note: PublishableNote, target: YuqueTargetConfig): Promise<PublishResult> {
+  async update(
+    remoteId: string,
+    note: PublishableNote,
+    target: YuqueTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
     const doc = await requestYuque<YuqueDoc>(
       target,
       `/api/v2/repos/${encodeURIComponent(target.repo)}/docs/${encodeURIComponent(remoteId)}`,
       "PUT",
-      buildPayload(note, target)
+      buildPayload(note, target, context)
     );
     return {
       remoteId: String(doc.id ?? remoteId),

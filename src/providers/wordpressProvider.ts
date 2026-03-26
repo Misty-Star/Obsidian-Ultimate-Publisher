@@ -1,6 +1,7 @@
 import { App, normalizePath, requestUrl } from "obsidian";
 import { PreparedHtmlNote } from "../core/content";
 import { renderMarkdownToHtml } from "../core/html";
+import { NormalPublishExecutionContext } from "../core/normalPublish/types";
 import { MediaSupport, MediaUploadResult, PublisherProvider, PublishResult } from "../core/providers";
 import { PublishableNote, ResolvedAsset } from "../core/note";
 import { WordpressTargetConfig } from "../types";
@@ -121,17 +122,28 @@ async function ensureTermIds(target: WordpressTargetConfig, taxonomy: "categorie
   return ids;
 }
 
-async function buildPayload(note: PublishableNote & PreparedHtmlNote, target: WordpressTargetConfig): Promise<Record<string, unknown>> {
+async function buildPayload(
+  note: PublishableNote & PreparedHtmlNote,
+  target: WordpressTargetConfig,
+  context?: NormalPublishExecutionContext
+): Promise<Record<string, unknown>> {
+  const providerContext = context?.provider.provider === "wordpress" ? context.provider : undefined;
   const content = target.contentFormat === "html" ? note.html ?? note.markdown : note.markdown;
-  return {
-    title: note.title,
+  const payload: Record<string, unknown> = {
+    title: context?.common.title || note.title,
     content,
-    excerpt: note.excerpt,
-    slug: note.slug,
-    status: note.frontmatter.status ?? target.defaultStatus,
-    categories: await ensureTermIds(target, "categories", note.categories),
-    tags: await ensureTermIds(target, "tags", note.tags),
+    excerpt: providerContext?.excerpt ?? note.excerpt,
+    slug: providerContext?.slug ?? note.slug,
+    status: providerContext?.status ?? note.frontmatter.status ?? target.defaultStatus,
+    categories: await ensureTermIds(target, "categories", providerContext?.categories ?? note.categories),
+    tags: await ensureTermIds(target, "tags", providerContext?.tags ?? note.tags),
   };
+
+  if (providerContext?.password) {
+    payload.password = providerContext.password;
+  }
+
+  return payload;
 }
 
 export class WordpressProvider implements PublisherProvider<WordpressTargetConfig> {
@@ -150,12 +162,16 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
     await requestJson(target, "/users/me");
   }
 
-  async publish(note: PublishableNote, target: WordpressTargetConfig): Promise<PublishResult> {
+  async publish(
+    note: PublishableNote,
+    target: WordpressTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     const response = await requestJson<WordpressPostResponse>(
       target,
       "/posts",
       "POST",
-      await buildPayload(await this.prepareNote(note), target)
+      await buildPayload(await this.prepareNote(note), target, context)
     );
     return {
       remoteId: String(response.id),
@@ -163,13 +179,18 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
     };
   }
 
-  async update(remoteId: string, note: PublishableNote, target: WordpressTargetConfig): Promise<PublishResult> {
+  async update(
+    remoteId: string,
+    note: PublishableNote,
+    target: WordpressTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     const preparedNote = await this.prepareNote(note);
     const response = await requestJson<WordpressPostResponse>(
       target,
       `/posts/${encodeURIComponent(remoteId)}`,
       "POST",
-      await buildPayload(preparedNote, target)
+      await buildPayload(preparedNote, target, context)
     );
     return {
       remoteId: String(response.id),

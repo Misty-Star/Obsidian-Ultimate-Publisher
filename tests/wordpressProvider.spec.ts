@@ -1,5 +1,6 @@
 import { App, requestUrl } from "obsidian";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NormalPublishExecutionContext } from "../src/core/normalPublish/types";
 import { PublishableNote, ResolvedAsset } from "../src/core/note";
 import { WordpressProvider } from "../src/providers/wordpressProvider";
 import { WordpressTargetConfig } from "../src/types";
@@ -59,6 +60,12 @@ function createTarget(): WordpressTargetConfig {
 describe("WordpressProvider", () => {
   beforeEach(() => {
     vi.mocked(requestUrl).mockReset();
+    vi.stubGlobal("document", {
+      createElement: () => ({
+        innerHTML: "",
+        querySelectorAll: () => [],
+      }),
+    });
   });
 
   it("uploads binary image data to the WordPress media endpoint", async () => {
@@ -82,6 +89,49 @@ describe("WordpressProvider", () => {
           Authorization: expect.stringMatching(/^Basic /),
           "Content-Disposition": expect.stringContaining('filename="cover.png"'),
         }),
+      })
+    );
+  });
+
+  it("includes detailed-mode status and password overrides in the publish payload", async () => {
+    vi.mocked(requestUrl).mockResolvedValue({
+      status: 201,
+      text: JSON.stringify({ id: 11, link: "https://wp.example/post" }),
+    } as never);
+
+    const provider = new WordpressProvider(createApp([1, 2, 3]));
+    const context: NormalPublishExecutionContext = {
+      common: {
+        title: "Post",
+      },
+      provider: {
+        provider: "wordpress",
+        slug: "post",
+        excerpt: "Custom excerpt",
+        tags: [],
+        categories: [],
+        status: "publish",
+        password: "secret",
+      },
+    };
+
+    await provider.publish(createNote(), createTarget(), context);
+
+    expect(requestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        url: "https://wp.example/wp-json/wp/v2/posts",
+        body: expect.stringContaining('"status":"publish"'),
+      })
+    );
+    expect(requestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('"password":"secret"'),
+      })
+    );
+    expect(requestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('"excerpt":"Custom excerpt"'),
       })
     );
   });
