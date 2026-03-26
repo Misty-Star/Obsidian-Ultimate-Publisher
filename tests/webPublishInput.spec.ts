@@ -48,6 +48,29 @@ describe("web publish input", () => {
     expect(input.columnId).toBe("frontmatter-column");
   });
 
+  it("prefers explicit zhihu overrides over frontmatter and target defaults", () => {
+    const input = resolveZhihuPublishInput(
+      createNote({
+        frontmatter: {
+          ultimatePublisher: {
+            zhihu: {
+              columnId: "frontmatter-column",
+            },
+          },
+        },
+      }),
+      {
+        ...createZhihuTarget(),
+        defaultColumnId: "target-column",
+      },
+      {
+        columnId: "override-column",
+      }
+    );
+
+    expect(input.columnId).toBe("override-column");
+  });
+
   it("normalizes csdn categories and tags from generic note metadata", () => {
     const input = resolveCsdnPublishInput(
       createNote({
@@ -59,6 +82,27 @@ describe("web publish input", () => {
 
     expect(input.categories).toEqual(["后端"]);
     expect(input.tags).toEqual(["Obsidian"]);
+  });
+
+  it("prefers explicit csdn overrides over note metadata and target defaults", () => {
+    const input = resolveCsdnPublishInput(
+      createNote({
+        categories: ["后端"],
+        tags: ["Obsidian"],
+      }),
+      {
+        ...createCsdnTarget(),
+        defaultCategories: ["默认分类"],
+        defaultTags: ["默认标签"],
+      },
+      {
+        categories: ["覆盖分类"],
+        tags: ["覆盖标签"],
+      }
+    );
+
+    expect(input.categories).toEqual(["覆盖分类"]);
+    expect(input.tags).toEqual(["覆盖标签"]);
   });
 
   it("requires juejin category and tag ids before publish", () => {
@@ -81,5 +125,37 @@ describe("web publish input", () => {
     expect(input.categoryId).toBe("category-1");
     expect(input.tagIds).toEqual(["tag-1", "tag-2"]);
     expect(input.briefContent).toBe("fallback brief content");
+  });
+
+  it("prefers explicit juejin overrides over frontmatter and target defaults", () => {
+    const input = resolveJuejinPublishInput(
+      createNote({
+        excerpt: "short brief",
+        frontmatter: {
+          ultimatePublisher: {
+            juejin: {
+              categoryId: "frontmatter-category",
+              tagIds: ["frontmatter-tag"],
+              briefContent: "frontmatter brief",
+            },
+          },
+        },
+      }),
+      {
+        ...createJuejinTarget(),
+        defaultCategoryId: "category-1",
+        defaultTagIds: ["tag-1", "tag-2"],
+        defaultBriefContent: "fallback brief content",
+      },
+      {
+        categoryId: "override-category",
+        tagIds: ["override-tag"],
+        briefContent: "override brief",
+      }
+    );
+
+    expect(input.categoryId).toBe("override-category");
+    expect(input.tagIds).toEqual(["override-tag"]);
+    expect(input.briefContent).toBe("override brief");
   });
 });

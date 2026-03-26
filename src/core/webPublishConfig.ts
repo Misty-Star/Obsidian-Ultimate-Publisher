@@ -1,5 +1,6 @@
 import { PublishableNote } from "./note";
 import { CsdnTargetConfig, JuejinTargetConfig, ZhihuTargetConfig } from "../types";
+import { CsdnPublishDraft, JuejinPublishDraft, ZhihuPublishDraft } from "./normalPublish/types";
 
 interface ZhihuPublishInput {
   columnId: string;
@@ -15,6 +16,10 @@ interface JuejinPublishInput {
   tagIds: string[];
   briefContent: string;
 }
+
+type ZhihuPublishOverrides = Pick<ZhihuPublishDraft, "columnId">;
+type CsdnPublishOverrides = Pick<CsdnPublishDraft, "categories" | "tags">;
+type JuejinPublishOverrides = Pick<JuejinPublishDraft, "categoryId" | "tagIds" | "briefContent">;
 
 function getNestedValue(source: Record<string, unknown>, path: string[]): unknown {
   let current: unknown = source;
@@ -61,8 +66,13 @@ function pickFirstNonEmptyArray(...values: unknown[]): string[] {
   return [];
 }
 
-export function resolveZhihuPublishInput(note: PublishableNote, target: ZhihuTargetConfig): ZhihuPublishInput {
+export function resolveZhihuPublishInput(
+  note: PublishableNote,
+  target: ZhihuTargetConfig,
+  overrides?: Partial<ZhihuPublishOverrides>
+): ZhihuPublishInput {
   const columnId =
+    readString(overrides?.columnId) ||
     readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "zhihu", "columnId"])) ||
     target.defaultColumnId;
 
@@ -73,13 +83,19 @@ export function resolveZhihuPublishInput(note: PublishableNote, target: ZhihuTar
   return { columnId };
 }
 
-export function resolveCsdnPublishInput(note: PublishableNote, target: CsdnTargetConfig): CsdnPublishInput {
+export function resolveCsdnPublishInput(
+  note: PublishableNote,
+  target: CsdnTargetConfig,
+  overrides?: Partial<CsdnPublishOverrides>
+): CsdnPublishInput {
   const categories = pickFirstNonEmptyArray(
+    overrides?.categories,
     getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "categories"]),
     note.categories,
     target.defaultCategories
   );
   const tags = pickFirstNonEmptyArray(
+    overrides?.tags,
     getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "tags"]),
     note.tags,
     target.defaultTags
@@ -91,15 +107,22 @@ export function resolveCsdnPublishInput(note: PublishableNote, target: CsdnTarge
   };
 }
 
-export function resolveJuejinPublishInput(note: PublishableNote, target: JuejinTargetConfig): JuejinPublishInput {
+export function resolveJuejinPublishInput(
+  note: PublishableNote,
+  target: JuejinTargetConfig,
+  overrides?: Partial<JuejinPublishOverrides>
+): JuejinPublishInput {
   const categoryId =
+    readString(overrides?.categoryId) ||
     readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "categoryId"])) ||
     target.defaultCategoryId;
   const tagIds = pickFirstNonEmptyArray(
+    overrides?.tagIds,
     getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tagIds"]),
     target.defaultTagIds
   );
   const briefContent =
+    readString(overrides?.briefContent) ||
     readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "briefContent"])) ||
     target.defaultBriefContent ||
     note.excerpt;

@@ -1,5 +1,6 @@
 import { TFile } from "obsidian";
 import { getRecord } from "../settings";
+import { NormalPublishExecutionContext } from "./normalPublish/types";
 import { PublishService, PublishServiceResult } from "./publishService";
 import { PublishTargetConfig, UltimatePublisherSettings } from "../types";
 
@@ -39,10 +40,11 @@ export class PublishWorkflow {
   async runSingle(
     file: TFile,
     target: PublishTargetConfig,
-    settings: UltimatePublisherSettings
+    settings: UltimatePublisherSettings,
+    context?: NormalPublishExecutionContext
   ): Promise<SinglePublishWorkflowResult> {
     const action = this.resolveAction(file, target, settings);
-    const serviceResult = await this.publishService.publishFile(file, target, settings);
+    const serviceResult = await this.publishService.publishFile(file, target, settings, context);
     const nextSettings = this.publishService.updateSettings(settings, serviceResult.record);
 
     return {

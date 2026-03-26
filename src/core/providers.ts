@@ -1,6 +1,7 @@
 import { Notice } from "obsidian";
 import { PublishRecord, PublishTargetConfig } from "../types";
 import { PublishableNote, ResolvedAsset } from "./note";
+import { NormalPublishExecutionContext } from "./normalPublish/types";
 
 export interface PublishResult {
   remoteId: string;
@@ -23,8 +24,8 @@ export interface PublisherProvider<TConfig extends PublishTargetConfig = Publish
   uploadAsset?(asset: ResolvedAsset, note: PublishableNote, target: TConfig): Promise<MediaUploadResult>;
   copyAsset?(asset: ResolvedAsset, note: PublishableNote, target: TConfig): Promise<MediaUploadResult>;
   validateConfig(target: TConfig): Promise<void>;
-  publish(note: PublishableNote, target: TConfig): Promise<PublishResult>;
-  update(remoteId: string, note: PublishableNote, target: TConfig): Promise<PublishResult>;
+  publish(note: PublishableNote, target: TConfig, context?: NormalPublishExecutionContext): Promise<PublishResult>;
+  update(remoteId: string, note: PublishableNote, target: TConfig, context?: NormalPublishExecutionContext): Promise<PublishResult>;
   delete(remoteId: string, target: TConfig): Promise<void>;
   getPreviewUrl(remoteId: string, target: TConfig): Promise<string | undefined>;
 }

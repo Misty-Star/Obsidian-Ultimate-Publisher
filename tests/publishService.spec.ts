@@ -1,6 +1,7 @@
 import { TFile } from "obsidian";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PublishableNote } from "../src/core/note";
+import { NormalPublishExecutionContext } from "../src/core/normalPublish/types";
 import { PublishService } from "../src/core/publishService";
 import { UltimatePublisherSettings, WordpressTargetConfig } from "../src/types";
 
@@ -96,15 +97,46 @@ describe("PublishService", () => {
     const mediaPipeline = {
       prepare: vi.fn().mockResolvedValue(preparedNote),
     };
+    const normalPublishContext: NormalPublishExecutionContext = {
+      common: {
+        title: "Override",
+      },
+      provider: {
+        provider: "wordpress",
+        slug: "custom-post",
+        excerpt: "Custom excerpt",
+        tags: ["Obsidian"],
+        categories: ["Notes"],
+        status: "publish",
+        password: "secret",
+      },
+    };
 
     const service = new PublishService({} as never, providers as never, mediaPipeline as never);
-    const result = await service.publishFile(createFile("Notes/Post.md"), createTarget(), createSettings());
+    const result = await service.publishFile(
+      createFile("Notes/Post.md"),
+      createTarget(),
+      createSettings(),
+      normalPublishContext
+    );
 
     expect(providers.get).toHaveBeenCalledWith(createTarget());
     expect(provider.validateConfig).toHaveBeenCalledWith(createTarget());
     expect(extractPublishableNoteMock).toHaveBeenCalled();
-    expect(mediaPipeline.prepare).toHaveBeenCalledWith(extractedNote, createTarget(), provider);
-    expect(provider.publish).toHaveBeenCalledWith(preparedNote, createTarget());
+    expect(mediaPipeline.prepare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Override",
+      }),
+      createTarget(),
+      provider
+    );
+    expect(provider.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Override",
+      }),
+      createTarget(),
+      normalPublishContext
+    );
     expect(result.created).toBe(true);
     expect(provider.validateConfig.mock.invocationCallOrder[0]).toBeLessThan(mediaPipeline.prepare.mock.invocationCallOrder[0]);
     expect(mediaPipeline.prepare.mock.invocationCallOrder[0]).toBeLessThan(provider.publish.mock.invocationCallOrder[0]);

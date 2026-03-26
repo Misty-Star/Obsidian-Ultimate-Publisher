@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { NormalPublishExecutionContext } from "../src/core/normalPublish/types";
 import { PublishWorkflow } from "../src/core/publishWorkflow";
 
 describe("PublishWorkflow", () => {
@@ -17,12 +18,37 @@ describe("PublishWorkflow", () => {
       publishFile: vi.fn().mockResolvedValue({ record, created: false }),
       updateSettings: vi.fn((settings, nextRecord) => ({ ...settings, records: [nextRecord] })),
     };
+    const normalPublishContext: NormalPublishExecutionContext = {
+      common: {
+        title: "Override",
+      },
+      provider: {
+        provider: "wordpress",
+        slug: "custom-post",
+        excerpt: "Custom excerpt",
+        tags: ["Obsidian"],
+        categories: ["Notes"],
+        status: "publish",
+        password: "secret",
+      },
+    };
 
     const workflow = new PublishWorkflow(publishService as never);
-    const result = await workflow.runSingle(file as never, target as never, { targets: [target], records: [record] } as never);
+    const result = await workflow.runSingle(
+      file as never,
+      target as never,
+      { targets: [target], records: [record] } as never,
+      normalPublishContext
+    );
 
     expect(result.action).toBe("update");
     expect(result.settings.records).toHaveLength(1);
+    expect(publishService.publishFile).toHaveBeenCalledWith(
+      file,
+      target,
+      { targets: [target], records: [record] },
+      normalPublishContext
+    );
   });
 
   it("runs batch targets sequentially and keeps later targets running after a failure", async () => {

@@ -76,6 +76,11 @@ export interface NormalPublishSessionState {
   lastErrorByTargetId: Record<string, string | null>;
 }
 
+export interface NormalPublishExecutionContext {
+  common: CommonPublishDraft;
+  provider: ProviderPublishDraft;
+}
+
 export interface NormalPublishDraftBuildInput {
   note: PublishableNote;
   target: PublishTargetConfig;
