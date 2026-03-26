@@ -113,4 +113,45 @@ describe("ZhihuProvider", () => {
       })
     );
   });
+
+  it("loads zhihu column options for detailed publish", async () => {
+    vi.mocked(requestUrl).mockResolvedValue({
+      status: 200,
+      json: {
+        data: [
+          {
+            column: {
+              id: "column-1",
+              title: "Demo Column",
+              url: "https://zhuanlan.zhihu.com/c/demo",
+            },
+          },
+        ],
+      },
+      text: JSON.stringify({
+        data: [
+          {
+            column: {
+              id: "column-1",
+              title: "Demo Column",
+              url: "https://zhuanlan.zhihu.com/c/demo",
+            },
+          },
+        ],
+      }),
+    } as never);
+
+    const provider = new ZhihuProvider(createApp());
+    const result = await provider.loadNormalPublishOptions?.(createTarget());
+
+    expect(result).toEqual({
+      zhihuColumns: [
+        {
+          id: "column-1",
+          label: "Demo Column",
+          description: "https://zhuanlan.zhihu.com/c/demo",
+        },
+      ],
+    });
+  });
 });

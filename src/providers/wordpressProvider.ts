@@ -2,7 +2,14 @@ import { App, normalizePath, requestUrl } from "obsidian";
 import { PreparedHtmlNote } from "../core/content";
 import { renderMarkdownToHtml } from "../core/html";
 import { NormalPublishExecutionContext } from "../core/normalPublish/types";
-import { MediaSupport, MediaUploadResult, PublisherProvider, PublishResult } from "../core/providers";
+import {
+  MediaSupport,
+  MediaUploadResult,
+  NormalPublishOptionItem,
+  ProviderRemoteOptions,
+  PublisherProvider,
+  PublishResult,
+} from "../core/providers";
 import { PublishableNote, ResolvedAsset } from "../core/note";
 import { WordpressTargetConfig } from "../types";
 
@@ -153,6 +160,22 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
 
   getMediaSupport(_target: WordpressTargetConfig): MediaSupport {
     return { mode: "native-upload" };
+  }
+
+  async loadNormalPublishOptions(target: WordpressTargetConfig): Promise<ProviderRemoteOptions> {
+    const categories = await requestJson<WordpressTermResponse[]>(target, "/categories?per_page=100");
+    const tags = await requestJson<WordpressTermResponse[]>(target, "/tags?per_page=100");
+
+    const toOption = (item: WordpressTermResponse): NormalPublishOptionItem => ({
+      id: String(item.id),
+      label: item.name,
+      description: item.slug,
+    });
+
+    return {
+      wordpressCategories: categories.map(toOption),
+      wordpressTags: tags.map(toOption),
+    };
   }
 
   async validateConfig(target: WordpressTargetConfig): Promise<void> {

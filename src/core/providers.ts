@@ -18,11 +18,28 @@ export interface MediaUploadResult {
   url: string;
 }
 
+export interface NormalPublishOptionItem {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface ProviderRemoteOptions {
+  wordpressCategories?: NormalPublishOptionItem[];
+  wordpressTags?: NormalPublishOptionItem[];
+  zhihuColumns?: NormalPublishOptionItem[];
+  csdnCategories?: NormalPublishOptionItem[];
+  csdnTags?: NormalPublishOptionItem[];
+  juejinCategories?: NormalPublishOptionItem[];
+  juejinTags?: NormalPublishOptionItem[];
+}
+
 export interface PublisherProvider<TConfig extends PublishTargetConfig = PublishTargetConfig> {
   readonly provider: TConfig["provider"];
   getMediaSupport(target: TConfig): MediaSupport;
   uploadAsset?(asset: ResolvedAsset, note: PublishableNote, target: TConfig): Promise<MediaUploadResult>;
   copyAsset?(asset: ResolvedAsset, note: PublishableNote, target: TConfig): Promise<MediaUploadResult>;
+  loadNormalPublishOptions?(target: TConfig): Promise<ProviderRemoteOptions>;
   validateConfig(target: TConfig): Promise<void>;
   publish(note: PublishableNote, target: TConfig, context?: NormalPublishExecutionContext): Promise<PublishResult>;
   update(remoteId: string, note: PublishableNote, target: TConfig, context?: NormalPublishExecutionContext): Promise<PublishResult>;

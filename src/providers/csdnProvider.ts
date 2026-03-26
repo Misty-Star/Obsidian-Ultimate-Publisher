@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { App, requestUrl } from "obsidian";
 import { renderMarkdownToHtml } from "../core/html";
+import { NormalPublishExecutionContext } from "../core/normalPublish/types";
 import { assertRemoteAssetsSupported, MediaSupport, PublisherProvider, PublishResult } from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { resolveCsdnPublishInput } from "../core/webPublishConfig";
@@ -19,6 +20,24 @@ interface CsdnPublishResponse {
   message?: string;
   data?: {
     id?: number | string;
+  };
+}
+
+interface CsdnColumnListResponse {
+  code?: number;
+  data?: {
+    list?: {
+      column?: Array<{
+        id?: number | string;
+        edit_title?: string;
+        column_url?: string;
+      }>;
+      pay_column?: Array<{
+        id?: number | string;
+        edit_title?: string;
+        column_url?: string;
+      }>;
+    };
   };
 }
 
@@ -188,6 +207,28 @@ export class CsdnProvider implements PublisherProvider<CsdnTargetConfig> {
     return { mode: "unsupported" };
   }
 
+  async loadNormalPublishOptions(target: CsdnTargetConfig) {
+    const response = await requestCsdn<CsdnColumnListResponse>(
+      target,
+      "https://bizapi.csdn.net/blog/phoenix/console/v1/column/list?type=all"
+    );
+    const columns = [
+      ...(response.data?.list?.column ?? []),
+      ...(response.data?.list?.pay_column ?? []),
+    ];
+
+    return {
+      csdnCategories: columns
+        .filter((item) => item.id && item.edit_title)
+        .map((item) => ({
+          id: String(item.id),
+          label: item.edit_title ?? String(item.id),
+          description: item.column_url,
+        })),
+      csdnTags: [],
+    };
+  }
+
   async validateConfig(target: CsdnTargetConfig): Promise<void> {
     if (!target.cookie) {
       throw new Error("CSDN target is missing Cookie.");
@@ -210,9 +251,17 @@ export class CsdnProvider implements PublisherProvider<CsdnTargetConfig> {
     };
   }
 
-  async publish(note: PublishableNote, target: CsdnTargetConfig): Promise<PublishResult> {
+  async publish(
+    note: PublishableNote,
+    target: CsdnTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(note, target);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : undefined
+    );
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     const response = await requestCsdn<CsdnPublishResponse>(
       target,
@@ -232,9 +281,18 @@ export class CsdnProvider implements PublisherProvider<CsdnTargetConfig> {
     };
   }
 
-  async update(remoteId: string, note: PublishableNote, target: CsdnTargetConfig): Promise<PublishResult> {
+  async update(
+    remoteId: string,
+    note: PublishableNote,
+    target: CsdnTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(note, target);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : undefined
+    );
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     const response = await requestCsdn<CsdnPublishResponse>(
       target,

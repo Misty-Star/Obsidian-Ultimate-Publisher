@@ -1,5 +1,6 @@
 import { App, requestUrl } from "obsidian";
 import { renderMarkdownToHtml } from "../core/html";
+import { NormalPublishExecutionContext } from "../core/normalPublish/types";
 import { assertRemoteAssetsSupported, MediaSupport, PublisherProvider, PublishResult } from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { resolveZhihuPublishInput } from "../core/webPublishConfig";
@@ -13,6 +14,16 @@ interface ZhihuAccountResponse {
   uid?: string;
   name?: string;
   avatar_url?: string;
+}
+
+interface ZhihuColumnContributionResponse {
+  data?: Array<{
+    column?: {
+      id?: number | string;
+      title?: string;
+      url?: string;
+    };
+  }>;
 }
 
 function buildHeaders(target: ZhihuTargetConfig): Record<string, string> {
@@ -68,6 +79,24 @@ export class ZhihuProvider implements PublisherProvider<ZhihuTargetConfig> {
     return { mode: "unsupported" };
   }
 
+  async loadNormalPublishOptions(target: ZhihuTargetConfig) {
+    const response = await requestZhihu<ZhihuColumnContributionResponse>(
+      target,
+      "https://www.zhihu.com/api/v4/members/self/column-contributions?include=data%5B*%5D.column.intro%2Cfollowers%2Carticles_count%2Cvoteup_count%2Citems_count&offset=0&limit=20"
+    );
+
+    return {
+      zhihuColumns: (response.data ?? [])
+        .map((item) => item.column)
+        .filter((column): column is NonNullable<typeof column> => Boolean(column?.id && column?.title))
+        .map((column) => ({
+          id: String(column.id),
+          label: column.title ?? String(column.id),
+          description: column.url,
+        })),
+    };
+  }
+
   async validateConfig(target: ZhihuTargetConfig): Promise<void> {
     if (!target.cookie) {
       throw new Error("Zhihu target is missing Cookie.");
@@ -93,9 +122,17 @@ export class ZhihuProvider implements PublisherProvider<ZhihuTargetConfig> {
     };
   }
 
-  async publish(note: PublishableNote, target: ZhihuTargetConfig): Promise<PublishResult> {
+  async publish(
+    note: PublishableNote,
+    target: ZhihuTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const { columnId } = resolveZhihuPublishInput(note, target);
+    const { columnId } = resolveZhihuPublishInput(
+      note,
+      target,
+      context?.provider.provider === "zhihu" ? context.provider : undefined
+    );
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     const draft = await requestZhihu<ZhihuDraftResponse>(
       target,
@@ -142,8 +179,14 @@ export class ZhihuProvider implements PublisherProvider<ZhihuTargetConfig> {
     };
   }
 
-  async update(remoteId: string, note: PublishableNote, target: ZhihuTargetConfig): Promise<PublishResult> {
+  async update(
+    remoteId: string,
+    note: PublishableNote,
+    target: ZhihuTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
+    void context;
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
 
     await requestZhihu(

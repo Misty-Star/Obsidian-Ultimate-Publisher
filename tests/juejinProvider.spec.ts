@@ -81,4 +81,76 @@ describe("JuejinProvider", () => {
       remoteUrl: "https://juejin.cn/post/article-1",
     });
   });
+
+  it("loads juejin category and tag options for detailed publish", async () => {
+    vi.mocked(requestUrl)
+      .mockResolvedValueOnce({
+        status: 200,
+        json: {
+          err_no: 0,
+          data: [
+            {
+              category_id: "category-1",
+              category: {
+                category_name: "Backend",
+              },
+            },
+          ],
+        },
+        text: JSON.stringify({
+          err_no: 0,
+          data: [
+            {
+              category_id: "category-1",
+              category: {
+                category_name: "Backend",
+              },
+            },
+          ],
+        }),
+      } as never)
+      .mockResolvedValueOnce({
+        status: 200,
+        json: {
+          err_no: 0,
+          data: [
+            {
+              tag_id: "tag-1",
+              tag: {
+                tag_name: "Obsidian",
+              },
+            },
+          ],
+        },
+        text: JSON.stringify({
+          err_no: 0,
+          data: [
+            {
+              tag_id: "tag-1",
+              tag: {
+                tag_name: "Obsidian",
+              },
+            },
+          ],
+        }),
+      } as never);
+
+    const provider = new JuejinProvider();
+    const result = await provider.loadNormalPublishOptions?.(createTarget());
+
+    expect(result).toEqual({
+      juejinCategories: [
+        {
+          id: "category-1",
+          label: "Backend",
+        },
+      ],
+      juejinTags: [
+        {
+          id: "tag-1",
+          label: "Obsidian",
+        },
+      ],
+    });
+  });
 });

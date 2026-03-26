@@ -1,4 +1,5 @@
 import { requestUrl } from "obsidian";
+import { NormalPublishExecutionContext } from "../core/normalPublish/types";
 import { assertRemoteAssetsSupported, MediaSupport, PublisherProvider, PublishResult } from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { resolveJuejinPublishInput } from "../core/webPublishConfig";
@@ -22,6 +23,20 @@ interface JuejinUserPayload {
   user_id?: string;
   user_name?: string;
   avatar_large?: string;
+}
+
+interface JuejinCategoryPayload {
+  category_id?: string;
+  category?: {
+    category_name?: string;
+  };
+}
+
+interface JuejinTagPayload {
+  tag_id?: string;
+  tag?: {
+    tag_name?: string;
+  };
 }
 
 function buildHeaders(target: JuejinTargetConfig): Record<string, string> {
@@ -87,6 +102,40 @@ export class JuejinProvider implements PublisherProvider<JuejinTargetConfig> {
     return { mode: "unsupported" };
   }
 
+  async loadNormalPublishOptions(target: JuejinTargetConfig) {
+    const categories = await requestJuejin<JuejinCategoryPayload[]>(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_category_list",
+      "POST"
+    );
+    const tags = await requestJuejin<JuejinTagPayload[]>(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_tag_list",
+      "POST",
+      {
+        cursor: "0",
+        key_word: "",
+        limit: 10,
+        sort_type: 1,
+      }
+    );
+
+    return {
+      juejinCategories: (categories.data ?? [])
+        .filter((item) => item.category_id && item.category?.category_name)
+        .map((item) => ({
+          id: String(item.category_id),
+          label: item.category?.category_name ?? String(item.category_id),
+        })),
+      juejinTags: (tags.data ?? [])
+        .filter((item) => item.tag_id && item.tag?.tag_name)
+        .map((item) => ({
+          id: String(item.tag_id),
+          label: item.tag?.tag_name ?? String(item.tag_id),
+        })),
+    };
+  }
+
   async validateConfig(target: JuejinTargetConfig): Promise<void> {
     if (!target.cookie) {
       throw new Error("Juejin target is missing Cookie.");
@@ -117,9 +166,17 @@ export class JuejinProvider implements PublisherProvider<JuejinTargetConfig> {
     };
   }
 
-  async publish(note: PublishableNote, target: JuejinTargetConfig): Promise<PublishResult> {
+  async publish(
+    note: PublishableNote,
+    target: JuejinTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(note, target);
+    const input = resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : undefined
+    );
     const draftResponse = await requestJuejin<JuejinDraftPayload>(
       target,
       "https://api.juejin.cn/content_api/v1/article_draft/create",
@@ -166,9 +223,18 @@ export class JuejinProvider implements PublisherProvider<JuejinTargetConfig> {
     };
   }
 
-  async update(remoteId: string, note: PublishableNote, target: JuejinTargetConfig): Promise<PublishResult> {
+  async update(
+    remoteId: string,
+    note: PublishableNote,
+    target: JuejinTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(note, target);
+    const input = resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : undefined
+    );
     const { articleId, draftId } = decodeRemoteId(remoteId);
     const draftResponse = await requestJuejin<JuejinDraftPayload>(
       target,

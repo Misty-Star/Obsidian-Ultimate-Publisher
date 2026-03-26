@@ -135,4 +135,28 @@ describe("WordpressProvider", () => {
       })
     );
   });
+
+  it("loads wordpress taxonomy options for detailed publish", async () => {
+    vi.mocked(requestUrl)
+      .mockResolvedValueOnce({
+        status: 200,
+        text: JSON.stringify([{ id: 1, name: "Notes", slug: "notes" }]),
+      } as never)
+      .mockResolvedValueOnce({
+        status: 200,
+        text: JSON.stringify([{ id: 2, name: "Obsidian", slug: "obsidian" }]),
+      } as never);
+
+    const provider = new WordpressProvider(createApp([1, 2, 3]));
+    const result = await provider.loadNormalPublishOptions?.(createTarget());
+
+    expect(result).toEqual({
+      wordpressCategories: [
+        { id: "1", label: "Notes", description: "notes" },
+      ],
+      wordpressTags: [
+        { id: "2", label: "Obsidian", description: "obsidian" },
+      ],
+    });
+  });
 });

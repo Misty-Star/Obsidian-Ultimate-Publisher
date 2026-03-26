@@ -142,4 +142,56 @@ describe("CsdnProvider", () => {
       "CSDN publish failed: 分类不能为空"
     );
   });
+
+  it("loads csdn remote category options for detailed publish", async () => {
+    vi.mocked(requestUrl).mockResolvedValue({
+      status: 200,
+      json: {
+        code: 200,
+        data: {
+          list: {
+            column: [
+              {
+                id: "column-1",
+                edit_title: "专栏一",
+                column_url: "https://blog.csdn.net/column-1",
+                desc: "说明",
+              },
+            ],
+            pay_column: [],
+          },
+        },
+      },
+      text: JSON.stringify({
+        code: 200,
+        data: {
+          list: {
+            column: [
+              {
+                id: "column-1",
+                edit_title: "专栏一",
+                column_url: "https://blog.csdn.net/column-1",
+                desc: "说明",
+              },
+            ],
+            pay_column: [],
+          },
+        },
+      }),
+    } as never);
+
+    const provider = new CsdnProvider(createApp());
+    const result = await provider.loadNormalPublishOptions?.(createTarget());
+
+    expect(result).toEqual({
+      csdnCategories: [
+        {
+          id: "column-1",
+          label: "专栏一",
+          description: "https://blog.csdn.net/column-1",
+        },
+      ],
+      csdnTags: [],
+    });
+  });
 });
