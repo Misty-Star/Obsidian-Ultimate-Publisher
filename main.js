@@ -34652,6 +34652,47 @@ async function prepareNoteForPublish(note, target, provider) {
   };
 }
 
+// src/core/normalPublish/overrides.ts
+function cloneStringList(values) {
+  return values.slice();
+}
+function applyNormalPublishContextToNote(note, context) {
+  if (!context) {
+    return note;
+  }
+  const nextNote = {
+    ...note,
+    frontmatter: {
+      ...note.frontmatter
+    },
+    attachments: note.attachments.slice(),
+    unresolvedAttachments: note.unresolvedAttachments.slice(),
+    title: context.common.title || note.title,
+    tags: cloneStringList(note.tags),
+    categories: cloneStringList(note.categories)
+  };
+  switch (context.provider.provider) {
+    case "wordpress":
+    case "local-export":
+      nextNote.slug = context.provider.slug;
+      nextNote.excerpt = context.provider.excerpt;
+      nextNote.tags = cloneStringList(context.provider.tags);
+      nextNote.categories = cloneStringList(context.provider.categories);
+      break;
+    case "yuque":
+      nextNote.slug = context.provider.slug;
+      break;
+    case "csdn":
+      nextNote.excerpt = context.provider.excerpt;
+      nextNote.tags = cloneStringList(context.provider.tags);
+      nextNote.categories = cloneStringList(context.provider.categories);
+      break;
+    default:
+      break;
+  }
+  return nextNote;
+}
+
 // src/settings.ts
 var import_node_crypto2 = require("node:crypto");
 var DEFAULT_SETTINGS = {
@@ -34814,14 +34855,18 @@ var PublishService = class {
     this.providers = providers;
     this.mediaPipeline = mediaPipeline;
   }
-  async publishFile(file, target, settings) {
+  async publishFile(file, target, settings, context) {
     const provider = this.providers.get(target);
     await provider.validateConfig(target);
-    const note = await extractPublishableNote(this.app, file);
+    const extractedNote = await extractPublishableNote(this.app, file);
+    const note = applyNormalPublishContextToNote(extractedNote, context);
     const contentHash = computeContentHash(note);
-    const preparedNote = await this.mediaPipeline.prepare(note, target, provider);
+    const preparedNote = applyNormalPublishContextToNote(
+      await this.mediaPipeline.prepare(note, target, provider),
+      context
+    );
     const existing = getRecord(settings.records, file.path, target.id);
-    const result = existing ? await provider.update(existing.remoteId, preparedNote, target) : await provider.publish(preparedNote, target);
+    const result = existing ? await provider.update(existing.remoteId, preparedNote, target, context) : await provider.publish(preparedNote, target, context);
     const previewUrl = result.remoteUrl ?? await provider.getPreviewUrl(result.remoteId, target);
     const record = {
       notePath: file.path,
@@ -34853,9 +34898,9 @@ var PublishWorkflow = class {
   resolveAction(file, target, settings) {
     return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
   }
-  async runSingle(file, target, settings) {
+  async runSingle(file, target, settings, context) {
     const action = this.resolveAction(file, target, settings);
-    const serviceResult = await this.publishService.publishFile(file, target, settings);
+    const serviceResult = await this.publishService.publishFile(file, target, settings, context);
     const nextSettings = this.publishService.updateSettings(settings, serviceResult.record);
     return {
       action,
@@ -34991,6 +35036,21 @@ var messages = {
     "publish.shared.error.last": "Last error: {error}",
     "publish.shared.error.targetUnavailable": "Selected target is not available.",
     "publish.normal.title": "Normal Publish",
+    "publish.normal.loading": "Loading publish details...",
+    "publish.normal.section.details": "Details",
+    "publish.normal.field.title": "Article Title",
+    "publish.normal.field.slug": "Slug",
+    "publish.normal.field.excerpt": "Excerpt",
+    "publish.normal.field.tags": "Tags",
+    "publish.normal.field.categories": "Categories",
+    "publish.normal.field.status": "Status",
+    "publish.normal.field.password": "Password",
+    "publish.normal.field.publicLevel": "Visibility",
+    "publish.normal.field.columnId": "Column ID",
+    "publish.normal.field.categoryId": "Category ID",
+    "publish.normal.field.tagIds": "Tag IDs",
+    "publish.normal.field.briefContent": "Brief Content",
+    "publish.normal.remote.fallback": "Remote options failed to load. Switched to manual input.",
     "publish.normal.summary.selectedAction": "Selected action: {action}",
     "publish.batch.title": "Batch Publish",
     "publish.batch.button.run": "Run Batch Publish",
@@ -35078,6 +35138,21 @@ var messages = {
     "publish.shared.error.last": "\u6700\u8FD1\u9519\u8BEF\uFF1A{error}",
     "publish.shared.error.targetUnavailable": "\u6240\u9009\u76EE\u6807\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
     "publish.normal.title": "\u666E\u901A\u53D1\u5E03",
+    "publish.normal.loading": "\u6B63\u5728\u52A0\u8F7D\u53D1\u5E03\u8BE6\u60C5...",
+    "publish.normal.section.details": "\u8BE6\u7EC6\u8BBE\u7F6E",
+    "publish.normal.field.title": "\u6587\u7AE0\u6807\u9898",
+    "publish.normal.field.slug": "\u522B\u540D",
+    "publish.normal.field.excerpt": "\u6458\u8981",
+    "publish.normal.field.tags": "\u6807\u7B7E",
+    "publish.normal.field.categories": "\u5206\u7C7B",
+    "publish.normal.field.status": "\u72B6\u6001",
+    "publish.normal.field.password": "\u5BC6\u7801\u4FDD\u62A4",
+    "publish.normal.field.publicLevel": "\u53EF\u89C1\u7EA7\u522B",
+    "publish.normal.field.columnId": "\u4E13\u680F ID",
+    "publish.normal.field.categoryId": "\u5206\u7C7B ID",
+    "publish.normal.field.tagIds": "\u6807\u7B7E ID",
+    "publish.normal.field.briefContent": "\u6458\u8981\u5185\u5BB9",
+    "publish.normal.remote.fallback": "\u8FDC\u7AEF\u9009\u9879\u62C9\u53D6\u5931\u8D25\uFF0C\u5DF2\u5207\u6362\u4E3A\u624B\u52A8\u8F93\u5165\u3002",
     "publish.normal.summary.selectedAction": "\u5F53\u524D\u64CD\u4F5C\uFF1A{action}",
     "publish.batch.title": "\u6279\u91CF\u53D1\u5E03",
     "publish.batch.button.run": "\u6267\u884C\u6279\u91CF\u53D1\u5E03",
@@ -35373,17 +35448,22 @@ async function ensureTermIds(target, taxonomy, names) {
   }
   return ids;
 }
-async function buildPayload(note, target) {
+async function buildPayload(note, target, context) {
+  const providerContext = context?.provider.provider === "wordpress" ? context.provider : void 0;
   const content = target.contentFormat === "html" ? note.html ?? note.markdown : note.markdown;
-  return {
-    title: note.title,
+  const payload = {
+    title: context?.common.title || note.title,
     content,
-    excerpt: note.excerpt,
-    slug: note.slug,
-    status: note.frontmatter.status ?? target.defaultStatus,
-    categories: await ensureTermIds(target, "categories", note.categories),
-    tags: await ensureTermIds(target, "tags", note.tags)
+    excerpt: providerContext?.excerpt ?? note.excerpt,
+    slug: providerContext?.slug ?? note.slug,
+    status: providerContext?.status ?? note.frontmatter.status ?? target.defaultStatus,
+    categories: await ensureTermIds(target, "categories", providerContext?.categories ?? note.categories),
+    tags: await ensureTermIds(target, "tags", providerContext?.tags ?? note.tags)
   };
+  if (providerContext?.password) {
+    payload.password = providerContext.password;
+  }
+  return payload;
 }
 var WordpressProvider = class {
   constructor(app) {
@@ -35393,31 +35473,44 @@ var WordpressProvider = class {
   getMediaSupport(_target) {
     return { mode: "native-upload" };
   }
+  async loadNormalPublishOptions(target) {
+    const categories = await requestJson(target, "/categories?per_page=100");
+    const tags = await requestJson(target, "/tags?per_page=100");
+    const toOption = (item) => ({
+      id: String(item.id),
+      label: item.name,
+      description: item.slug
+    });
+    return {
+      wordpressCategories: categories.map(toOption),
+      wordpressTags: tags.map(toOption)
+    };
+  }
   async validateConfig(target) {
     if (!target.endpoint || !target.username || !target.appPassword) {
       throw new Error("WordPress target is missing endpoint, username, or application password.");
     }
     await requestJson(target, "/users/me");
   }
-  async publish(note, target) {
+  async publish(note, target, context) {
     const response = await requestJson(
       target,
       "/posts",
       "POST",
-      await buildPayload(await this.prepareNote(note), target)
+      await buildPayload(await this.prepareNote(note), target, context)
     );
     return {
       remoteId: String(response.id),
       remoteUrl: response.link
     };
   }
-  async update(remoteId, note, target) {
+  async update(remoteId, note, target, context) {
     const preparedNote = await this.prepareNote(note);
     const response = await requestJson(
       target,
       `/posts/${encodeURIComponent(remoteId)}`,
       "POST",
-      await buildPayload(preparedNote, target)
+      await buildPayload(preparedNote, target, context)
     );
     return {
       remoteId: String(response.id),
@@ -35504,11 +35597,12 @@ async function requestYuque(target, path, method = "GET", body) {
   }
   return payload;
 }
-function buildPayload2(note, target) {
+function buildPayload2(note, target, context) {
+  const providerContext = context?.provider.provider === "yuque" ? context.provider : void 0;
   return {
-    title: note.title,
-    slug: note.slug,
-    public: target.publicLevel,
+    title: context?.common.title || note.title,
+    slug: providerContext?.slug ?? note.slug,
+    public: providerContext?.publicLevel ?? target.publicLevel,
     format: "markdown",
     body: note.markdown
   };
@@ -35529,22 +35623,27 @@ var YuqueProvider = class {
     }
     await requestYuque(target, `/api/v2/repos/${encodeURIComponent(target.repo)}`);
   }
-  async publish(note, target) {
+  async publish(note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
-    const doc = await requestYuque(target, `/api/v2/repos/${encodeURIComponent(target.repo)}/docs`, "POST", buildPayload2(note, target));
+    const doc = await requestYuque(
+      target,
+      `/api/v2/repos/${encodeURIComponent(target.repo)}/docs`,
+      "POST",
+      buildPayload2(note, target, context)
+    );
     const remoteId = String(doc.id ?? doc.slug ?? note.slug);
     return {
       remoteId,
       remoteUrl: getDocUrl(doc)
     };
   }
-  async update(remoteId, note, target) {
+  async update(remoteId, note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
     const doc = await requestYuque(
       target,
       `/api/v2/repos/${encodeURIComponent(target.repo)}/docs/${encodeURIComponent(remoteId)}`,
       "PUT",
-      buildPayload2(note, target)
+      buildPayload2(note, target, context)
     );
     return {
       remoteId: String(doc.id ?? remoteId),
@@ -35599,20 +35698,22 @@ function pickFirstNonEmptyArray(...values) {
   }
   return [];
 }
-function resolveZhihuPublishInput(note, target) {
-  const columnId = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "zhihu", "columnId"])) || target.defaultColumnId;
+function resolveZhihuPublishInput(note, target, overrides) {
+  const columnId = readString(overrides?.columnId) || readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "zhihu", "columnId"])) || target.defaultColumnId;
   if (!columnId) {
     throw new Error("Zhihu publish requires a columnId.");
   }
   return { columnId };
 }
-function resolveCsdnPublishInput(note, target) {
+function resolveCsdnPublishInput(note, target, overrides) {
   const categories = pickFirstNonEmptyArray(
+    overrides?.categories,
     getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "categories"]),
     note.categories,
     target.defaultCategories
   );
   const tags = pickFirstNonEmptyArray(
+    overrides?.tags,
     getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "tags"]),
     note.tags,
     target.defaultTags
@@ -35622,13 +35723,14 @@ function resolveCsdnPublishInput(note, target) {
     tags
   };
 }
-function resolveJuejinPublishInput(note, target) {
-  const categoryId = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "categoryId"])) || target.defaultCategoryId;
+function resolveJuejinPublishInput(note, target, overrides) {
+  const categoryId = readString(overrides?.categoryId) || readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "categoryId"])) || target.defaultCategoryId;
   const tagIds = pickFirstNonEmptyArray(
+    overrides?.tagIds,
     getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tagIds"]),
     target.defaultTagIds
   );
-  const briefContent = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "briefContent"])) || target.defaultBriefContent || note.excerpt;
+  const briefContent = readString(overrides?.briefContent) || readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "briefContent"])) || target.defaultBriefContent || note.excerpt;
   if (!categoryId) {
     throw new Error("Juejin publish requires a categoryId.");
   }
@@ -35753,6 +35855,24 @@ var CsdnProvider = class {
   getMediaSupport(_target) {
     return { mode: "unsupported" };
   }
+  async loadNormalPublishOptions(target) {
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog/phoenix/console/v1/column/list?type=all"
+    );
+    const columns = [
+      ...response.data?.list?.column ?? [],
+      ...response.data?.list?.pay_column ?? []
+    ];
+    return {
+      csdnCategories: columns.filter((item) => item.id && item.edit_title).map((item) => ({
+        id: String(item.id),
+        label: item.edit_title ?? String(item.id),
+        description: item.column_url
+      })),
+      csdnTags: []
+    };
+  }
   async validateConfig(target) {
     if (!target.cookie) {
       throw new Error("CSDN target is missing Cookie.");
@@ -35767,9 +35887,13 @@ var CsdnProvider = class {
       accountAvatarUrl: response.data?.avatar
     };
   }
-  async publish(note, target) {
+  async publish(note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(note, target);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : void 0
+    );
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     const response = await requestCsdn(
       target,
@@ -35786,9 +35910,13 @@ var CsdnProvider = class {
       remoteUrl: buildPreviewUrl(target, articleId)
     };
   }
-  async update(remoteId, note, target) {
+  async update(remoteId, note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(note, target);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : void 0
+    );
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     const response = await requestCsdn(
       target,
@@ -35878,6 +36006,34 @@ var JuejinProvider = class {
   getMediaSupport(_target) {
     return { mode: "unsupported" };
   }
+  async loadNormalPublishOptions(target) {
+    const categories = await requestJuejin(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_category_list",
+      "POST"
+    );
+    const tags = await requestJuejin(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_tag_list",
+      "POST",
+      {
+        cursor: "0",
+        key_word: "",
+        limit: 10,
+        sort_type: 1
+      }
+    );
+    return {
+      juejinCategories: (categories.data ?? []).filter((item) => item.category_id && item.category?.category_name).map((item) => ({
+        id: String(item.category_id),
+        label: item.category?.category_name ?? String(item.category_id)
+      })),
+      juejinTags: (tags.data ?? []).filter((item) => item.tag_id && item.tag?.tag_name).map((item) => ({
+        id: String(item.tag_id),
+        label: item.tag?.tag_name ?? String(item.tag_id)
+      }))
+    };
+  }
   async validateConfig(target) {
     if (!target.cookie) {
       throw new Error("Juejin target is missing Cookie.");
@@ -35899,9 +36055,13 @@ var JuejinProvider = class {
       accountAvatarUrl: response.data.avatar_large
     };
   }
-  async publish(note, target) {
+  async publish(note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(note, target);
+    const input = resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : void 0
+    );
     const draftResponse = await requestJuejin(
       target,
       "https://api.juejin.cn/content_api/v1/article_draft/create",
@@ -35943,9 +36103,13 @@ var JuejinProvider = class {
       remoteUrl: buildPreviewUrl2(articleId)
     };
   }
-  async update(remoteId, note, target) {
+  async update(remoteId, note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(note, target);
+    const input = resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : void 0
+    );
     const { articleId, draftId } = decodeRemoteId(remoteId);
     const draftResponse = await requestJuejin(
       target,
@@ -36048,6 +36212,19 @@ var ZhihuProvider = class {
   getMediaSupport(_target) {
     return { mode: "unsupported" };
   }
+  async loadNormalPublishOptions(target) {
+    const response = await requestZhihu(
+      target,
+      "https://www.zhihu.com/api/v4/members/self/column-contributions?include=data%5B*%5D.column.intro%2Cfollowers%2Carticles_count%2Cvoteup_count%2Citems_count&offset=0&limit=20"
+    );
+    return {
+      zhihuColumns: (response.data ?? []).map((item) => item.column).filter((column) => Boolean(column?.id && column?.title)).map((column) => ({
+        id: String(column.id),
+        label: column.title ?? String(column.id),
+        description: column.url
+      }))
+    };
+  }
   async validateConfig(target) {
     if (!target.cookie) {
       throw new Error("Zhihu target is missing Cookie.");
@@ -36065,9 +36242,13 @@ var ZhihuProvider = class {
       accountAvatarUrl: account.avatar_url
     };
   }
-  async publish(note, target) {
+  async publish(note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
-    const { columnId } = resolveZhihuPublishInput(note, target);
+    const { columnId } = resolveZhihuPublishInput(
+      note,
+      target,
+      context?.provider.provider === "zhihu" ? context.provider : void 0
+    );
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     const draft = await requestZhihu(
       target,
@@ -36110,8 +36291,9 @@ var ZhihuProvider = class {
       remoteUrl: buildPreviewUrl3(articleId)
     };
   }
-  async update(remoteId, note, target) {
+  async update(remoteId, note, target, context) {
     assertRemoteAssetsSupported(note, target.name);
+    void context;
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
     await requestZhihu(
       target,
@@ -37678,17 +37860,405 @@ var BatchPublishModal = class extends import_obsidian14.Modal {
 
 // src/ui/modals/NormalPublishModal.ts
 var import_obsidian15 = require("obsidian");
+
+// src/core/normalPublish/drafts.ts
+function createIdleRemoteOptionsState() {
+  return {
+    status: "idle",
+    data: {},
+    manualFallbackFields: []
+  };
+}
+function cloneStringList2(values) {
+  return values.slice();
+}
+function buildWordpressDraft(note, target) {
+  return {
+    provider: "wordpress",
+    slug: note.slug,
+    excerpt: note.excerpt,
+    tags: cloneStringList2(note.tags),
+    categories: cloneStringList2(note.categories),
+    status: target.defaultStatus,
+    password: ""
+  };
+}
+function buildYuqueDraft(note, target) {
+  return {
+    provider: "yuque",
+    slug: note.slug,
+    publicLevel: target.publicLevel
+  };
+}
+function buildLocalExportDraft(note) {
+  return {
+    provider: "local-export",
+    slug: note.slug,
+    excerpt: note.excerpt,
+    tags: cloneStringList2(note.tags),
+    categories: cloneStringList2(note.categories)
+  };
+}
+function buildZhihuDraft(note, target) {
+  const frontmatterConfig = note.frontmatter.ultimatePublisher?.zhihu;
+  return {
+    provider: "zhihu",
+    columnId: (typeof frontmatterConfig?.columnId === "string" ? frontmatterConfig.columnId.trim() : "") || target.defaultColumnId,
+    columnTitle: target.defaultColumnTitle ?? ""
+  };
+}
+function buildCsdnDraft(note, target) {
+  return {
+    provider: "csdn",
+    excerpt: note.excerpt,
+    tags: note.tags.length > 0 ? cloneStringList2(note.tags) : cloneStringList2(target.defaultTags),
+    categories: note.categories.length > 0 ? cloneStringList2(note.categories) : cloneStringList2(target.defaultCategories)
+  };
+}
+function buildJuejinDraft(note, target) {
+  return {
+    provider: "juejin",
+    categoryId: target.defaultCategoryId,
+    categoryName: target.defaultCategoryName ?? "",
+    tagIds: cloneStringList2(target.defaultTagIds),
+    tagNames: cloneStringList2(target.defaultTagNames ?? []),
+    briefContent: target.defaultBriefContent || note.excerpt
+  };
+}
+function buildInitialTargetDraft(target, note) {
+  switch (target.provider) {
+    case "wordpress":
+      return buildWordpressDraft(note, target);
+    case "yuque":
+      return buildYuqueDraft(note, target);
+    case "local-export":
+      return buildLocalExportDraft(note);
+    case "zhihu":
+      return buildZhihuDraft(note, target);
+    case "csdn":
+      return buildCsdnDraft(note, target);
+    case "juejin":
+      return buildJuejinDraft(note, target);
+    default:
+      throw new Error(`Unsupported provider: ${target.provider}`);
+  }
+}
+function buildNormalPublishSessionState(note, targets) {
+  const enabledTargets = targets.filter((target) => target.enabled);
+  const targetDrafts = {};
+  const remoteOptions = {};
+  const lastErrorByTargetId = {};
+  for (const target of enabledTargets) {
+    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
+    remoteOptions[target.id] = createIdleRemoteOptionsState();
+    lastErrorByTargetId[target.id] = null;
+  }
+  return {
+    selectedTargetId: enabledTargets[0]?.id ?? null,
+    commonDraft: {
+      title: note.title
+    },
+    targetDrafts,
+    remoteOptions,
+    lastErrorByTargetId
+  };
+}
+
+// src/core/normalPublish/remoteOptions.ts
+function getManualFallbackFields(target) {
+  switch (target.provider) {
+    case "wordpress":
+      return ["categories", "tags"];
+    case "zhihu":
+      return ["columnId"];
+    case "csdn":
+      return ["categories", "tags"];
+    case "juejin":
+      return ["categoryId", "tagIds"];
+    default:
+      return [];
+  }
+}
+function buildRemoteOptionsState(status, data, errorMessage, manualFallbackFields = []) {
+  return {
+    status,
+    data,
+    errorMessage,
+    manualFallbackFields
+  };
+}
+async function ensureRemoteOptionsLoaded(state, target, registry) {
+  const currentState = state.remoteOptions[target.id];
+  if (currentState?.status === "loaded") {
+    return state;
+  }
+  const provider = registry.get(target);
+  if (!provider.loadNormalPublishOptions) {
+    return {
+      ...state,
+      remoteOptions: {
+        ...state.remoteOptions,
+        [target.id]: buildRemoteOptionsState("loaded", {})
+      }
+    };
+  }
+  try {
+    const data = await provider.loadNormalPublishOptions(target);
+    return {
+      ...state,
+      remoteOptions: {
+        ...state.remoteOptions,
+        [target.id]: buildRemoteOptionsState("loaded", data)
+      }
+    };
+  } catch (error) {
+    return {
+      ...state,
+      remoteOptions: {
+        ...state.remoteOptions,
+        [target.id]: buildRemoteOptionsState(
+          "error",
+          {},
+          error instanceof Error ? error.message : String(error),
+          getManualFallbackFields(target)
+        )
+      }
+    };
+  }
+}
+
+// src/core/normalPublish/validation.ts
+function validateTargetDraft(draft) {
+  switch (draft.provider) {
+    case "zhihu":
+      return draft.columnId.trim() ? null : "Zhihu publish requires a columnId.";
+    case "juejin":
+      if (!draft.categoryId.trim()) {
+        return "Juejin publish requires a categoryId.";
+      }
+      if (draft.tagIds.length === 0) {
+        return "Juejin publish requires at least one tagId.";
+      }
+      return null;
+    case "local-export": {
+      const candidate = sanitizeFileName(draft.slug || "", "");
+      return candidate ? null : "Local export requires a valid slug or title.";
+    }
+    default:
+      return null;
+  }
+}
+
+// src/ui/normalPublish/formControls.ts
+function createFieldContainer(container, label) {
+  const field = container.createDiv({ cls: "ultimate-publisher-normal-field" });
+  field.createEl("label", { text: label });
+  return field;
+}
+function renderTextInput(container, options) {
+  const field = createFieldContainer(container, options.label);
+  const input = field.createEl("input", { type: "text" });
+  input.name = options.name;
+  input.value = options.value;
+  input.addEventListener("input", () => {
+    options.onInput(input.value);
+  });
+  return input;
+}
+function renderTextArea(container, options) {
+  const field = createFieldContainer(container, options.label);
+  const input = field.createEl("textarea");
+  input.name = options.name;
+  input.value = options.value;
+  input.addEventListener("input", () => {
+    options.onInput(input.value);
+  });
+  return input;
+}
+function renderStringListInput(container, options) {
+  return renderTextInput(container, {
+    label: options.label,
+    name: options.name,
+    value: options.value.join(", "),
+    onInput: (value) => {
+      options.onInput(
+        value.split(",").map((item) => item.trim()).filter(Boolean)
+      );
+    }
+  });
+}
+function renderHelperText(container, text) {
+  container.createEl("p", {
+    cls: "ultimate-publisher-normal-helper",
+    text
+  });
+}
+
+// src/ui/normalPublish/renderTargetForm.ts
+function renderTargetForm(options) {
+  const { container, draft, remoteOptions, i18n, onChange } = options;
+  if (remoteOptions?.status === "error") {
+    renderHelperText(container, i18n.t("publish.normal.remote.fallback"));
+  }
+  switch (draft.provider) {
+    case "wordpress":
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.slug"),
+        name: "normal-publish-wordpress-slug",
+        value: draft.slug,
+        onInput: (value) => onChange({ ...draft, slug: value })
+      });
+      renderTextArea(container, {
+        label: i18n.t("publish.normal.field.excerpt"),
+        name: "normal-publish-wordpress-excerpt",
+        value: draft.excerpt,
+        onInput: (value) => onChange({ ...draft, excerpt: value })
+      });
+      renderStringListInput(container, {
+        label: i18n.t("publish.normal.field.tags"),
+        name: "normal-publish-wordpress-tags",
+        value: draft.tags,
+        onInput: (value) => onChange({ ...draft, tags: value })
+      });
+      renderStringListInput(container, {
+        label: i18n.t("publish.normal.field.categories"),
+        name: "normal-publish-wordpress-categories",
+        value: draft.categories,
+        onInput: (value) => onChange({ ...draft, categories: value })
+      });
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.status"),
+        name: "normal-publish-wordpress-status",
+        value: draft.status,
+        onInput: (value) => onChange({ ...draft, status: value })
+      });
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.password"),
+        name: "normal-publish-wordpress-password",
+        value: draft.password,
+        onInput: (value) => onChange({ ...draft, password: value })
+      });
+      return;
+    case "yuque":
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.slug"),
+        name: "normal-publish-yuque-slug",
+        value: draft.slug,
+        onInput: (value) => onChange({ ...draft, slug: value })
+      });
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.publicLevel"),
+        name: "normal-publish-yuque-publicLevel",
+        value: String(draft.publicLevel),
+        onInput: (value) => onChange({ ...draft, publicLevel: value === "1" ? 1 : 0 })
+      });
+      return;
+    case "local-export":
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.slug"),
+        name: "normal-publish-local-export-slug",
+        value: draft.slug,
+        onInput: (value) => onChange({ ...draft, slug: value })
+      });
+      renderTextArea(container, {
+        label: i18n.t("publish.normal.field.excerpt"),
+        name: "normal-publish-local-export-excerpt",
+        value: draft.excerpt,
+        onInput: (value) => onChange({ ...draft, excerpt: value })
+      });
+      renderStringListInput(container, {
+        label: i18n.t("publish.normal.field.tags"),
+        name: "normal-publish-local-export-tags",
+        value: draft.tags,
+        onInput: (value) => onChange({ ...draft, tags: value })
+      });
+      renderStringListInput(container, {
+        label: i18n.t("publish.normal.field.categories"),
+        name: "normal-publish-local-export-categories",
+        value: draft.categories,
+        onInput: (value) => onChange({ ...draft, categories: value })
+      });
+      return;
+    case "zhihu":
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.columnId"),
+        name: "normal-publish-zhihu-columnId",
+        value: draft.columnId,
+        onInput: (value) => onChange({ ...draft, columnId: value })
+      });
+      return;
+    case "csdn":
+      renderTextArea(container, {
+        label: i18n.t("publish.normal.field.excerpt"),
+        name: "normal-publish-csdn-excerpt",
+        value: draft.excerpt,
+        onInput: (value) => onChange({ ...draft, excerpt: value })
+      });
+      renderStringListInput(container, {
+        label: i18n.t("publish.normal.field.tags"),
+        name: "normal-publish-csdn-tags",
+        value: draft.tags,
+        onInput: (value) => onChange({ ...draft, tags: value })
+      });
+      renderStringListInput(container, {
+        label: i18n.t("publish.normal.field.categories"),
+        name: "normal-publish-csdn-categories",
+        value: draft.categories,
+        onInput: (value) => onChange({ ...draft, categories: value })
+      });
+      return;
+    case "juejin":
+      renderTextInput(container, {
+        label: i18n.t("publish.normal.field.categoryId"),
+        name: "normal-publish-juejin-categoryId",
+        value: draft.categoryId,
+        onInput: (value) => onChange({ ...draft, categoryId: value })
+      });
+      renderStringListInput(container, {
+        label: i18n.t("publish.normal.field.tagIds"),
+        name: "normal-publish-juejin-tagIds",
+        value: draft.tagIds,
+        onInput: (value) => onChange({ ...draft, tagIds: value })
+      });
+      renderTextArea(container, {
+        label: i18n.t("publish.normal.field.briefContent"),
+        name: "normal-publish-juejin-briefContent",
+        value: draft.briefContent,
+        onInput: (value) => onChange({ ...draft, briefContent: value })
+      });
+      return;
+  }
+}
+
+// src/ui/modals/NormalPublishModal.ts
 var NormalPublishModal = class extends import_obsidian15.Modal {
-  constructor(plugin, file, workflow) {
+  constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote) {
     super(plugin.app);
     this.plugin = plugin;
     this.file = file;
     this.workflow = workflow;
+    this.providerRegistry = providerRegistry;
+    this.noteLoader = noteLoader;
     this.selectedTargetId = null;
     this.isPublishing = false;
+    this.isInitializing = false;
     this.errorMessage = null;
+    this.sessionState = null;
+    this.note = null;
   }
   async onOpen() {
+    this.isInitializing = true;
+    await this.render();
+    try {
+      this.note = await this.noteLoader(this.app, this.file);
+      this.sessionState = buildNormalPublishSessionState(this.note, this.plugin.settings.targets);
+      this.selectedTargetId = this.sessionState.selectedTargetId;
+      await this.loadRemoteOptionsForSelectedTarget();
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.isInitializing = false;
+    }
     await this.render();
   }
   onClose() {
@@ -37707,13 +38277,79 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     row.createEl("strong", { text: `${label}: ` });
     row.createSpan({ text: value });
   }
+  getSelectedDraft() {
+    if (!this.sessionState || !this.selectedTargetId) {
+      return null;
+    }
+    return this.sessionState.targetDrafts[this.selectedTargetId] ?? null;
+  }
+  buildExecutionContext() {
+    const draft = this.getSelectedDraft();
+    if (!this.sessionState || !draft) {
+      return null;
+    }
+    return {
+      common: {
+        title: this.sessionState.commonDraft.title
+      },
+      provider: draft
+    };
+  }
+  updateSelectedDraft(draft) {
+    if (!this.sessionState || !this.selectedTargetId) {
+      return;
+    }
+    this.sessionState = {
+      ...this.sessionState,
+      targetDrafts: {
+        ...this.sessionState.targetDrafts,
+        [this.selectedTargetId]: draft
+      }
+    };
+  }
+  async loadRemoteOptionsForSelectedTarget() {
+    if (!this.sessionState || !this.selectedTargetId) {
+      return;
+    }
+    const target = this.getTargetById(this.selectedTargetId);
+    if (!target || !target.enabled) {
+      return;
+    }
+    const nextState = await ensureRemoteOptionsLoaded(this.sessionState, target, this.providerRegistry);
+    if (!this.sessionState) {
+      this.sessionState = nextState;
+      return;
+    }
+    this.sessionState = {
+      ...this.sessionState,
+      remoteOptions: {
+        ...this.sessionState.remoteOptions,
+        [target.id]: nextState.remoteOptions[target.id]
+      }
+    };
+  }
   async handlePublish(target) {
     const i18n = createI18nFromObsidianLanguage();
+    const draft = this.getSelectedDraft();
+    if (draft) {
+      const validationError = validateTargetDraft(draft);
+      if (validationError) {
+        this.errorMessage = validationError;
+        new import_obsidian15.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
+        await this.render();
+        return;
+      }
+    }
     this.isPublishing = true;
     this.errorMessage = null;
     await this.render();
     try {
-      const result = await this.workflow.runSingle(this.file, target, this.plugin.settings);
+      const result = await this.workflow.runSingle(
+        this.file,
+        target,
+        this.plugin.settings,
+        this.buildExecutionContext() ?? void 0
+      );
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
       const actionLabel = result.action === "update" ? i18n.t("notice.publish.action.updated") : i18n.t("notice.publish.action.published");
@@ -37739,8 +38375,13 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     const noteInfo = contentEl.createDiv();
     this.createInfoRow(noteInfo, i18n.t("publish.shared.note"), this.file.basename);
     this.createInfoRow(noteInfo, i18n.t("publish.shared.path"), this.file.path);
+    if (this.isInitializing) {
+      contentEl.createEl("p", {
+        text: i18n.t("publish.normal.loading")
+      });
+      return;
+    }
     const summaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path);
-    this.selectedTargetId ?? (this.selectedTargetId = summaries.find((item) => item.enabled)?.targetId ?? null);
     const enabledSummaries = summaries.filter((item) => item.enabled);
     if (enabledSummaries.length === 0) {
       contentEl.createEl("p", {
@@ -37756,27 +38397,56 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     if (!this.selectedTargetId || !summaries.some((item) => item.targetId === this.selectedTargetId && item.enabled)) {
       this.selectedTargetId = enabledSummaries[0].targetId;
     }
-    const targetList = contentEl.createDiv();
-    targetList.createEl("h3", { text: i18n.t("publish.shared.target") });
-    for (const summary of summaries) {
-      const row = targetList.createEl("label");
-      row.style.display = "block";
-      row.style.margin = "6px 0";
-      const input = row.createEl("input", { type: "radio" });
-      input.name = "ultimate-publisher-normal-target";
-      input.value = summary.targetId;
-      input.checked = summary.targetId === this.selectedTargetId;
-      input.disabled = !summary.enabled || this.isPublishing;
-      input.addEventListener("change", () => {
-        if (input.checked) {
-          this.selectedTargetId = summary.targetId;
-          void this.render();
+    if (this.sessionState) {
+      this.sessionState.selectedTargetId = this.selectedTargetId;
+    }
+    const layout = contentEl.createDiv({ cls: "ultimate-publisher-normal-layout" });
+    const targetList = layout.createDiv({ cls: "ultimate-publisher-normal-targets" });
+    targetList.createEl("h3", { text: i18n.t("publish.shared.targets") });
+    for (const summary of enabledSummaries) {
+      const button = targetList.createEl("button", { text: summary.name });
+      button.toggleClass("mod-cta", summary.targetId === this.selectedTargetId);
+      button.disabled = this.isPublishing;
+      button.addEventListener("click", () => {
+        this.selectedTargetId = summary.targetId;
+        if (this.sessionState) {
+          this.sessionState.selectedTargetId = summary.targetId;
+        }
+        void this.render();
+        void this.loadRemoteOptionsForSelectedTarget().then(() => this.render());
+      });
+    }
+    const details = layout.createDiv({ cls: "ultimate-publisher-normal-details" });
+    details.createEl("h3", { text: i18n.t("publish.normal.section.details") });
+    if (this.sessionState) {
+      renderTextInput(details, {
+        label: i18n.t("publish.normal.field.title"),
+        name: "normal-publish-title",
+        value: this.sessionState.commonDraft.title,
+        onInput: (value) => {
+          if (!this.sessionState) {
+            return;
+          }
+          this.sessionState = {
+            ...this.sessionState,
+            commonDraft: {
+              ...this.sessionState.commonDraft,
+              title: value
+            }
+          };
         }
       });
-      row.appendText(` ${summary.name} (${summary.provider})`);
-      const actionLabel = summary.action === "update" ? i18n.t("publish.shared.summary.updateExistingPost") : i18n.t("publish.shared.summary.publishNewPost");
-      row.createEl("small", {
-        text: ` - ${actionLabel}${summary.enabled ? "" : i18n.t("publish.shared.summary.disabledSuffix")}`
+    }
+    const selectedDraft = this.getSelectedDraft();
+    if (selectedDraft && this.sessionState && this.selectedTargetId) {
+      renderTargetForm({
+        container: details,
+        draft: selectedDraft,
+        remoteOptions: this.sessionState.remoteOptions[this.selectedTargetId],
+        i18n,
+        onChange: (draft) => {
+          this.updateSelectedDraft(draft);
+        }
       });
     }
     const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
