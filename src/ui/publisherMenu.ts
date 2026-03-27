@@ -96,8 +96,6 @@ function getProviderIcon(provider: string): string {
       return "globe";
     case "yuque":
       return "book";
-    case "local-export":
-      return "folder";
     default:
       return "upload";
   }

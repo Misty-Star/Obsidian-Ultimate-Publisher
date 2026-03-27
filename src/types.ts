@@ -1,4 +1,10 @@
-export type ProviderId = "wordpress" | "yuque" | "local-export" | "zhihu" | "csdn" | "juejin";
+export const SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin"] as const;
+
+export type ProviderId = (typeof SUPPORTED_PROVIDER_IDS)[number];
+
+export function isProviderId(value: unknown): value is ProviderId {
+  return typeof value === "string" && (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(value);
+}
 
 export type WordpressStatus = "draft" | "publish" | "private" | "pending";
 export type PublishContentFormat = "markdown" | "html";
@@ -49,13 +55,6 @@ export interface YuqueTargetConfig extends BaseTargetConfig {
   publicLevel: 0 | 1;
 }
 
-export interface LocalExportTargetConfig extends BaseTargetConfig {
-  provider: "local-export";
-  outputDir: string;
-  yamlType: "default" | "hexo";
-  assetDirName: string;
-}
-
 export interface ZhihuTargetConfig extends WebAuthTargetBase {
   provider: "zhihu";
   defaultColumnId: string;
@@ -80,7 +79,6 @@ export interface JuejinTargetConfig extends WebAuthTargetBase {
 export type PublishTargetConfig =
   | WordpressTargetConfig
   | YuqueTargetConfig
-  | LocalExportTargetConfig
   | ZhihuTargetConfig
   | CsdnTargetConfig
   | JuejinTargetConfig;

@@ -1,7 +1,7 @@
 import { WorkspaceLeaf, FakeElement, resetObsidianTestState, setObsidianTestLanguage } from "obsidian";
 import { describe, expect, it, vi } from "vitest";
 import { deriveDashboardSummary, deriveNoteTargetSummaries, summarizeBatchSelection } from "../src/ui/publishSummary";
-import { createLocalExportTarget, createWordpressTarget, createYuqueTarget } from "../src/settings";
+import { createWordpressTarget, createYuqueTarget, createZhihuTarget } from "../src/settings";
 import { UltimatePublisherSettings } from "../src/types";
 import { PublisherDashboardView } from "../src/ui/views/PublisherDashboardView";
 
@@ -64,9 +64,9 @@ describe("publishSummary", () => {
 
   it("labels note targets as publish or update for the current note snapshot", () => {
     const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
-    const local = { ...createLocalExportTarget(), id: "local", name: "Local Export" };
+    const zhihu = { ...createZhihuTarget(), id: "zh", name: "Zhihu" };
     const settings: UltimatePublisherSettings = {
-      targets: [wordpress, local],
+      targets: [wordpress, zhihu],
       records: [
         {
           notePath: "Notes/Post.md",
@@ -82,8 +82,8 @@ describe("publishSummary", () => {
     const statuses = deriveNoteTargetSummaries(settings, "Notes/Post.md");
 
     expect(statuses.map((item) => [item.targetId, item.action])).toEqual([
-      ["local", "publish"],
       ["wp", "update"],
+      ["zh", "publish"],
     ]);
   });
 
@@ -93,14 +93,14 @@ describe("publishSummary", () => {
         targets: [
           { id: "yuque", name: "Yuque", provider: "yuque", enabled: false },
           { id: "wp", name: "WordPress", provider: "wordpress", enabled: true },
-          { id: "local", name: "Local Export", provider: "local-export", enabled: true },
+          { id: "zh", name: "Zhihu", provider: "zhihu", enabled: true },
         ],
         records: [],
       } as never,
       "Notes/Post.md"
     );
 
-    expect(statuses.map((item) => item.targetId)).toEqual(["local", "wp", "yuque"]);
+    expect(statuses.map((item) => item.targetId)).toEqual(["wp", "zh", "yuque"]);
   });
 
   it("summarizes batch selection counts for publish and update targets", () => {
@@ -125,7 +125,7 @@ describe("publishSummary", () => {
       settings: {
         targets: [
           { ...createWordpressTarget(), id: "wp", name: "WordPress" },
-          { ...createLocalExportTarget(), id: "local", name: "Local Export", enabled: false },
+          { ...createZhihuTarget(), id: "zh", name: "Zhihu", enabled: false },
         ],
         records: [
           {

@@ -23,14 +23,6 @@ export interface YuquePublishDraft {
   publicLevel: 0 | 1;
 }
 
-export interface LocalExportPublishDraft {
-  provider: "local-export";
-  slug: string;
-  excerpt: string;
-  tags: string[];
-  categories: string[];
-}
-
 export interface ZhihuPublishDraft {
   provider: "zhihu";
   columnId: string;
@@ -56,7 +48,6 @@ export interface JuejinPublishDraft {
 export type ProviderPublishDraft =
   | WordpressPublishDraft
   | YuquePublishDraft
-  | LocalExportPublishDraft
   | ZhihuPublishDraft
   | CsdnPublishDraft
   | JuejinPublishDraft;

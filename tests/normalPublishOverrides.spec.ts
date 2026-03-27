@@ -25,11 +25,13 @@ describe("normal publish overrides", () => {
         title: "Override",
       },
       provider: {
-        provider: "local-export",
+        provider: "wordpress",
         slug: "custom-post",
         excerpt: "Custom excerpt",
         tags: ["one"],
         categories: ["notes"],
+        status: "draft",
+        password: "",
       },
     });
 

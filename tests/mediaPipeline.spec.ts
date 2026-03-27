@@ -30,7 +30,7 @@ function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
   };
 }
 
-function createTarget(provider: PublishTargetConfig["provider"]): PublishTargetConfig {
+function createTarget(provider: "wordpress" | "yuque" | "zhihu"): PublishTargetConfig {
   if (provider === "wordpress") {
     return {
       id: "wordpress-target",
@@ -59,13 +59,13 @@ function createTarget(provider: PublishTargetConfig["provider"]): PublishTargetC
   }
 
   return {
-    id: "local-target",
-    name: "Local Export",
+    id: "zhihu-target",
+    name: "Zhihu",
     enabled: true,
     provider,
-    outputDir: "E:/exports",
-    yamlType: "default",
-    assetDirName: "assets",
+    cookie: "",
+    defaultColumnId: "",
+    defaultColumnTitle: "",
   };
 }
 
@@ -113,12 +113,12 @@ describe("prepareNoteForPublish", () => {
   it("rewrites local-copy assets using provider returned relative paths", async () => {
     const copyAsset = vi.fn().mockResolvedValue({ url: "./assets/post-cover.png" });
     const provider = {
-      provider: "local-export" as const,
+      provider: "zhihu" as const,
       getMediaSupport: () => ({ mode: "local-copy" as const }),
       copyAsset,
     };
 
-    const prepared = await prepareNoteForPublish(createNote(), createTarget("local-export"), provider as never);
+    const prepared = await prepareNoteForPublish(createNote(), createTarget("zhihu"), provider as never);
 
     expect(copyAsset).toHaveBeenCalledTimes(1);
     expect(prepared.markdown).toBe("![Cover](./assets/post-cover.png)");

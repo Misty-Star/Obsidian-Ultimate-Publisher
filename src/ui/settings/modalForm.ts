@@ -22,10 +22,7 @@ export type ModalFieldKey =
   | "defaultTags"
   | "defaultCategoryId"
   | "defaultTagIds"
-  | "defaultBriefContent"
-  | "outputDir"
-  | "yamlType"
-  | "assetDirName";
+  | "defaultBriefContent";
 
 type ModalFieldType = "toggle" | "text" | "password" | "dropdown";
 
@@ -99,20 +96,6 @@ const YUQUE_FIELDS: ModalFieldDefinition[] = [
   },
 ];
 
-const LOCAL_EXPORT_FIELDS: ModalFieldDefinition[] = [
-  { key: "outputDir", label: "Output directory", description: "Absolute directory path on the local machine.", type: "text" },
-  {
-    key: "yamlType",
-    label: "YAML type",
-    type: "dropdown",
-    options: [
-      { value: "default", label: "Default" },
-      { value: "hexo", label: "Hexo" },
-    ],
-  },
-  { key: "assetDirName", label: "Asset directory name", type: "text" },
-];
-
 const ZHIHU_FIELDS: ModalFieldDefinition[] = [
   { key: "defaultColumnId", label: "Default column ID", type: "text" },
   { key: "defaultColumnTitle", label: "Default column title", type: "text" },
@@ -151,9 +134,6 @@ const FIELD_LABEL_ZH: Partial<Record<ModalFieldKey, string>> = {
   defaultCategoryId: "默认分类 ID",
   defaultTagIds: "默认标签 ID",
   defaultBriefContent: "默认摘要",
-  outputDir: "输出目录",
-  yamlType: "YAML 类型",
-  assetDirName: "资源目录名",
 };
 
 const FIELD_DESCRIPTION_ZH: Partial<Record<ModalFieldKey, string>> = {
@@ -162,7 +142,6 @@ const FIELD_DESCRIPTION_ZH: Partial<Record<ModalFieldKey, string>> = {
   contentFormat: "选择向 WordPress 发布 Markdown 文本或渲染后的 HTML。",
   repo: "示例: namespace/repo",
   publicLevel: "0 = 私有, 1 = 公开",
-  outputDir: "本地机器上的绝对目录路径。",
   defaultCategories: "用逗号分隔分类名。",
   defaultTags: "用逗号分隔标签名。",
   defaultTagIds: "用逗号分隔标签 ID。",
@@ -182,10 +161,6 @@ const FIELD_OPTION_LABEL_ZH: Partial<Record<ModalFieldKey, Record<string, string
   publicLevel: {
     "0": "私有",
     "1": "公开",
-  },
-  yamlType: {
-    default: "默认",
-    hexo: "Hexo",
   },
 };
 
@@ -267,7 +242,7 @@ export function getModalFieldDefinitions(
     );
   }
 
-  return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS].map((field) => localizeField(field, i18n));
+  return COMMON_FIELDS.map((field) => localizeField(field, i18n));
 }
 
 export function readFieldValue(target: PublishTargetConfig, key: ModalFieldKey): string | boolean {
@@ -310,12 +285,6 @@ export function readFieldValue(target: PublishTargetConfig, key: ModalFieldKey):
       return target.provider === "juejin" ? target.defaultTagIds.join(", ") : "";
     case "defaultBriefContent":
       return target.provider === "juejin" ? target.defaultBriefContent : "";
-    case "outputDir":
-      return target.provider === "local-export" ? target.outputDir : "";
-    case "yamlType":
-      return target.provider === "local-export" ? target.yamlType : "";
-    case "assetDirName":
-      return target.provider === "local-export" ? target.assetDirName : "";
   }
 }
 
@@ -416,21 +385,6 @@ export function applyFieldValue(
     case "defaultBriefContent":
       if (nextTarget.provider === "juejin") {
         nextTarget.defaultBriefContent = String(value).trim();
-      }
-      return nextTarget;
-    case "outputDir":
-      if (nextTarget.provider === "local-export") {
-        nextTarget.outputDir = String(value).trim();
-      }
-      return nextTarget;
-    case "yamlType":
-      if (nextTarget.provider === "local-export") {
-        nextTarget.yamlType = String(value) === "hexo" ? "hexo" : "default";
-      }
-      return nextTarget;
-    case "assetDirName":
-      if (nextTarget.provider === "local-export") {
-        nextTarget.assetDirName = String(value).trim();
       }
       return nextTarget;
   }

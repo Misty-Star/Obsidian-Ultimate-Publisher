@@ -1,7 +1,6 @@
 import {
   createCsdnTarget,
   createJuejinTarget,
-  createLocalExportTarget,
   createWordpressTarget,
   createYuqueTarget,
   createZhihuTarget,
@@ -9,7 +8,6 @@ import {
 import {
   CsdnTargetConfig,
   JuejinTargetConfig,
-  LocalExportTargetConfig,
   ProviderId,
   PublishTargetConfig,
   WordpressTargetConfig,
@@ -42,7 +40,6 @@ interface ProviderCatalogSeed<TTarget extends PublishTargetConfig> {
 type ProviderCatalogSeedEntry =
   | ProviderCatalogSeed<WordpressTargetConfig>
   | ProviderCatalogSeed<YuqueTargetConfig>
-  | ProviderCatalogSeed<LocalExportTargetConfig>
   | ProviderCatalogSeed<ZhihuTargetConfig>
   | ProviderCatalogSeed<CsdnTargetConfig>
   | ProviderCatalogSeed<JuejinTargetConfig>;
@@ -50,7 +47,6 @@ type ProviderCatalogSeedEntry =
 export type ProviderCatalogEntry =
   | ProviderCatalogBase<WordpressTargetConfig>
   | ProviderCatalogBase<YuqueTargetConfig>
-  | ProviderCatalogBase<LocalExportTargetConfig>
   | ProviderCatalogBase<ZhihuTargetConfig>
   | ProviderCatalogBase<CsdnTargetConfig>
   | ProviderCatalogBase<JuejinTargetConfig>;
@@ -77,17 +73,6 @@ const PROVIDER_CATALOG: ProviderCatalogSeedEntry[] = [
     },
     icon: "YQ",
     createTarget: createYuqueTarget,
-  },
-  {
-    id: "local-export",
-    name: "Local Export",
-    descriptionKey: "settings.providers.local-export.description",
-    descriptionFallback: {
-      en: "Write Markdown and copied assets to a local directory.",
-      "zh-CN": "将 Markdown 与复制的资源写入本地目录。",
-    },
-    icon: "FS",
-    createTarget: createLocalExportTarget,
   },
   {
     id: "zhihu",
@@ -152,8 +137,6 @@ function localizeProviderCatalogEntry(
       return { id: "wordpress", ...base, createTarget: entry.createTarget };
     case "yuque":
       return { id: "yuque", ...base, createTarget: entry.createTarget };
-    case "local-export":
-      return { id: "local-export", ...base, createTarget: entry.createTarget };
     case "zhihu":
       return { id: "zhihu", ...base, createTarget: entry.createTarget };
     case "csdn":

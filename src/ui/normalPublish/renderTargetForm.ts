@@ -147,33 +147,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           { value: "0", label: i18n.t("publish.normal.option.visibility.private") },
           { value: "1", label: i18n.t("publish.normal.option.visibility.public") },
         ],
-        onChange: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, publicLevel: value === "1" ? 1 : 0 })),
-      });
-      return;
-    case "local-export":
-      renderTextInput(container, {
-        label: i18n.t("publish.normal.field.slug"),
-        name: "normal-publish-local-export-slug",
-        value: draft.slug,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, slug: value })),
-      });
-      renderTextArea(container, {
-        label: i18n.t("publish.normal.field.excerpt"),
-        name: "normal-publish-local-export-excerpt",
-        value: draft.excerpt,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, excerpt: value })),
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.tags"),
-        name: "normal-publish-local-export-tags",
-        value: draft.tags,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, tags: value })),
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.categories"),
-        name: "normal-publish-local-export-categories",
-        value: draft.categories,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, categories: value })),
+          onChange: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, publicLevel: value === "1" ? 1 : 0 })),
       });
       return;
     case "zhihu":

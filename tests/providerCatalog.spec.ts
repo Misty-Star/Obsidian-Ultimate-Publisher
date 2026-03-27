@@ -7,7 +7,6 @@ describe("getProviderCatalog", () => {
     expect(getProviderCatalog().map((item) => item.id)).toEqual([
       "wordpress",
       "yuque",
-      "local-export",
       "zhihu",
       "csdn",
       "juejin",

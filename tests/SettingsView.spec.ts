@@ -60,7 +60,7 @@ describe("SettingsView", () => {
 
     expect(markup).toContain("WordPress");
     expect(markup).toContain("Yuque");
-    expect(markup).toContain("Local Export");
+    expect(markup).toContain("Zhihu");
     expect(markup).toContain("已配置");
   });
 

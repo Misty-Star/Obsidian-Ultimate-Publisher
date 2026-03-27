@@ -27,7 +27,6 @@ export function applyNormalPublishContextToNote(
 
   switch (context.provider.provider) {
     case "wordpress":
-    case "local-export":
       nextNote.slug = context.provider.slug;
       nextNote.excerpt = context.provider.excerpt;
       nextNote.tags = cloneStringList(context.provider.tags);

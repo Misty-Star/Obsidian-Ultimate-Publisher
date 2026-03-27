@@ -29,7 +29,6 @@ describe("settingsViewModel", () => {
     expect(buildMarketplaceCards(settings, getProviderCatalog()).map((item) => item.id)).toEqual([
       "wordpress",
       "yuque",
-      "local-export",
       "zhihu",
       "csdn",
       "juejin",
@@ -54,7 +53,6 @@ describe("settingsViewModel", () => {
     ).toEqual([
       { id: "wordpress", configured: true, configuredCount: 2 },
       { id: "yuque", configured: false, configuredCount: 0 },
-      { id: "local-export", configured: false, configuredCount: 0 },
       { id: "zhihu", configured: false, configuredCount: 0 },
       { id: "csdn", configured: false, configuredCount: 0 },
       { id: "juejin", configured: false, configuredCount: 0 },

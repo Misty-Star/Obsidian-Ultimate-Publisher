@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import {
   CsdnTargetConfig,
   JuejinTargetConfig,
-  LocalExportTargetConfig,
   PublishContentFormat,
   PublishRecord,
   PublishTargetConfig,
@@ -41,18 +40,6 @@ export function createYuqueTarget(): YuqueTargetConfig {
     repo: "",
     token: "",
     publicLevel: 0,
-  };
-}
-
-export function createLocalExportTarget(): LocalExportTargetConfig {
-  return {
-    id: randomUUID(),
-    name: "Local Export",
-    enabled: true,
-    provider: "local-export",
-    outputDir: "",
-    yamlType: "default",
-    assetDirName: "assets",
   };
 }
 
@@ -139,55 +126,42 @@ function normalizeStringList(value: unknown): string[] {
 }
 
 export function normalizeTarget(target: PublishTargetConfig): PublishTargetConfig {
-  if (target.provider === "wordpress") {
-    return {
-      ...target,
-      defaultStatus: target.defaultStatus ?? "draft",
-      contentFormat: (target.contentFormat ?? "html") as PublishContentFormat,
-    };
+  switch (target.provider) {
+    case "wordpress":
+      return {
+        ...target,
+        defaultStatus: target.defaultStatus ?? "draft",
+        contentFormat: (target.contentFormat ?? "html") as PublishContentFormat,
+      };
+    case "yuque":
+      return {
+        ...target,
+        baseUrl: target.baseUrl || "https://www.yuque.com",
+        publicLevel: target.publicLevel ?? 0,
+      };
+    case "zhihu":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultColumnId: target.defaultColumnId || "",
+        defaultColumnTitle: target.defaultColumnTitle || "",
+      };
+    case "csdn":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultCategories: normalizeStringList(target.defaultCategories),
+        defaultTags: normalizeStringList(target.defaultTags),
+      };
+    case "juejin":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultCategoryId: target.defaultCategoryId || "",
+        defaultCategoryName: target.defaultCategoryName || "",
+        defaultTagIds: normalizeStringList(target.defaultTagIds),
+        defaultTagNames: normalizeStringList(target.defaultTagNames),
+        defaultBriefContent: target.defaultBriefContent || "",
+      };
   }
-
-  if (target.provider === "yuque") {
-    return {
-      ...target,
-      baseUrl: target.baseUrl || "https://www.yuque.com",
-      publicLevel: target.publicLevel ?? 0,
-    };
-  }
-
-  if (target.provider === "zhihu") {
-    return {
-      ...target,
-      cookie: target.cookie || "",
-      defaultColumnId: target.defaultColumnId || "",
-      defaultColumnTitle: target.defaultColumnTitle || "",
-    };
-  }
-
-  if (target.provider === "csdn") {
-    return {
-      ...target,
-      cookie: target.cookie || "",
-      defaultCategories: normalizeStringList(target.defaultCategories),
-      defaultTags: normalizeStringList(target.defaultTags),
-    };
-  }
-
-  if (target.provider === "juejin") {
-    return {
-      ...target,
-      cookie: target.cookie || "",
-      defaultCategoryId: target.defaultCategoryId || "",
-      defaultCategoryName: target.defaultCategoryName || "",
-      defaultTagIds: normalizeStringList(target.defaultTagIds),
-      defaultTagNames: normalizeStringList(target.defaultTagNames),
-      defaultBriefContent: target.defaultBriefContent || "",
-    };
-  }
-
-  return {
-    ...target,
-    yamlType: target.yamlType ?? "default",
-    assetDirName: target.assetDirName || "assets",
-  };
 }

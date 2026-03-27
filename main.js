@@ -34395,7 +34395,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian17 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 
 // src/core/note.ts
 var import_obsidian = require("obsidian");
@@ -34583,12 +34583,6 @@ function computeContentHash(note) {
     })
   ).digest("hex");
 }
-function sanitizeFileName(value, fallback = "note") {
-  const ext = (0, import_node_path.extname)(value);
-  const name = ext ? value.slice(0, -ext.length) : value;
-  const sanitized = name.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "-").trim();
-  return sanitized || fallback;
-}
 
 // src/core/mediaPipeline.ts
 async function resolveReplacement(provider, note, target, sourcePath) {
@@ -34673,7 +34667,6 @@ function applyNormalPublishContextToNote(note, context) {
   };
   switch (context.provider.provider) {
     case "wordpress":
-    case "local-export":
       nextNote.slug = context.provider.slug;
       nextNote.excerpt = context.provider.excerpt;
       nextNote.tags = cloneStringList(context.provider.tags);
@@ -34722,17 +34715,6 @@ function createYuqueTarget() {
     repo: "",
     token: "",
     publicLevel: 0
-  };
-}
-function createLocalExportTarget() {
-  return {
-    id: (0, import_node_crypto2.randomUUID)(),
-    name: "Local Export",
-    enabled: true,
-    provider: "local-export",
-    outputDir: "",
-    yamlType: "default",
-    assetDirName: "assets"
   };
 }
 function createZhihuTarget() {
@@ -34798,52 +34780,44 @@ function normalizeStringList(value) {
   return [];
 }
 function normalizeTarget(target) {
-  if (target.provider === "wordpress") {
-    return {
-      ...target,
-      defaultStatus: target.defaultStatus ?? "draft",
-      contentFormat: target.contentFormat ?? "html"
-    };
+  switch (target.provider) {
+    case "wordpress":
+      return {
+        ...target,
+        defaultStatus: target.defaultStatus ?? "draft",
+        contentFormat: target.contentFormat ?? "html"
+      };
+    case "yuque":
+      return {
+        ...target,
+        baseUrl: target.baseUrl || "https://www.yuque.com",
+        publicLevel: target.publicLevel ?? 0
+      };
+    case "zhihu":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultColumnId: target.defaultColumnId || "",
+        defaultColumnTitle: target.defaultColumnTitle || ""
+      };
+    case "csdn":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultCategories: normalizeStringList(target.defaultCategories),
+        defaultTags: normalizeStringList(target.defaultTags)
+      };
+    case "juejin":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultCategoryId: target.defaultCategoryId || "",
+        defaultCategoryName: target.defaultCategoryName || "",
+        defaultTagIds: normalizeStringList(target.defaultTagIds),
+        defaultTagNames: normalizeStringList(target.defaultTagNames),
+        defaultBriefContent: target.defaultBriefContent || ""
+      };
   }
-  if (target.provider === "yuque") {
-    return {
-      ...target,
-      baseUrl: target.baseUrl || "https://www.yuque.com",
-      publicLevel: target.publicLevel ?? 0
-    };
-  }
-  if (target.provider === "zhihu") {
-    return {
-      ...target,
-      cookie: target.cookie || "",
-      defaultColumnId: target.defaultColumnId || "",
-      defaultColumnTitle: target.defaultColumnTitle || ""
-    };
-  }
-  if (target.provider === "csdn") {
-    return {
-      ...target,
-      cookie: target.cookie || "",
-      defaultCategories: normalizeStringList(target.defaultCategories),
-      defaultTags: normalizeStringList(target.defaultTags)
-    };
-  }
-  if (target.provider === "juejin") {
-    return {
-      ...target,
-      cookie: target.cookie || "",
-      defaultCategoryId: target.defaultCategoryId || "",
-      defaultCategoryName: target.defaultCategoryName || "",
-      defaultTagIds: normalizeStringList(target.defaultTagIds),
-      defaultTagNames: normalizeStringList(target.defaultTagNames),
-      defaultBriefContent: target.defaultBriefContent || ""
-    };
-  }
-  return {
-    ...target,
-    yamlType: target.yamlType ?? "default",
-    assetDirName: target.assetDirName || "assets"
-  };
 }
 
 // src/core/publishService.ts
@@ -35225,177 +35199,17 @@ function createI18nFromObsidianLanguage() {
   return createI18n((0, import_obsidian2.getLanguage)());
 }
 
-// src/providers/localExportProvider.ts
-var import_promises = require("node:fs/promises");
-var import_node_path2 = require("node:path");
-var import_obsidian3 = require("obsidian");
-
-// src/core/yaml.ts
-function escapeScalar(value) {
-  if (value.includes("\n")) {
-    return `|-
-${value.split("\n").map((line) => `  ${line}`).join("\n")}`;
-  }
-  if (/[:#[\]\{\},&*!?|<>=@`]/.test(value) || value.trim() !== value) {
-    return JSON.stringify(value);
-  }
-  return value;
-}
-function serializeValue(value) {
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return ["[]"];
-    }
-    return value.flatMap((item) => {
-      if (typeof item === "string") {
-        return [`- ${escapeScalar(item)}`];
-      }
-      return [`- ${JSON.stringify(item)}`];
-    });
-  }
-  if (typeof value === "string") {
-    return [escapeScalar(value)];
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return [String(value)];
-  }
-  if (value == null) {
-    return ["null"];
-  }
-  return [JSON.stringify(value)];
-}
-function buildExportFrontmatter(metadata, yamlType) {
-  if (yamlType === "hexo") {
-    return {
-      title: metadata.title,
-      date: metadata.date ?? (/* @__PURE__ */ new Date()).toISOString(),
-      tags: metadata.tags,
-      categories: metadata.categories,
-      slug: metadata.slug,
-      excerpt: metadata.excerpt,
-      ...metadata.extra
-    };
-  }
-  return {
-    title: metadata.title,
-    slug: metadata.slug,
-    description: metadata.excerpt,
-    tags: metadata.tags,
-    categories: metadata.categories,
-    date: metadata.date ?? (/* @__PURE__ */ new Date()).toISOString(),
-    ...metadata.extra
-  };
-}
-function serializeFrontmatter(values) {
-  const lines = ["---"];
-  for (const [key, value] of Object.entries(values)) {
-    if (value === void 0 || value === "") {
-      continue;
-    }
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        lines.push(`${key}: []`);
-      } else {
-        lines.push(`${key}:`);
-        for (const item of value) {
-          lines.push(`  - ${typeof item === "string" ? escapeScalar(item) : JSON.stringify(item)}`);
-        }
-      }
-      continue;
-    }
-    const serialized = serializeValue(value);
-    if (serialized.length === 1) {
-      lines.push(`${key}: ${serialized[0]}`);
-      continue;
-    }
-    lines.push(`${key}:`);
-    lines.push(...serialized.map((line) => `  ${line}`));
-  }
-  lines.push("---");
-  return lines.join("\n");
-}
-
-// src/providers/localExportProvider.ts
-var LocalExportProvider = class {
-  constructor(app) {
-    this.app = app;
-    this.provider = "local-export";
-  }
-  getMediaSupport(_target) {
-    return { mode: "local-copy" };
-  }
-  async validateConfig(target) {
-    if (!target.outputDir) {
-      throw new Error("Local export target is missing outputDir.");
-    }
-    await (0, import_promises.mkdir)(target.outputDir, { recursive: true });
-  }
-  async publish(note, target) {
-    return this.writeExport(void 0, note, target);
-  }
-  async update(remoteId, note, target) {
-    return this.writeExport(remoteId, note, target);
-  }
-  async delete(remoteId) {
-    void remoteId;
-  }
-  async getPreviewUrl(remoteId) {
-    return remoteId;
-  }
-  async writeExport(remoteId, note, target) {
-    const slug = sanitizeFileName(note.slug || note.title, "note");
-    const outputPath = remoteId || (0, import_node_path2.join)(target.outputDir, `${slug}.md`);
-    await (0, import_promises.mkdir)(target.outputDir, { recursive: true });
-    const frontmatter = buildExportFrontmatter(
-      {
-        title: note.title,
-        slug: note.slug,
-        excerpt: note.excerpt,
-        tags: note.tags,
-        categories: note.categories,
-        date: note.date,
-        extra: note.frontmatter
-      },
-      target.yamlType
-    );
-    const content = `${serializeFrontmatter(frontmatter)}
-
-${note.markdown.trim()}
-`;
-    await (0, import_promises.writeFile)(outputPath, content, "utf8");
-    return {
-      remoteId: outputPath,
-      remoteUrl: outputPath
-    };
-  }
-  async copyAsset(asset, note, target) {
-    const sourceData = await this.app.vault.adapter.readBinary((0, import_obsidian3.normalizePath)(asset.sourcePath));
-    const slug = sanitizeFileName(note.slug || note.title, "note");
-    const assetDir = (0, import_node_path2.join)(target.outputDir, target.assetDirName || "assets");
-    await (0, import_promises.mkdir)(assetDir, { recursive: true });
-    const extension = (0, import_node_path2.extname)(asset.fileName);
-    const baseName = extension ? asset.fileName.slice(0, -extension.length) : asset.fileName;
-    const assetName = `${slug}-${sanitizeFileName(baseName, "asset")}${extension}`;
-    const destination = (0, import_node_path2.join)(assetDir, assetName);
-    await (0, import_promises.writeFile)(destination, Buffer.from(sourceData));
-    const relativeDir = target.assetDirName || "assets";
-    return {
-      url: `./${relativeDir}/${assetName}`
-    };
-  }
-};
-
 // src/providers/wordpressProvider.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/core/html.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 async function renderMarkdownToHtml(app, markdown, sourcePath) {
   const container = document.createElement("div");
-  const component = new import_obsidian4.Component();
+  const component = new import_obsidian3.Component();
   component.load();
   try {
-    await import_obsidian4.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
+    await import_obsidian3.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
     container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
       copyButton.remove();
     });
@@ -35437,7 +35251,7 @@ function normalizeEndpoint(target) {
   return `${trimTrailingSlash(target.endpoint)}/wp-json/wp/v2`;
 }
 async function requestJson(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian5.requestUrl)({
+  const response = await (0, import_obsidian4.requestUrl)({
     url: `${normalizeEndpoint(target)}${path}`,
     method,
     headers: {
@@ -35557,9 +35371,9 @@ var WordpressProvider = class {
     return response.link;
   }
   async uploadAsset(asset, _note, target) {
-    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian5.normalizePath)(asset.sourcePath));
+    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian4.normalizePath)(asset.sourcePath));
     const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
-    const response = await (0, import_obsidian5.requestUrl)({
+    const response = await (0, import_obsidian4.requestUrl)({
       url: `${normalizeEndpoint(target)}/media`,
       method: "POST",
       headers: {
@@ -35590,10 +35404,10 @@ var WordpressProvider = class {
 };
 
 // src/providers/yuqueProvider.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // src/core/providers.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 function assertRemoteAssetsSupported(note, targetName) {
   if (note.attachments.length === 0) {
     return;
@@ -35610,7 +35424,7 @@ function normalizeBaseUrl(baseUrl) {
   return trimTrailingSlash2(baseUrl || "https://www.yuque.com");
 }
 async function requestYuque(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian7.requestUrl)({
+  const response = await (0, import_obsidian6.requestUrl)({
     url: `${normalizeBaseUrl(target.baseUrl)}${path}`,
     method,
     headers: {
@@ -35696,7 +35510,7 @@ var YuqueProvider = class {
 
 // src/providers/csdnProvider.ts
 var import_node_crypto3 = require("node:crypto");
-var import_obsidian8 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/core/webPublishConfig.ts
 function getNestedValue(source, path) {
@@ -35860,7 +35674,7 @@ function getResponseMessage(response) {
 }
 async function requestCsdn(target, url, method = "GET", body) {
   const contentType = "application/json";
-  const response = await (0, import_obsidian8.requestUrl)({
+  const response = await (0, import_obsidian7.requestUrl)({
     url,
     method,
     headers: buildSignedHeaders(target, url, method, contentType),
@@ -35989,7 +35803,7 @@ var CsdnProvider = class {
 };
 
 // src/providers/juejinProvider.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 function buildHeaders2(target) {
   return {
     "Content-Type": "application/json",
@@ -36016,7 +35830,7 @@ function decodeRemoteId(remoteId) {
   };
 }
 async function requestJuejin(target, url, method = "POST", body) {
-  const response = await (0, import_obsidian9.requestUrl)({
+  const response = await (0, import_obsidian8.requestUrl)({
     url,
     method,
     headers: buildHeaders2(target),
@@ -36204,7 +36018,7 @@ var JuejinProvider = class {
 };
 
 // src/providers/zhihuProvider.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 function buildHeaders3(target) {
   return {
     "Content-Type": "application/json",
@@ -36221,7 +36035,7 @@ function readJsonPayload3(response) {
   return {};
 }
 async function requestZhihu(target, url, method = "GET", body) {
-  const response = await (0, import_obsidian10.requestUrl)({
+  const response = await (0, import_obsidian9.requestUrl)({
     url,
     method,
     headers: buildHeaders3(target),
@@ -36369,7 +36183,6 @@ var ProviderRegistry = class {
     this.yuque = new YuqueProvider();
     this.juejin = new JuejinProvider();
     this.wordpress = new WordpressProvider(app);
-    this.localExport = new LocalExportProvider(app);
     this.csdn = new CsdnProvider(app);
     this.zhihu = new ZhihuProvider(app);
   }
@@ -36379,8 +36192,6 @@ var ProviderRegistry = class {
         return this.wordpress;
       case "yuque":
         return this.yuque;
-      case "local-export":
-        return this.localExport;
       case "csdn":
         return this.csdn;
       case "juejin":
@@ -36393,9 +36204,15 @@ var ProviderRegistry = class {
   }
 };
 
+// src/types.ts
+var SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
+function isProviderId(value) {
+  return typeof value === "string" && SUPPORTED_PROVIDER_IDS.includes(value);
+}
+
 // src/ui/PublishTargetModal.ts
-var import_obsidian11 = require("obsidian");
-var PublishTargetModal = class extends import_obsidian11.SuggestModal {
+var import_obsidian10 = require("obsidian");
+var PublishTargetModal = class extends import_obsidian10.SuggestModal {
   constructor(app, targets, onChooseTarget) {
     super(app);
     this.targets = targets;
@@ -36421,7 +36238,7 @@ var PublishTargetModal = class extends import_obsidian11.SuggestModal {
 };
 
 // src/ui/UltimatePublisherSettingTab.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 
 // src/ui/settings/renderSettingsRoot.tsx
 var import_client = __toESM(require_client());
@@ -36573,7 +36390,7 @@ var DesktopWebAuthService = class {
 };
 
 // src/ui/settings/EditTargetModal.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 
 // src/ui/settings/providerCatalog.ts
 var PROVIDER_CATALOG = [
@@ -36598,17 +36415,6 @@ var PROVIDER_CATALOG = [
     },
     icon: "YQ",
     createTarget: createYuqueTarget
-  },
-  {
-    id: "local-export",
-    name: "Local Export",
-    descriptionKey: "settings.providers.local-export.description",
-    descriptionFallback: {
-      en: "Write Markdown and copied assets to a local directory.",
-      "zh-CN": "\u5C06 Markdown \u4E0E\u590D\u5236\u7684\u8D44\u6E90\u5199\u5165\u672C\u5730\u76EE\u5F55\u3002"
-    },
-    icon: "FS",
-    createTarget: createLocalExportTarget
   },
   {
     id: "zhihu",
@@ -36662,8 +36468,6 @@ function localizeProviderCatalogEntry(entry, i18n) {
       return { id: "wordpress", ...base, createTarget: entry.createTarget };
     case "yuque":
       return { id: "yuque", ...base, createTarget: entry.createTarget };
-    case "local-export":
-      return { id: "local-export", ...base, createTarget: entry.createTarget };
     case "zhihu":
       return { id: "zhihu", ...base, createTarget: entry.createTarget };
     case "csdn":
@@ -36733,19 +36537,6 @@ var YUQUE_FIELDS = [
     ]
   }
 ];
-var LOCAL_EXPORT_FIELDS = [
-  { key: "outputDir", label: "Output directory", description: "Absolute directory path on the local machine.", type: "text" },
-  {
-    key: "yamlType",
-    label: "YAML type",
-    type: "dropdown",
-    options: [
-      { value: "default", label: "Default" },
-      { value: "hexo", label: "Hexo" }
-    ]
-  },
-  { key: "assetDirName", label: "Asset directory name", type: "text" }
-];
 var ZHIHU_FIELDS = [
   { key: "defaultColumnId", label: "Default column ID", type: "text" },
   { key: "defaultColumnTitle", label: "Default column title", type: "text" }
@@ -36779,10 +36570,7 @@ var FIELD_LABEL_ZH = {
   defaultTags: "\u9ED8\u8BA4\u6807\u7B7E",
   defaultCategoryId: "\u9ED8\u8BA4\u5206\u7C7B ID",
   defaultTagIds: "\u9ED8\u8BA4\u6807\u7B7E ID",
-  defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981",
-  outputDir: "\u8F93\u51FA\u76EE\u5F55",
-  yamlType: "YAML \u7C7B\u578B",
-  assetDirName: "\u8D44\u6E90\u76EE\u5F55\u540D"
+  defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981"
 };
 var FIELD_DESCRIPTION_ZH = {
   cookie: "\u5982\u679C\u6D4F\u89C8\u5668\u6388\u6743\u5931\u8D25\uFF0C\u53EF\u624B\u52A8\u7C98\u8D34 Cookie\u3002",
@@ -36790,7 +36578,6 @@ var FIELD_DESCRIPTION_ZH = {
   contentFormat: "\u9009\u62E9\u5411 WordPress \u53D1\u5E03 Markdown \u6587\u672C\u6216\u6E32\u67D3\u540E\u7684 HTML\u3002",
   repo: "\u793A\u4F8B: namespace/repo",
   publicLevel: "0 = \u79C1\u6709, 1 = \u516C\u5F00",
-  outputDir: "\u672C\u5730\u673A\u5668\u4E0A\u7684\u7EDD\u5BF9\u76EE\u5F55\u8DEF\u5F84\u3002",
   defaultCategories: "\u7528\u9017\u53F7\u5206\u9694\u5206\u7C7B\u540D\u3002",
   defaultTags: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E\u540D\u3002",
   defaultTagIds: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E ID\u3002"
@@ -36809,10 +36596,6 @@ var FIELD_OPTION_LABEL_ZH = {
   publicLevel: {
     "0": "\u79C1\u6709",
     "1": "\u516C\u5F00"
-  },
-  yamlType: {
-    default: "\u9ED8\u8BA4",
-    hexo: "Hexo"
   }
 };
 function resolveTranslation2(i18n, key, fallback) {
@@ -36870,7 +36653,7 @@ function getModalFieldDefinitions(target, i18n = DEFAULT_I18N2) {
       (field) => localizeField(field, i18n)
     );
   }
-  return [...COMMON_FIELDS, ...LOCAL_EXPORT_FIELDS].map((field) => localizeField(field, i18n));
+  return COMMON_FIELDS.map((field) => localizeField(field, i18n));
 }
 function readFieldValue(target, key) {
   switch (key) {
@@ -36912,12 +36695,6 @@ function readFieldValue(target, key) {
       return target.provider === "juejin" ? target.defaultTagIds.join(", ") : "";
     case "defaultBriefContent":
       return target.provider === "juejin" ? target.defaultBriefContent : "";
-    case "outputDir":
-      return target.provider === "local-export" ? target.outputDir : "";
-    case "yamlType":
-      return target.provider === "local-export" ? target.yamlType : "";
-    case "assetDirName":
-      return target.provider === "local-export" ? target.assetDirName : "";
   }
 }
 function applyFieldValue(target, key, value) {
@@ -37014,21 +36791,6 @@ function applyFieldValue(target, key, value) {
         nextTarget.defaultBriefContent = String(value).trim();
       }
       return nextTarget;
-    case "outputDir":
-      if (nextTarget.provider === "local-export") {
-        nextTarget.outputDir = String(value).trim();
-      }
-      return nextTarget;
-    case "yamlType":
-      if (nextTarget.provider === "local-export") {
-        nextTarget.yamlType = String(value) === "hexo" ? "hexo" : "default";
-      }
-      return nextTarget;
-    case "assetDirName":
-      if (nextTarget.provider === "local-export") {
-        nextTarget.assetDirName = String(value).trim();
-      }
-      return nextTarget;
   }
 }
 
@@ -37076,7 +36838,7 @@ function clearWebAuthTarget(target) {
 }
 
 // src/ui/settings/EditTargetModal.ts
-var EditTargetModal = class extends import_obsidian12.Modal {
+var EditTargetModal = class extends import_obsidian11.Modal {
   constructor(app, options) {
     super(app);
     this.options = options;
@@ -37096,7 +36858,7 @@ var EditTargetModal = class extends import_obsidian12.Modal {
       text: this.options.mode === "create" ? i18n.t("settings.modal.title.addTarget", { provider: providerName }) : i18n.t("settings.modal.title.editTarget", { provider: providerName })
     });
     for (const field of getModalFieldDefinitions(this.draft, i18n)) {
-      const setting = new import_obsidian12.Setting(contentEl).setName(field.label);
+      const setting = new import_obsidian11.Setting(contentEl).setName(field.label);
       if (field.description) {
         setting.setDesc(field.description);
       }
@@ -37583,7 +37345,7 @@ function render(root, props) {
 }
 
 // src/ui/UltimatePublisherSettingTab.ts
-var UltimatePublisherSettingTab = class extends import_obsidian13.PluginSettingTab {
+var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
@@ -37603,7 +37365,7 @@ var UltimatePublisherSettingTab = class extends import_obsidian13.PluginSettingT
 };
 
 // src/ui/modals/BatchPublishModal.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 
 // src/ui/publishSummary.ts
 var DEFAULT_DASHBOARD_RECORD_LIMIT = 10;
@@ -37682,7 +37444,7 @@ function summarizeBatchSelection(targets, selectedTargetIds) {
 }
 
 // src/ui/modals/BatchPublishModal.ts
-var BatchPublishModal = class extends import_obsidian14.Modal {
+var BatchPublishModal = class extends import_obsidian13.Modal {
   constructor(plugin, file, workflow) {
     super(plugin.app);
     this.plugin = plugin;
@@ -37775,7 +37537,7 @@ var BatchPublishModal = class extends import_obsidian14.Modal {
     const i18n = createI18nFromObsidianLanguage();
     const selectedTargets = this.getSelectedTargets();
     if (selectedTargets.length === 0) {
-      new import_obsidian14.Notice(i18n.t("notice.batch.selectOne"), 6e3);
+      new import_obsidian13.Notice(i18n.t("notice.batch.selectOne"), 6e3);
       return;
     }
     this.isPublishing = true;
@@ -37793,7 +37555,7 @@ var BatchPublishModal = class extends import_obsidian14.Modal {
         successCount: result.successCount,
         failureCount: result.failureCount
       };
-      new import_obsidian14.Notice(
+      new import_obsidian13.Notice(
         i18n.t("notice.batch.finished", {
           successCount: this.lastRunSummary.successCount,
           failureCount: this.lastRunSummary.failureCount
@@ -37802,7 +37564,7 @@ var BatchPublishModal = class extends import_obsidian14.Modal {
       );
     } catch (error) {
       this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
-      new import_obsidian14.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
+      new import_obsidian13.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -37891,7 +37653,7 @@ var BatchPublishModal = class extends import_obsidian14.Modal {
 };
 
 // src/ui/modals/NormalPublishModal.ts
-var import_obsidian15 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 
 // src/core/normalPublish/drafts.ts
 function createIdleRemoteOptionsState() {
@@ -37920,15 +37682,6 @@ function buildYuqueDraft(note, target) {
     provider: "yuque",
     slug: note.slug,
     publicLevel: target.publicLevel
-  };
-}
-function buildLocalExportDraft(note) {
-  return {
-    provider: "local-export",
-    slug: note.slug,
-    excerpt: note.excerpt,
-    tags: cloneStringList2(note.tags),
-    categories: cloneStringList2(note.categories)
   };
 }
 function buildZhihuDraft(note, target) {
@@ -37963,8 +37716,6 @@ function buildInitialTargetDraft(target, note) {
       return buildWordpressDraft(note, target);
     case "yuque":
       return buildYuqueDraft(note, target);
-    case "local-export":
-      return buildLocalExportDraft(note);
     case "zhihu":
       return buildZhihuDraft(note, target);
     case "csdn":
@@ -38072,10 +37823,6 @@ function validateTargetDraft(draft) {
         return "Juejin publish requires at least one tagId.";
       }
       return null;
-    case "local-export": {
-      const candidate = sanitizeFileName(draft.slug || "", "");
-      return candidate ? null : "Local export requires a valid slug or title.";
-    }
     default:
       return null;
   }
@@ -38387,32 +38134,6 @@ function renderTargetForm(options) {
         onChange: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, publicLevel: value === "1" ? 1 : 0 }))
       });
       return;
-    case "local-export":
-      renderTextInput(container, {
-        label: i18n.t("publish.normal.field.slug"),
-        name: "normal-publish-local-export-slug",
-        value: draft.slug,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, slug: value }))
-      });
-      renderTextArea(container, {
-        label: i18n.t("publish.normal.field.excerpt"),
-        name: "normal-publish-local-export-excerpt",
-        value: draft.excerpt,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, excerpt: value }))
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.tags"),
-        name: "normal-publish-local-export-tags",
-        value: draft.tags,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, tags: value }))
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.categories"),
-        name: "normal-publish-local-export-categories",
-        value: draft.categories,
-        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, categories: value }))
-      });
-      return;
     case "zhihu":
       const columns = readOptionItems("zhihuColumns");
       if (columns.length > 0 && !remoteOptions?.manualFallbackFields.includes("columnId")) {
@@ -38520,7 +38241,7 @@ function renderTargetForm(options) {
 // src/ui/modals/NormalPublishModal.ts
 var NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
 var NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
-var NormalPublishModal = class extends import_obsidian15.Modal {
+var NormalPublishModal = class extends import_obsidian14.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote) {
     super(plugin.app);
     this.plugin = plugin;
@@ -38700,7 +38421,7 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
       const validationError = validateTargetDraft(draft);
       if (validationError) {
         this.setSelectedTargetError(validationError);
-        new import_obsidian15.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
+        new import_obsidian14.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
         await this.render();
         return;
       }
@@ -38718,7 +38439,7 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
       const actionLabel = result.action === "update" ? i18n.t("notice.publish.action.updated") : i18n.t("notice.publish.action.published");
-      new import_obsidian15.Notice(
+      new import_obsidian14.Notice(
         i18n.t("notice.publish.succeeded", {
           target: target.name,
           action: actionLabel
@@ -38728,7 +38449,7 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.setSelectedTargetError(message);
-      new import_obsidian15.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian14.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -38887,7 +38608,7 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
       if (!target || !target.enabled) {
         const message = i18n.t("publish.shared.error.targetUnavailable");
         this.setSelectedTargetError(message);
-        new import_obsidian15.Notice(message, 6e3);
+        new import_obsidian14.Notice(message, 6e3);
         void this.render();
         return;
       }
@@ -38971,8 +38692,6 @@ function getProviderIcon(provider) {
       return "globe";
     case "yuque":
       return "book";
-    case "local-export":
-      return "folder";
     default:
       return "upload";
   }
@@ -39001,7 +38720,7 @@ function buildQuickPublishChildren(enabledTargets, i18n) {
 }
 
 // src/ui/views/PublisherDashboardView.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
 function formatTimestamp(timestamp, i18n) {
   if (!timestamp) {
@@ -39013,7 +38732,7 @@ function formatTimestamp(timestamp, i18n) {
   }
   return parsed.toLocaleString();
 }
-var PublisherDashboardView = class extends import_obsidian16.ItemView {
+var PublisherDashboardView = class extends import_obsidian15.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -39144,7 +38863,33 @@ var PublisherDashboardView = class extends import_obsidian16.ItemView {
 };
 
 // src/plugin.ts
-var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
+function isRecordLike(value) {
+  return typeof value === "object" && value !== null;
+}
+function normalizeLoadedTarget(target) {
+  if (!isRecordLike(target) || typeof target.id !== "string" || typeof target.name !== "string" || !isProviderId(target.provider)) {
+    return null;
+  }
+  return normalizeTarget(target);
+}
+function normalizeLoadedRecord(record, targetIds) {
+  if (!isRecordLike(record) || typeof record.notePath !== "string" || !isProviderId(record.provider) || typeof record.targetId !== "string" || typeof record.remoteId !== "string" || typeof record.lastPublishedAt !== "string" || typeof record.contentHash !== "string") {
+    return null;
+  }
+  if (!targetIds.has(record.targetId)) {
+    return null;
+  }
+  return {
+    notePath: record.notePath,
+    provider: record.provider,
+    targetId: record.targetId,
+    remoteId: record.remoteId,
+    remoteUrl: typeof record.remoteUrl === "string" ? record.remoteUrl : void 0,
+    lastPublishedAt: record.lastPublishedAt,
+    contentHash: record.contentHash
+  };
+}
+var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -39172,12 +38917,23 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
   }
   async loadSettings() {
     const loaded = await this.loadData();
-    this.settings = {
+    const rawTargets = Array.isArray(loaded?.targets) ? loaded.targets : [];
+    const targets = rawTargets.map((target) => normalizeLoadedTarget(target)).filter((target) => target !== null);
+    const targetIds = new Set(targets.map((target) => target.id));
+    const rawRecords = Array.isArray(loaded?.records) ? loaded.records : [];
+    const records = rawRecords.map((record) => normalizeLoadedRecord(record, targetIds)).filter((record) => record !== null);
+    const nextSettings = {
       ...DEFAULT_SETTINGS,
       ...loaded,
-      targets: (loaded?.targets ?? []).map((target) => normalizeTarget(target)),
-      records: loaded?.records ?? []
+      targets,
+      records
     };
+    this.settings = nextSettings;
+    const targetCountChanged = rawTargets.length !== targets.length;
+    const recordCountChanged = rawRecords.length !== records.length;
+    if (loaded && (targetCountChanged || recordCountChanged)) {
+      await this.saveSettings();
+    }
   }
   async saveSettings() {
     await this.saveData(this.settings);
@@ -39227,7 +38983,7 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new import_obsidian17.Notice(this.i18n.t("notice.dashboard.openFailed"));
+      new import_obsidian16.Notice(this.i18n.t("notice.dashboard.openFailed"));
       return;
     }
     await leaf.setViewState({
@@ -39242,7 +38998,7 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
   openNormalPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian16.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new NormalPublishModal(this, file, this.publishWorkflow).open();
@@ -39250,7 +39006,7 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
   openBatchPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian16.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new BatchPublishModal(this, file, this.publishWorkflow).open();
@@ -39258,12 +39014,12 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
   async runQuickPublishForTarget(targetId) {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian16.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new import_obsidian17.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
+      new import_obsidian16.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
       return;
     }
     await this.publishToTarget(file, target);
@@ -39276,12 +39032,12 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian17.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian16.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian17.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
+      new import_obsidian16.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
       return;
     }
     if (targets.length === 1) {
@@ -39296,15 +39052,15 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
     return this.settings.targets.filter((target) => target.enabled);
   }
   getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian17.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
     const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian17.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian16.TFile) || file.extension !== "md") {
       return null;
     }
     return file;
   }
   showPublisherMenu(items, position) {
-    const menu = new import_obsidian17.Menu();
+    const menu = new import_obsidian16.Menu();
     menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -39377,16 +39133,16 @@ var UltimatePublisherPlugin = class extends import_obsidian17.Plugin {
     }
   }
   async publishToTarget(file, target) {
-    new import_obsidian17.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
+    new import_obsidian16.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
     try {
       const result = await this.publishWorkflow.runSingle(file, target, this.settings);
       this.settings = result.settings;
       await this.saveSettings();
       const actionLabel = result.action === "update" ? this.i18n.t("notice.publish.action.updated") : this.i18n.t("notice.publish.action.published");
-      new import_obsidian17.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
+      new import_obsidian16.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian17.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian16.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
   }

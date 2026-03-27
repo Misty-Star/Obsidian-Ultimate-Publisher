@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createI18n } from "../src/i18n";
-import { createLocalExportTarget, createWordpressTarget, createYuqueTarget } from "../src/settings";
+import { createWordpressTarget, createYuqueTarget } from "../src/settings";
 import { applyFieldValue, getModalFieldDefinitions } from "../src/ui/settings/modalForm";
 
 describe("modalForm", () => {
@@ -65,12 +65,12 @@ describe("modalForm", () => {
 
   it("preserves provider-specific enum values", () => {
     const yuqueTarget = applyFieldValue(createYuqueTarget(), "publicLevel", "1");
-    const localExportTarget = applyFieldValue(createLocalExportTarget(), "yamlType", "hexo");
+    const wordpressTarget = applyFieldValue(createWordpressTarget(), "contentFormat", "markdown");
 
     expect(yuqueTarget.provider).toBe("yuque");
     expect(yuqueTarget.publicLevel).toBe(1);
-    expect(localExportTarget.provider).toBe("local-export");
-    expect(localExportTarget.yamlType).toBe("hexo");
+    expect(wordpressTarget.provider).toBe("wordpress");
+    expect(wordpressTarget.contentFormat).toBe("markdown");
   });
 
   it("returns zhihu-specific fields for zhihu targets", () => {

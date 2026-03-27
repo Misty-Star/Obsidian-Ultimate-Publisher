@@ -2,7 +2,7 @@ import { MarkdownView, Menu, Notice, TFile, resetObsidianTestState, setObsidianT
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createI18n } from "../src/i18n";
 import UltimatePublisherPlugin from "../src/plugin";
-import { createLocalExportTarget, createWordpressTarget } from "../src/settings";
+import { createWordpressTarget, createZhihuTarget } from "../src/settings";
 import { buildPublisherMenuModel } from "../src/ui/publisherMenu";
 
 function createApp(activeFile: TFile | null = null) {
@@ -47,7 +47,7 @@ describe("buildPublisherMenuModel", () => {
       hasActiveMarkdown: true,
       enabledTargets: [
         { id: "wp", name: "WordPress", provider: "wordpress" },
-        { id: "local", name: "Local Export", provider: "local-export" },
+        { id: "zh", name: "Zhihu", provider: "zhihu" },
       ],
     }, createI18n("en"));
 
@@ -84,13 +84,13 @@ describe("buildPublisherMenuModel", () => {
     ]);
     expect(model[1].children).toEqual([
       expect.objectContaining({
-        targetId: "local",
-        icon: "folder",
+        targetId: "wp",
+        icon: "globe",
         section: "ultimate-publisher-quick-publish-targets",
       }),
       expect.objectContaining({
-        targetId: "wp",
-        icon: "globe",
+        targetId: "zh",
+        icon: "upload",
         section: "ultimate-publisher-quick-publish-targets",
       }),
     ]);
@@ -161,7 +161,7 @@ describe("buildPublisherMenuModel", () => {
     plugin.settings = {
       targets: [
         { ...createWordpressTarget(), id: "wp", name: "WordPress" },
-        { ...createLocalExportTarget(), id: "local", name: "Local Export" },
+        { ...createZhihuTarget(), id: "zh", name: "Zhihu" },
       ],
       records: [],
     };
@@ -226,13 +226,13 @@ describe("buildPublisherMenuModel", () => {
       section: item.section,
     }))).toEqual([
       {
-        title: "Local Export",
-        icon: "folder",
+        title: "WordPress",
+        icon: "globe",
         section: "ultimate-publisher-quick-publish-targets",
       },
       {
-        title: "WordPress",
-        icon: "globe",
+        title: "Zhihu",
+        icon: "upload",
         section: "ultimate-publisher-quick-publish-targets",
       },
     ]);
@@ -242,7 +242,7 @@ describe("buildPublisherMenuModel", () => {
       width: 180,
     });
     await quickPublishMenu.items[0].trigger();
-    expect(runQuickPublish).toHaveBeenCalledWith("local");
+    expect(runQuickPublish).toHaveBeenCalledWith("wp");
 
     await rootMenu.items[2].trigger();
     await rootMenu.items[3].trigger();

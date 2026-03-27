@@ -2,7 +2,6 @@ import { PublishableNote } from "../note";
 import { PublishTargetConfig } from "../../types";
 import {
   JuejinPublishDraft,
-  LocalExportPublishDraft,
   NormalPublishSessionState,
   ProviderPublishDraft,
   ProviderRemoteOptionsState,
@@ -40,18 +39,6 @@ function buildYuqueDraft(note: PublishableNote, target: Extract<PublishTargetCon
     provider: "yuque",
     slug: note.slug,
     publicLevel: target.publicLevel,
-  };
-}
-
-function buildLocalExportDraft(
-  note: PublishableNote
-): LocalExportPublishDraft {
-  return {
-    provider: "local-export",
-    slug: note.slug,
-    excerpt: note.excerpt,
-    tags: cloneStringList(note.tags),
-    categories: cloneStringList(note.categories),
   };
 }
 
@@ -95,8 +82,6 @@ export function buildInitialTargetDraft(target: PublishTargetConfig, note: Publi
       return buildWordpressDraft(note, target);
     case "yuque":
       return buildYuqueDraft(note, target);
-    case "local-export":
-      return buildLocalExportDraft(note);
     case "zhihu":
       return buildZhihuDraft(note, target);
     case "csdn":

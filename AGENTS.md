@@ -20,4 +20,4 @@ Write Vitest specs next to related behavior in `tests/` using the `*.spec.ts` su
 Recent history follows conventional prefixes like `feat:`, `fix:`, `docs:`, `style:`, and `merge:`. Keep commit subjects short, imperative, and scoped to one change. PRs should explain user-visible impact, list verification commands run, and link related issues when available. Include screenshots or GIFs for settings, ribbon menu, dashboard, or modal UI changes.
 
 ## Security & Configuration Tips
-Never commit real WordPress, Yuque, or local export credentials. Use sanitized examples in docs and tests, and keep secrets in Obsidian plugin settings rather than checked-in files.
+Never commit real WordPress, Yuque, or web publishing credentials. Use sanitized examples in docs and tests, and keep secrets in Obsidian plugin settings rather than checked-in files.

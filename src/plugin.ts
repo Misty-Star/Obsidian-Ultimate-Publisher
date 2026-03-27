@@ -4,7 +4,12 @@ import { PublishWorkflow } from "./core/publishWorkflow";
 import { createI18nFromObsidianLanguage, Translator } from "./i18n";
 import { ProviderRegistry } from "./providers/registry";
 import { cloneTarget, DEFAULT_SETTINGS, normalizeTarget } from "./settings";
-import { PublishTargetConfig, UltimatePublisherSettings } from "./types";
+import {
+  isProviderId,
+  PublishRecord,
+  PublishTargetConfig,
+  UltimatePublisherSettings,
+} from "./types";
 import { PublishTargetModal } from "./ui/PublishTargetModal";
 import { UltimatePublisherSettingTab } from "./ui/UltimatePublisherSettingTab";
 import { BatchPublishModal } from "./ui/modals/BatchPublishModal";
@@ -37,6 +42,51 @@ interface RectAnchor {
     top: number;
     bottom: number;
     width: number;
+  };
+}
+
+function isRecordLike(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeLoadedTarget(target: unknown): PublishTargetConfig | null {
+  if (
+    !isRecordLike(target) ||
+    typeof target.id !== "string" ||
+    typeof target.name !== "string" ||
+    !isProviderId(target.provider)
+  ) {
+    return null;
+  }
+
+  return normalizeTarget(target as unknown as PublishTargetConfig);
+}
+
+function normalizeLoadedRecord(record: unknown, targetIds: Set<string>): PublishRecord | null {
+  if (
+    !isRecordLike(record) ||
+    typeof record.notePath !== "string" ||
+    !isProviderId(record.provider) ||
+    typeof record.targetId !== "string" ||
+    typeof record.remoteId !== "string" ||
+    typeof record.lastPublishedAt !== "string" ||
+    typeof record.contentHash !== "string"
+  ) {
+    return null;
+  }
+
+  if (!targetIds.has(record.targetId)) {
+    return null;
+  }
+
+  return {
+    notePath: record.notePath,
+    provider: record.provider,
+    targetId: record.targetId,
+    remoteId: record.remoteId,
+    remoteUrl: typeof record.remoteUrl === "string" ? record.remoteUrl : undefined,
+    lastPublishedAt: record.lastPublishedAt,
+    contentHash: record.contentHash,
   };
 }
 
@@ -74,12 +124,30 @@ export default class UltimatePublisherPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const loaded = (await this.loadData()) as Partial<UltimatePublisherSettings> | null;
-    this.settings = {
+    const rawTargets = Array.isArray(loaded?.targets) ? loaded.targets : [];
+    const targets = rawTargets
+      .map((target) => normalizeLoadedTarget(target))
+      .filter((target): target is PublishTargetConfig => target !== null);
+    const targetIds = new Set(targets.map((target) => target.id));
+    const rawRecords = Array.isArray(loaded?.records) ? loaded.records : [];
+    const records = rawRecords
+      .map((record) => normalizeLoadedRecord(record, targetIds))
+      .filter((record): record is PublishRecord => record !== null);
+
+    const nextSettings: UltimatePublisherSettings = {
       ...DEFAULT_SETTINGS,
       ...loaded,
-      targets: (loaded?.targets ?? []).map((target) => normalizeTarget(target)),
-      records: loaded?.records ?? [],
+      targets,
+      records,
     };
+
+    this.settings = nextSettings;
+
+    const targetCountChanged = rawTargets.length !== targets.length;
+    const recordCountChanged = rawRecords.length !== records.length;
+    if (loaded && (targetCountChanged || recordCountChanged)) {
+      await this.saveSettings();
+    }
   }
 
   async saveSettings(): Promise<void> {
