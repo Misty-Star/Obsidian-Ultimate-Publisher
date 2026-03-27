@@ -53,6 +53,14 @@ function findInputByName(root: FakeElement, name: string): FakeElement {
   return found;
 }
 
+function findSelectByName(root: FakeElement, name: string): FakeElement {
+  const found = walk(root).find((element) => element.tagName === "select" && element.name === name);
+  if (!found) {
+    throw new Error(`Select not found: ${name}`);
+  }
+  return found;
+}
+
 function findButtonByText(root: FakeElement, text: string): FakeElement {
   const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
   const buttons = walk(root).filter((element) => element.tagName === "button");
@@ -268,6 +276,75 @@ describe("NormalPublishModal", () => {
         provider: expect.objectContaining({
           provider: "zhihu",
           columnId: "column-2",
+        }),
+      })
+    );
+  });
+
+  it("preserves selected wordpress categories when another detailed field changes before publish", async () => {
+    setObsidianTestLanguage("en");
+
+    const target = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
+    const settings = { targets: [target], records: [] };
+    const plugin = {
+      app: createApp(),
+      manifest: { id: "ultimate-publisher" },
+      settings,
+      saveSettings: vi.fn(async () => {}),
+    };
+    const workflow = {
+      runSingle: vi.fn(async () => ({
+        settings,
+        action: "publish" as const,
+      })),
+    };
+    const file = new TFile({
+      path: "Notes/Post.md",
+      basename: "Post",
+      extension: "md",
+      name: "Post.md",
+    });
+    const providerRegistry = {
+      get: vi.fn(() => ({
+        loadNormalPublishOptions: vi.fn().mockResolvedValue({
+          wordpressCategories: [{ id: "1", label: "Notes", description: "notes" }],
+          wordpressTags: [],
+        }),
+      })),
+    };
+
+    const modal = new NormalPublishModal(
+      plugin as never,
+      file,
+      workflow as never,
+      providerRegistry as never,
+      async () => createNote()
+    );
+    await modal.onOpen();
+
+    const categoryInput = findInputByName(modal.contentEl as never, "normal-publish-wordpress-categories");
+    categoryInput.click();
+
+    const categoryOption = findInputByName(modal.contentEl as never, "normal-publish-wordpress-categories-option-1");
+    categoryOption.checked = true;
+    categoryOption.dispatchEvent("change", { currentTarget: categoryOption, target: categoryOption });
+
+    const statusSelect = findSelectByName(modal.contentEl as never, "normal-publish-wordpress-status");
+    statusSelect.value = "publish";
+    statusSelect.dispatchEvent("change", { currentTarget: statusSelect, target: statusSelect });
+
+    findButtonByText(modal.contentEl as never, "Publish").click();
+    await Promise.resolve();
+
+    expect(workflow.runSingle).toHaveBeenCalledWith(
+      file,
+      expect.objectContaining({ id: "wp" }),
+      settings,
+      expect.objectContaining({
+        provider: expect.objectContaining({
+          provider: "wordpress",
+          categories: ["Notes"],
+          status: "publish",
         }),
       })
     );

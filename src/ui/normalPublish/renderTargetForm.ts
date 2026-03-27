@@ -16,7 +16,7 @@ interface RenderTargetFormOptions {
   draft: ProviderPublishDraft;
   remoteOptions: ProviderRemoteOptionsState | undefined;
   i18n: Translator;
-  onChange: (draft: ProviderPublishDraft) => void;
+  onChange: (update: (draft: ProviderPublishDraft) => ProviderPublishDraft) => void;
 }
 
 export function renderTargetForm(options: RenderTargetFormOptions): void {
@@ -47,6 +47,13 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
       description: item.description,
     }));
 
+  const applyDraftUpdate = <TDraft extends ProviderPublishDraft>(
+    provider: TDraft["provider"],
+    update: (currentDraft: TDraft) => TDraft
+  ): void => {
+    onChange((currentDraft) => (currentDraft.provider === provider ? update(currentDraft as TDraft) : currentDraft));
+  };
+
   if (remoteOptions?.status === "loading") {
     renderHelperText(container, i18n.t("publish.normal.remote.loading"), "info");
   }
@@ -61,13 +68,13 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
         label: i18n.t("publish.normal.field.slug"),
         name: "normal-publish-wordpress-slug",
         value: draft.slug,
-        onInput: (value) => onChange({ ...draft, slug: value }),
+        onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, slug: value })),
       });
       renderTextArea(container, {
         label: i18n.t("publish.normal.field.excerpt"),
         name: "normal-publish-wordpress-excerpt",
         value: draft.excerpt,
-        onInput: (value) => onChange({ ...draft, excerpt: value }),
+        onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, excerpt: value })),
       });
       const wordpressTags = readOptionItems("wordpressTags");
       const wordpressCategories = readOptionItems("wordpressCategories");
@@ -78,14 +85,14 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           value: draft.tags,
           choices: toSelectableStringChoices(wordpressTags),
           description: i18n.t("publish.normal.remote.manualHint"),
-          onInput: (value) => onChange({ ...draft, tags: value }),
+          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, tags: value })),
         });
       } else {
         renderStringListInput(container, {
           label: i18n.t("publish.normal.field.tags"),
           name: "normal-publish-wordpress-tags",
           value: draft.tags,
-          onInput: (value) => onChange({ ...draft, tags: value }),
+          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, tags: value })),
         });
       }
       if (wordpressCategories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categories")) {
@@ -95,14 +102,14 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           value: draft.categories,
           choices: toSelectableStringChoices(wordpressCategories),
           description: i18n.t("publish.normal.remote.dropdownInputHint"),
-          onInput: (value) => onChange({ ...draft, categories: value }),
+          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, categories: value })),
         });
       } else {
         renderStringListInput(container, {
           label: i18n.t("publish.normal.field.categories"),
           name: "normal-publish-wordpress-categories",
           value: draft.categories,
-          onInput: (value) => onChange({ ...draft, categories: value }),
+          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, categories: value })),
         });
       }
       renderSelectInput(container, {
@@ -115,13 +122,14 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           { value: "private", label: i18n.t("publish.normal.option.status.private") },
           { value: "pending", label: i18n.t("publish.normal.option.status.pending") },
         ],
-        onChange: (value) => onChange({ ...draft, status: value as typeof draft.status }),
+        onChange: (value) =>
+          applyDraftUpdate("wordpress", (currentDraft: typeof draft) => ({ ...currentDraft, status: value as typeof draft.status })),
       });
       renderTextInput(container, {
         label: i18n.t("publish.normal.field.password"),
         name: "normal-publish-wordpress-password",
         value: draft.password,
-        onInput: (value) => onChange({ ...draft, password: value }),
+        onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, password: value })),
       });
       return;
     case "yuque":
@@ -129,7 +137,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
         label: i18n.t("publish.normal.field.slug"),
         name: "normal-publish-yuque-slug",
         value: draft.slug,
-        onInput: (value) => onChange({ ...draft, slug: value }),
+        onInput: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, slug: value })),
       });
       renderSelectInput(container, {
         label: i18n.t("publish.normal.field.publicLevel"),
@@ -139,7 +147,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           { value: "0", label: i18n.t("publish.normal.option.visibility.private") },
           { value: "1", label: i18n.t("publish.normal.option.visibility.public") },
         ],
-        onChange: (value) => onChange({ ...draft, publicLevel: value === "1" ? 1 : 0 }),
+        onChange: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, publicLevel: value === "1" ? 1 : 0 })),
       });
       return;
     case "local-export":
@@ -147,25 +155,25 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
         label: i18n.t("publish.normal.field.slug"),
         name: "normal-publish-local-export-slug",
         value: draft.slug,
-        onInput: (value) => onChange({ ...draft, slug: value }),
+        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, slug: value })),
       });
       renderTextArea(container, {
         label: i18n.t("publish.normal.field.excerpt"),
         name: "normal-publish-local-export-excerpt",
         value: draft.excerpt,
-        onInput: (value) => onChange({ ...draft, excerpt: value }),
+        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, excerpt: value })),
       });
       renderStringListInput(container, {
         label: i18n.t("publish.normal.field.tags"),
         name: "normal-publish-local-export-tags",
         value: draft.tags,
-        onInput: (value) => onChange({ ...draft, tags: value }),
+        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, tags: value })),
       });
       renderStringListInput(container, {
         label: i18n.t("publish.normal.field.categories"),
         name: "normal-publish-local-export-categories",
         value: draft.categories,
-        onInput: (value) => onChange({ ...draft, categories: value }),
+        onInput: (value) => applyDraftUpdate("local-export", (currentDraft) => ({ ...currentDraft, categories: value })),
       });
       return;
     case "zhihu":
@@ -182,11 +190,11 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           description: i18n.t("publish.normal.remote.selectHint"),
           onChange: (value) => {
             const selected = findOption(columns, value);
-            onChange({
-              ...draft,
+            applyDraftUpdate("zhihu", (currentDraft: typeof draft) => ({
+              ...currentDraft,
               columnId: value,
-              columnTitle: selected?.label ?? draft.columnTitle,
-            });
+              columnTitle: selected?.label ?? currentDraft.columnTitle,
+            }));
           },
         });
         const selectedColumn = findOption(columns, draft.columnId);
@@ -199,7 +207,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           name: "normal-publish-zhihu-columnId",
           value: draft.columnId,
           description: i18n.t("publish.normal.remote.manualFallbackHint"),
-          onInput: (value) => onChange({ ...draft, columnId: value }),
+          onInput: (value) => applyDraftUpdate("zhihu", (currentDraft) => ({ ...currentDraft, columnId: value })),
         });
       }
       return;
@@ -208,7 +216,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
         label: i18n.t("publish.normal.field.excerpt"),
         name: "normal-publish-csdn-excerpt",
         value: draft.excerpt,
-        onInput: (value) => onChange({ ...draft, excerpt: value }),
+        onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, excerpt: value })),
       });
       renderStringListInput(container, {
         label: i18n.t("publish.normal.field.tags"),
@@ -218,7 +226,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           readOptionItems("csdnTags").length > 0
             ? i18n.t("publish.normal.remote.manualHint")
             : undefined,
-        onInput: (value) => onChange({ ...draft, tags: value }),
+        onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, tags: value })),
       });
       renderStringListInput(container, {
         label: i18n.t("publish.normal.field.categories"),
@@ -228,7 +236,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           readOptionItems("csdnCategories").length > 0
             ? i18n.t("publish.normal.remote.manualHint")
             : undefined,
-        onInput: (value) => onChange({ ...draft, categories: value }),
+        onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, categories: value })),
       });
       return;
     case "juejin":
@@ -245,11 +253,11 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           description: i18n.t("publish.normal.remote.selectHint"),
           onChange: (value) => {
             const selected = findOption(categories, value);
-            onChange({
-              ...draft,
+            applyDraftUpdate("juejin", (currentDraft: typeof draft) => ({
+              ...currentDraft,
               categoryId: value,
-              categoryName: selected?.label ?? draft.categoryName,
-            });
+              categoryName: selected?.label ?? currentDraft.categoryName,
+            }));
           },
         });
       } else {
@@ -258,7 +266,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           name: "normal-publish-juejin-categoryId",
           value: draft.categoryId,
           description: i18n.t("publish.normal.remote.manualFallbackHint"),
-          onInput: (value) => onChange({ ...draft, categoryId: value }),
+          onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, categoryId: value })),
         });
       }
       renderStringListInput(container, {
@@ -269,13 +277,13 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           readOptionItems("juejinTags").length > 0
             ? i18n.t("publish.normal.remote.manualHint")
             : undefined,
-        onInput: (value) => onChange({ ...draft, tagIds: value }),
+        onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, tagIds: value })),
       });
       renderTextArea(container, {
         label: i18n.t("publish.normal.field.briefContent"),
         name: "normal-publish-juejin-briefContent",
         value: draft.briefContent,
-        onInput: (value) => onChange({ ...draft, briefContent: value }),
+        onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, briefContent: value })),
       });
       return;
   }

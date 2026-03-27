@@ -119,15 +119,19 @@ export class NormalPublishModal extends Modal {
     }
   }
 
-  private updateSelectedDraft(draft: ProviderPublishDraft): void {
+  private updateSelectedDraft(update: (draft: ProviderPublishDraft) => ProviderPublishDraft): void {
     if (!this.sessionState || !this.selectedTargetId) {
+      return;
+    }
+    const currentDraft = this.sessionState.targetDrafts[this.selectedTargetId];
+    if (!currentDraft) {
       return;
     }
     this.sessionState = {
       ...this.sessionState,
       targetDrafts: {
         ...this.sessionState.targetDrafts,
-        [this.selectedTargetId]: draft,
+        [this.selectedTargetId]: update(currentDraft),
       },
     };
   }
@@ -405,8 +409,8 @@ export class NormalPublishModal extends Modal {
         draft: selectedDraft,
         remoteOptions: this.sessionState.remoteOptions[this.selectedTargetId],
         i18n,
-        onChange: (draft) => {
-          this.updateSelectedDraft(draft);
+        onChange: (update) => {
+          this.updateSelectedDraft(update);
         },
       });
     }

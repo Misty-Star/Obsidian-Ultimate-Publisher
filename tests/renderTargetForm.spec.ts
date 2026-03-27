@@ -61,14 +61,16 @@ describe("renderTargetForm", () => {
       manualFallbackFields: [],
     };
     let latestDraft: WordpressPublishDraft | null = null;
+    let currentDraft = draft;
 
     renderTargetForm({
       container,
       draft,
       remoteOptions,
       i18n: createI18n("en"),
-      onChange: (nextDraft) => {
-        latestDraft = nextDraft as WordpressPublishDraft;
+      onChange: (updateDraft) => {
+        currentDraft = updateDraft(currentDraft) as WordpressPublishDraft;
+        latestDraft = currentDraft;
       },
     });
 
@@ -117,14 +119,16 @@ describe("renderTargetForm", () => {
       manualFallbackFields: [],
     };
     let latestDraft: WordpressPublishDraft | null = null;
+    let currentDraft = draft;
 
     renderTargetForm({
       container,
       draft,
       remoteOptions,
       i18n: createI18n("en"),
-      onChange: (nextDraft) => {
-        latestDraft = nextDraft as WordpressPublishDraft;
+      onChange: (updateDraft) => {
+        currentDraft = updateDraft(currentDraft) as WordpressPublishDraft;
+        latestDraft = currentDraft;
       },
     });
 
