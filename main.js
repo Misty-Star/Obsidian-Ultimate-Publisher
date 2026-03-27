@@ -35059,6 +35059,7 @@ var messages = {
     "publish.normal.remote.fallback": "Remote options failed to load. Switched to manual input.",
     "publish.normal.remote.selectHint": "Remote options are available for this field.",
     "publish.normal.remote.manualHint": "Remote options are available, but you can still edit the value manually.",
+    "publish.normal.remote.dropdownInputHint": "Click the field to open remote categories, or type manually and press Enter to confirm.",
     "publish.normal.remote.manualFallbackHint": "Enter the raw ID manually when remote options are unavailable.",
     "publish.normal.option.status.draft": "Draft",
     "publish.normal.option.status.publish": "Published",
@@ -35176,6 +35177,7 @@ var messages = {
     "publish.normal.remote.fallback": "\u8FDC\u7AEF\u9009\u9879\u62C9\u53D6\u5931\u8D25\uFF0C\u5DF2\u5207\u6362\u4E3A\u624B\u52A8\u8F93\u5165\u3002",
     "publish.normal.remote.selectHint": "\u8BE5\u5B57\u6BB5\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF0C\u53EF\u76F4\u63A5\u9009\u62E9\u3002",
     "publish.normal.remote.manualHint": "\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF1B\u5982\u6709\u9700\u8981\uFF0C\u4ECD\u53EF\u624B\u52A8\u7F16\u8F91\u539F\u59CB\u503C\u3002",
+    "publish.normal.remote.dropdownInputHint": "\u70B9\u51FB\u8F93\u5165\u6846\u5C55\u5F00\u8FDC\u7AEF\u5206\u7C7B\u5217\u8868\uFF1B\u4E5F\u53EF\u624B\u52A8\u8F93\u5165\u5E76\u6309 Enter \u786E\u8BA4\u3002",
     "publish.normal.remote.manualFallbackHint": "\u5F53\u524D\u65E0\u6CD5\u4F7F\u7528\u8FDC\u7AEF\u9009\u9879\uFF0C\u8BF7\u624B\u52A8\u586B\u5199\u539F\u59CB ID\u3002",
     "publish.normal.option.status.draft": "\u8349\u7A3F",
     "publish.normal.option.status.publish": "\u5DF2\u53D1\u5E03",
@@ -38111,6 +38113,21 @@ function renderTextArea(container, options) {
   });
   return input;
 }
+function parseStringList(value) {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+function uniqueStringList(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  for (const value of values) {
+    if (seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    result.push(value);
+  }
+  return result;
+}
 function renderStringListInput(container, options) {
   return renderTextInput(container, {
     label: options.label,
@@ -38118,11 +38135,117 @@ function renderStringListInput(container, options) {
     value: options.value.join(", "),
     description: options.description,
     onInput: (value) => {
-      options.onInput(
-        value.split(",").map((item) => item.trim()).filter(Boolean)
-      );
+      options.onInput(parseStringList(value));
     }
   });
+}
+function renderSelectableStringListInput(container, options) {
+  const field = createFieldContainer(container, options.label, options.description);
+  const input = field.createEl("input", { type: "text" });
+  input.name = options.name;
+  input.value = options.value.join(", ");
+  const choiceValues = new Set(options.choices.map((choice) => choice.value));
+  const choiceInputs = options.choices.map((choice) => {
+    const row = field.createDiv({ cls: "ultimate-publisher-normal-choice-row" });
+    const label = row.createEl("label", { cls: "ultimate-publisher-normal-choice-label" });
+    const checkbox = label.createEl("input", { type: "checkbox" });
+    checkbox.name = `${options.name}-option-${choice.id}`;
+    checkbox.value = choice.value;
+    checkbox.checked = options.value.includes(choice.value);
+    label.createSpan({ text: choice.label });
+    if (choice.description) {
+      row.createEl("p", {
+        cls: "ultimate-publisher-normal-helper",
+        text: choice.description
+      });
+    }
+    return { choice, checkbox };
+  });
+  const syncValue = (values) => {
+    const nextValues = uniqueStringList(values);
+    input.value = nextValues.join(", ");
+    for (const { choice, checkbox } of choiceInputs) {
+      checkbox.checked = nextValues.includes(choice.value);
+    }
+    options.onInput(nextValues);
+  };
+  input.addEventListener("input", () => {
+    syncValue(parseStringList(input.value));
+  });
+  for (const { checkbox } of choiceInputs) {
+    checkbox.addEventListener("change", () => {
+      const manualValues = parseStringList(input.value).filter((value) => !choiceValues.has(value));
+      const selectedValues = choiceInputs.filter((item) => item.checkbox.checked).map((item) => item.choice.value);
+      syncValue([...selectedValues, ...manualValues]);
+    });
+  }
+  return input;
+}
+function renderDropdownSelectableStringListInput(container, options) {
+  const field = createFieldContainer(container, options.label, options.description);
+  const input = field.createEl("input", { type: "text" });
+  input.name = options.name;
+  input.value = options.value.join(", ");
+  const dropdown = field.createDiv({ cls: "ultimate-publisher-normal-dropdown" });
+  dropdown.style.display = "none";
+  const choiceValues = new Set(options.choices.map((choice) => choice.value));
+  const choiceInputs = options.choices.map((choice) => {
+    const row = dropdown.createDiv({ cls: "ultimate-publisher-normal-choice-row" });
+    const label = row.createEl("label", { cls: "ultimate-publisher-normal-choice-label" });
+    const checkbox = label.createEl("input", { type: "checkbox" });
+    checkbox.name = `${options.name}-option-${choice.id}`;
+    checkbox.value = choice.value;
+    checkbox.checked = options.value.includes(choice.value);
+    const textContainer = label.createSpan({ cls: "ultimate-publisher-normal-choice-text" });
+    textContainer.createSpan({ text: choice.label });
+    if (choice.description && choice.description !== choice.label) {
+      textContainer.createSpan({ text: choice.description, cls: "ultimate-publisher-normal-alias" });
+    }
+    return { choice, checkbox };
+  });
+  const syncValue = (values) => {
+    const nextValues = uniqueStringList(values);
+    input.value = nextValues.join(", ");
+    for (const { choice, checkbox } of choiceInputs) {
+      checkbox.checked = nextValues.includes(choice.value);
+    }
+    options.onInput(nextValues);
+  };
+  const openDropdown = () => {
+    dropdown.style.display = "block";
+  };
+  const closeDropdown = () => {
+    dropdown.style.display = "none";
+  };
+  input.addEventListener("click", () => {
+    openDropdown();
+  });
+  input.addEventListener("keydown", (event) => {
+    const keyboardEvent = event;
+    if (keyboardEvent?.key !== "Enter") {
+      return;
+    }
+    keyboardEvent.preventDefault?.();
+    syncValue(parseStringList(input.value));
+  });
+  for (const { checkbox } of choiceInputs) {
+    checkbox.addEventListener("change", () => {
+      openDropdown();
+      const manualValues = parseStringList(input.value).filter((value) => !choiceValues.has(value));
+      const selectedValues = choiceInputs.filter((item) => item.checkbox.checked).map((item) => item.choice.value);
+      syncValue([...selectedValues, ...manualValues]);
+    });
+  }
+  if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+    setTimeout(() => {
+      document.addEventListener("click", (event) => {
+        if (!field.contains(event.target)) {
+          closeDropdown();
+        }
+      });
+    }, 0);
+  }
+  return input;
 }
 function renderSelectInput(container, options) {
   const field = createFieldContainer(container, options.label, options.description);
@@ -38162,6 +38285,12 @@ function renderTargetForm(options) {
     );
   };
   const findOption = (items, id) => items.find((item) => item.id === id);
+  const toSelectableStringChoices = (items) => items.map((item) => ({
+    id: item.id,
+    value: item.label,
+    label: item.label,
+    description: item.description
+  }));
   if (remoteOptions?.status === "loading") {
     renderHelperText(container, i18n.t("publish.normal.remote.loading"), "info");
   }
@@ -38182,20 +38311,42 @@ function renderTargetForm(options) {
         value: draft.excerpt,
         onInput: (value) => onChange({ ...draft, excerpt: value })
       });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.tags"),
-        name: "normal-publish-wordpress-tags",
-        value: draft.tags,
-        description: readOptionItems("wordpressTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
-        onInput: (value) => onChange({ ...draft, tags: value })
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.categories"),
-        name: "normal-publish-wordpress-categories",
-        value: draft.categories,
-        description: readOptionItems("wordpressCategories").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
-        onInput: (value) => onChange({ ...draft, categories: value })
-      });
+      const wordpressTags = readOptionItems("wordpressTags");
+      const wordpressCategories = readOptionItems("wordpressCategories");
+      if (wordpressTags.length > 0 && !remoteOptions?.manualFallbackFields.includes("tags")) {
+        renderSelectableStringListInput(container, {
+          label: i18n.t("publish.normal.field.tags"),
+          name: "normal-publish-wordpress-tags",
+          value: draft.tags,
+          choices: toSelectableStringChoices(wordpressTags),
+          description: i18n.t("publish.normal.remote.manualHint"),
+          onInput: (value) => onChange({ ...draft, tags: value })
+        });
+      } else {
+        renderStringListInput(container, {
+          label: i18n.t("publish.normal.field.tags"),
+          name: "normal-publish-wordpress-tags",
+          value: draft.tags,
+          onInput: (value) => onChange({ ...draft, tags: value })
+        });
+      }
+      if (wordpressCategories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categories")) {
+        renderDropdownSelectableStringListInput(container, {
+          label: i18n.t("publish.normal.field.categories"),
+          name: "normal-publish-wordpress-categories",
+          value: draft.categories,
+          choices: toSelectableStringChoices(wordpressCategories),
+          description: i18n.t("publish.normal.remote.dropdownInputHint"),
+          onInput: (value) => onChange({ ...draft, categories: value })
+        });
+      } else {
+        renderStringListInput(container, {
+          label: i18n.t("publish.normal.field.categories"),
+          name: "normal-publish-wordpress-categories",
+          value: draft.categories,
+          onInput: (value) => onChange({ ...draft, categories: value })
+        });
+      }
       renderSelectInput(container, {
         label: i18n.t("publish.normal.field.status"),
         name: "normal-publish-wordpress-status",

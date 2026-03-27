@@ -1,6 +1,14 @@
 import { NormalPublishOptionItem } from "../../core/providers";
 import { Translator } from "../../i18n";
-import { renderHelperText, renderSelectInput, renderStringListInput, renderTextArea, renderTextInput } from "./formControls";
+import {
+  renderDropdownSelectableStringListInput,
+  renderHelperText,
+  renderSelectableStringListInput,
+  renderSelectInput,
+  renderStringListInput,
+  renderTextArea,
+  renderTextInput,
+} from "./formControls";
 import { ProviderPublishDraft, ProviderRemoteOptionsState } from "../../core/normalPublish/types";
 
 interface RenderTargetFormOptions {
@@ -31,6 +39,14 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
   const findOption = (items: NormalPublishOptionItem[], id: string): NormalPublishOptionItem | undefined =>
     items.find((item) => item.id === id);
 
+  const toSelectableStringChoices = (items: NormalPublishOptionItem[]) =>
+    items.map((item) => ({
+      id: item.id,
+      value: item.label,
+      label: item.label,
+      description: item.description,
+    }));
+
   if (remoteOptions?.status === "loading") {
     renderHelperText(container, i18n.t("publish.normal.remote.loading"), "info");
   }
@@ -53,26 +69,42 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
         value: draft.excerpt,
         onInput: (value) => onChange({ ...draft, excerpt: value }),
       });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.tags"),
-        name: "normal-publish-wordpress-tags",
-        value: draft.tags,
-        description:
-          readOptionItems("wordpressTags").length > 0
-            ? i18n.t("publish.normal.remote.manualHint")
-            : undefined,
-        onInput: (value) => onChange({ ...draft, tags: value }),
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.categories"),
-        name: "normal-publish-wordpress-categories",
-        value: draft.categories,
-        description:
-          readOptionItems("wordpressCategories").length > 0
-            ? i18n.t("publish.normal.remote.manualHint")
-            : undefined,
-        onInput: (value) => onChange({ ...draft, categories: value }),
-      });
+      const wordpressTags = readOptionItems("wordpressTags");
+      const wordpressCategories = readOptionItems("wordpressCategories");
+      if (wordpressTags.length > 0 && !remoteOptions?.manualFallbackFields.includes("tags")) {
+        renderSelectableStringListInput(container, {
+          label: i18n.t("publish.normal.field.tags"),
+          name: "normal-publish-wordpress-tags",
+          value: draft.tags,
+          choices: toSelectableStringChoices(wordpressTags),
+          description: i18n.t("publish.normal.remote.manualHint"),
+          onInput: (value) => onChange({ ...draft, tags: value }),
+        });
+      } else {
+        renderStringListInput(container, {
+          label: i18n.t("publish.normal.field.tags"),
+          name: "normal-publish-wordpress-tags",
+          value: draft.tags,
+          onInput: (value) => onChange({ ...draft, tags: value }),
+        });
+      }
+      if (wordpressCategories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categories")) {
+        renderDropdownSelectableStringListInput(container, {
+          label: i18n.t("publish.normal.field.categories"),
+          name: "normal-publish-wordpress-categories",
+          value: draft.categories,
+          choices: toSelectableStringChoices(wordpressCategories),
+          description: i18n.t("publish.normal.remote.dropdownInputHint"),
+          onInput: (value) => onChange({ ...draft, categories: value }),
+        });
+      } else {
+        renderStringListInput(container, {
+          label: i18n.t("publish.normal.field.categories"),
+          name: "normal-publish-wordpress-categories",
+          value: draft.categories,
+          onInput: (value) => onChange({ ...draft, categories: value }),
+        });
+      }
       renderSelectInput(container, {
         label: i18n.t("publish.normal.field.status"),
         name: "normal-publish-wordpress-status",
