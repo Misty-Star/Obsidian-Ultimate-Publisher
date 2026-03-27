@@ -39,6 +39,12 @@ function textTree(root: FakeElement): string {
     .join(" ");
 }
 
+function elementText(root: FakeElement): string {
+  return [root.textContent, ...root.children.map((child) => elementText(child))]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function findInputByName(root: FakeElement, name: string): FakeElement {
   const found = walk(root).find((element) => element.tagName === "input" && element.name === name);
   if (!found) {
@@ -48,11 +54,30 @@ function findInputByName(root: FakeElement, name: string): FakeElement {
 }
 
 function findButtonByText(root: FakeElement, text: string): FakeElement {
-  const found = walk(root).find((element) => element.tagName === "button" && element.textContent === text);
+  const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
+  const buttons = walk(root).filter((element) => element.tagName === "button");
+  const exactMatch = buttons.find((element) => normalize(elementText(element)) === text);
+  const found = exactMatch ?? buttons.find((element) => normalize(elementText(element)).includes(text));
   if (!found) {
     throw new Error(`Button not found: ${text}`);
   }
   return found;
+}
+
+function hasClass(element: FakeElement, className: string): boolean {
+  return element.className.split(/\s+/).includes(className);
+}
+
+function findByClass(root: FakeElement, className: string): FakeElement {
+  const found = walk(root).find((element) => hasClass(element, className));
+  if (!found) {
+    throw new Error(`Element not found with class: ${className}`);
+  }
+  return found;
+}
+
+function findAllByClass(root: FakeElement, className: string): FakeElement[] {
+  return walk(root).filter((element) => hasClass(element, className));
 }
 
 afterEach(() => {
@@ -60,6 +85,71 @@ afterEach(() => {
 });
 
 describe("NormalPublishModal", () => {
+  it("renders the normal publish dialog as a two-pane shell with semantic layout classes", async () => {
+    setObsidianTestLanguage("en");
+
+    const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
+    const zhihu = { ...createZhihuTarget(), id: "zhihu", name: "Zhihu", defaultColumnId: "column-1" };
+    const settings = { targets: [wordpress, zhihu], records: [] };
+    const plugin = {
+      app: createApp(),
+      manifest: { id: "ultimate-publisher" },
+      settings,
+      saveSettings: vi.fn(async () => {}),
+    };
+    const workflow = {
+      runSingle: vi.fn(async () => ({
+        settings,
+        action: "publish" as const,
+      })),
+    };
+    const file = new TFile({
+      path: "Notes/Post.md",
+      basename: "Post",
+      extension: "md",
+      name: "Post.md",
+    });
+    const providerRegistry = {
+      get: vi.fn((target) => ({
+        loadNormalPublishOptions: vi.fn().mockResolvedValue(
+          target.provider === "zhihu"
+            ? { zhihuColumns: [{ id: "column-1", label: "Demo Column" }] }
+            : {}
+        ),
+      })),
+    };
+
+    const modal = new NormalPublishModal(
+      plugin as never,
+      file,
+      workflow as never,
+      providerRegistry as never,
+      async () => createNote()
+    );
+    await modal.onOpen();
+
+    expect(hasClass((modal as any).modalEl, "ultimate-publisher-normal-modal-frame")).toBe(true);
+    expect(hasClass((modal as any).containerEl, "ultimate-publisher-normal-modal-container")).toBe(true);
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-modal")).toBeTruthy();
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-header")).toBeTruthy();
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-note-card")).toBeTruthy();
+    expect(textTree(modal.contentEl as never)).not.toContain("Notes/Post.md");
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-shell")).toBeTruthy();
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-sidebar")).toBeTruthy();
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-main")).toBeTruthy();
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-detail-panel")).toBeTruthy();
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-detail-body")).toBeTruthy();
+    expect(findByClass(modal.contentEl as never, "ultimate-publisher-normal-actions")).toBeTruthy();
+
+    const targetItems = findAllByClass(modal.contentEl as never, "ultimate-publisher-normal-target-item");
+    const targetButtons = findAllByClass(modal.contentEl as never, "ultimate-publisher-normal-target-button");
+    const targetMeta = findAllByClass(modal.contentEl as never, "ultimate-publisher-normal-target-meta");
+    expect(targetItems).toHaveLength(2);
+    expect(targetButtons).toHaveLength(2);
+    expect(targetMeta).toHaveLength(0);
+    expect(targetButtons.some((button) => hasClass(button, "is-selected"))).toBe(true);
+  });
+
   it("shows only enabled targets in the left pane and selects the first one", async () => {
     setObsidianTestLanguage("en");
 

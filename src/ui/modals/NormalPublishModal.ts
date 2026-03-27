@@ -9,9 +9,9 @@ import { ProviderRegistry } from "../../providers/registry";
 import { createI18nFromObsidianLanguage } from "../../i18n";
 import UltimatePublisherPlugin from "../../plugin";
 import { PublishTargetConfig } from "../../types";
-import { deriveNoteTargetSummaries } from "../publishSummary";
+import { deriveNoteTargetSummaries, NoteTargetSummary } from "../publishSummary";
 import { renderTargetForm } from "../normalPublish/renderTargetForm";
-import { renderTextInput } from "../normalPublish/formControls";
+import { renderHelperText, renderTextInput } from "../normalPublish/formControls";
 
 interface AppSettingsController {
   open(): void;
@@ -23,6 +23,9 @@ interface AppWithSettings {
 }
 
 type NoteLoader = (app: typeof Modal.prototype.app, file: TFile) => Promise<PublishableNote>;
+
+const NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
+const NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
 
 export class NormalPublishModal extends Modal {
   private selectedTargetId: string | null = null;
@@ -43,6 +46,8 @@ export class NormalPublishModal extends Modal {
   }
 
   async onOpen(): Promise<void> {
+    this.containerEl.addClass(NORMAL_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.addClass(NORMAL_PUBLISH_MODAL_FRAME_CLASS);
     this.isInitializing = true;
     await this.render();
     try {
@@ -59,6 +64,9 @@ export class NormalPublishModal extends Modal {
   }
 
   onClose(): void {
+    this.containerEl.removeClass(NORMAL_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.removeClass(NORMAL_PUBLISH_MODAL_FRAME_CLASS);
+    this.contentEl.removeClass("ultimate-publisher-normal-modal");
     this.contentEl.empty();
   }
 
@@ -73,9 +81,15 @@ export class NormalPublishModal extends Modal {
   }
 
   private createInfoRow(container: HTMLElement, label: string, value: string): void {
-    const row = container.createDiv();
-    row.createEl("strong", { text: `${label}: ` });
-    row.createSpan({ text: value });
+    const row = container.createDiv({ cls: "ultimate-publisher-normal-note-row" });
+    row.createSpan({
+      cls: "ultimate-publisher-normal-note-label",
+      text: label,
+    });
+    row.createSpan({
+      cls: "ultimate-publisher-normal-note-value",
+      text: value,
+    });
   }
 
   private getSelectedDraft(): ProviderPublishDraft | null {
@@ -98,6 +112,13 @@ export class NormalPublishModal extends Modal {
     };
   }
 
+  private syncSelectedTarget(targetId: string | null): void {
+    this.selectedTargetId = targetId;
+    if (this.sessionState) {
+      this.sessionState.selectedTargetId = targetId;
+    }
+  }
+
   private updateSelectedDraft(draft: ProviderPublishDraft): void {
     if (!this.sessionState || !this.selectedTargetId) {
       return;
@@ -111,6 +132,48 @@ export class NormalPublishModal extends Modal {
     };
   }
 
+  private setSelectedTargetError(message: string | null): void {
+    if (!this.sessionState || !this.selectedTargetId) {
+      this.errorMessage = message;
+      return;
+    }
+    this.sessionState = {
+      ...this.sessionState,
+      lastErrorByTargetId: {
+        ...this.sessionState.lastErrorByTargetId,
+        [this.selectedTargetId]: message,
+      },
+    };
+  }
+
+  private getSelectedTargetError(): string | null {
+    if (!this.sessionState || !this.selectedTargetId) {
+      return this.errorMessage;
+    }
+    return this.sessionState.lastErrorByTargetId[this.selectedTargetId] ?? null;
+  }
+
+  private markRemoteOptionsLoading(targetId: string): void {
+    if (!this.sessionState) {
+      return;
+    }
+    const current = this.sessionState.remoteOptions[targetId];
+    if (!current || current.status !== "idle") {
+      return;
+    }
+    this.sessionState = {
+      ...this.sessionState,
+      remoteOptions: {
+        ...this.sessionState.remoteOptions,
+        [targetId]: {
+          ...current,
+          status: "loading",
+          errorMessage: undefined,
+        },
+      },
+    };
+  }
+
   private async loadRemoteOptionsForSelectedTarget(): Promise<void> {
     if (!this.sessionState || !this.selectedTargetId) {
       return;
@@ -118,6 +181,13 @@ export class NormalPublishModal extends Modal {
     const target = this.getTargetById(this.selectedTargetId);
     if (!target || !target.enabled) {
       return;
+    }
+    const current = this.sessionState.remoteOptions[target.id];
+    if (current?.status === "loaded" || current?.status === "error") {
+      return;
+    }
+    if (current?.status !== "loading") {
+      this.markRemoteOptionsLoading(target.id);
     }
     const nextState = await ensureRemoteOptionsLoaded(this.sessionState, target, this.providerRegistry);
     if (!this.sessionState) {
@@ -133,20 +203,30 @@ export class NormalPublishModal extends Modal {
     };
   }
 
+  private async handleTargetSelection(targetId: string): Promise<void> {
+    this.syncSelectedTarget(targetId);
+    if (this.sessionState?.remoteOptions[targetId]?.status === "idle") {
+      this.markRemoteOptionsLoading(targetId);
+      await this.render();
+      await this.loadRemoteOptionsForSelectedTarget();
+    }
+    await this.render();
+  }
+
   private async handlePublish(target: PublishTargetConfig): Promise<void> {
     const i18n = createI18nFromObsidianLanguage();
     const draft = this.getSelectedDraft();
     if (draft) {
       const validationError = validateTargetDraft(draft);
       if (validationError) {
-        this.errorMessage = validationError;
+        this.setSelectedTargetError(validationError);
         new Notice(i18n.t("notice.publish.failed", { error: validationError }), 8000);
         await this.render();
         return;
       }
     }
     this.isPublishing = true;
-    this.errorMessage = null;
+    this.setSelectedTargetError(null);
     await this.render();
 
     try {
@@ -168,28 +248,74 @@ export class NormalPublishModal extends Modal {
           action: actionLabel,
         })
       );
+      this.setSelectedTargetError(null);
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : String(error);
-      new Notice(i18n.t("notice.publish.failed", { error: this.errorMessage }), 8000);
+      const message = error instanceof Error ? error.message : String(error);
+      this.setSelectedTargetError(message);
+      new Notice(i18n.t("notice.publish.failed", { error: message }), 8000);
     } finally {
       this.isPublishing = false;
       await this.render();
     }
   }
 
+  private renderHeader(container: HTMLElement, i18n: ReturnType<typeof createI18nFromObsidianLanguage>): void {
+    const header = container.createDiv({ cls: "ultimate-publisher-normal-header" });
+    header.createEl("h2", { text: i18n.t("publish.normal.title") });
+    header.createEl("p", {
+      text: i18n.t("publish.normal.subtitle"),
+    });
+  }
+
+  private renderNoteCard(container: HTMLElement, i18n: ReturnType<typeof createI18nFromObsidianLanguage>): void {
+    const noteCard = container.createDiv({ cls: "ultimate-publisher-normal-note-card" });
+    noteCard.createEl("h3", {
+      text: i18n.t("publish.normal.noteCard.title"),
+    });
+
+    const noteInline = noteCard.createDiv({ cls: "ultimate-publisher-normal-note-inline" });
+    this.createInfoRow(noteInline, i18n.t("publish.shared.note"), this.file.basename);
+  }
+
+  private renderTargetButton(
+    container: HTMLElement,
+    summary: NoteTargetSummary,
+    isSelected: boolean,
+    i18n: ReturnType<typeof createI18nFromObsidianLanguage>
+  ): void {
+    const item = container.createDiv({ cls: "ultimate-publisher-normal-target-item" });
+    const button = item.createEl("button", { cls: "ultimate-publisher-normal-target-button" });
+    if (isSelected) {
+      button.addClass("is-selected");
+    }
+    button.disabled = this.isPublishing;
+    button.addEventListener("click", () => {
+      void this.handleTargetSelection(summary.targetId);
+    });
+
+    const content = button.createDiv({ cls: "ultimate-publisher-normal-target-button-content" });
+    content.createEl("span", {
+      cls: "ultimate-publisher-normal-target-name",
+      text: summary.name,
+    });
+    content.createEl("span", {
+      cls: "ultimate-publisher-normal-target-action",
+      text: i18n.t(`publish.shared.summary.action.${summary.action}`),
+    });
+  }
+
   private async render(): Promise<void> {
     const { contentEl } = this;
     contentEl.empty();
+    contentEl.addClass("ultimate-publisher-normal-modal");
     const i18n = createI18nFromObsidianLanguage();
 
-    contentEl.createEl("h2", { text: i18n.t("publish.normal.title") });
-
-    const noteInfo = contentEl.createDiv();
-    this.createInfoRow(noteInfo, i18n.t("publish.shared.note"), this.file.basename);
-    this.createInfoRow(noteInfo, i18n.t("publish.shared.path"), this.file.path);
+    this.renderHeader(contentEl, i18n);
+    this.renderNoteCard(contentEl, i18n);
 
     if (this.isInitializing) {
-      contentEl.createEl("p", {
+      const loadingPanel = contentEl.createDiv({ cls: "ultimate-publisher-normal-panel" });
+      loadingPanel.createEl("p", {
         text: i18n.t("publish.normal.loading"),
       });
       return;
@@ -198,12 +324,13 @@ export class NormalPublishModal extends Modal {
     const summaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path);
     const enabledSummaries = summaries.filter((item) => item.enabled);
     if (enabledSummaries.length === 0) {
-      contentEl.createEl("p", {
+      const emptyPanel = contentEl.createDiv({ cls: "ultimate-publisher-normal-panel" });
+      emptyPanel.createEl("p", {
         cls: "ultimate-publisher-empty-state",
         text: i18n.t("publish.shared.empty.noEnabledTargets"),
       });
 
-      const settingsButton = contentEl.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+      const settingsButton = emptyPanel.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
       settingsButton.addEventListener("click", () => {
         this.openPublishSettings();
       });
@@ -211,35 +338,32 @@ export class NormalPublishModal extends Modal {
     }
 
     if (!this.selectedTargetId || !summaries.some((item) => item.targetId === this.selectedTargetId && item.enabled)) {
-      this.selectedTargetId = enabledSummaries[0].targetId;
-    }
-    if (this.sessionState) {
-      this.sessionState.selectedTargetId = this.selectedTargetId;
+      this.syncSelectedTarget(enabledSummaries[0].targetId);
     }
 
-    const layout = contentEl.createDiv({ cls: "ultimate-publisher-normal-layout" });
-    const targetList = layout.createDiv({ cls: "ultimate-publisher-normal-targets" });
-    targetList.createEl("h3", { text: i18n.t("publish.shared.targets") });
+    const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
+    const selectedAction = selectedSummary?.action ?? "publish";
+    const selectedTargetError = this.getSelectedTargetError();
+
+    const shell = contentEl.createDiv({ cls: "ultimate-publisher-normal-shell" });
+    const sidebar = shell.createDiv({ cls: "ultimate-publisher-normal-sidebar ultimate-publisher-normal-panel" });
+    sidebar.createEl("h3", { text: i18n.t("publish.shared.targets") });
+    sidebar.createEl("p", {
+      cls: "ultimate-publisher-normal-helper",
+      text: i18n.t("publish.normal.sidebar.description"),
+    });
+    const targetList = sidebar.createDiv({ cls: "ultimate-publisher-normal-target-list" });
 
     for (const summary of enabledSummaries) {
-      const button = targetList.createEl("button", { text: summary.name });
-      button.toggleClass("mod-cta", summary.targetId === this.selectedTargetId);
-      button.disabled = this.isPublishing;
-      button.addEventListener("click", () => {
-        this.selectedTargetId = summary.targetId;
-        if (this.sessionState) {
-          this.sessionState.selectedTargetId = summary.targetId;
-        }
-        void this.render();
-        void this.loadRemoteOptionsForSelectedTarget().then(() => this.render());
-      });
+      this.renderTargetButton(targetList, summary, summary.targetId === this.selectedTargetId, i18n);
     }
 
-    const details = layout.createDiv({ cls: "ultimate-publisher-normal-details" });
-    details.createEl("h3", { text: i18n.t("publish.normal.section.details") });
+    const main = shell.createDiv({ cls: "ultimate-publisher-normal-main" });
+    const commonPanel = main.createDiv({ cls: "ultimate-publisher-normal-panel" });
+    commonPanel.createEl("h3", { text: i18n.t("publish.normal.section.common") });
 
     if (this.sessionState) {
-      renderTextInput(details, {
+      renderTextInput(commonPanel, {
         label: i18n.t("publish.normal.field.title"),
         name: "normal-publish-title",
         value: this.sessionState.commonDraft.title,
@@ -258,10 +382,26 @@ export class NormalPublishModal extends Modal {
       });
     }
 
+    const detailPanel = main.createDiv({ cls: "ultimate-publisher-normal-panel ultimate-publisher-normal-detail-panel" });
+    const detailHeader = detailPanel.createDiv({ cls: "ultimate-publisher-normal-detail-header" });
+    const detailCopy = detailHeader.createDiv();
+    detailCopy.createEl("h3", { text: i18n.t("publish.normal.section.details") });
+    if (selectedSummary) {
+      detailCopy.createEl("p", {
+        cls: "ultimate-publisher-normal-helper",
+        text: i18n.t("publish.normal.section.currentTarget", { target: selectedSummary.name }),
+      });
+      detailHeader.createEl("span", {
+        cls: "ultimate-publisher-normal-target-action",
+        text: i18n.t(`publish.shared.summary.action.${selectedSummary.action}`),
+      });
+    }
+
+    const detailBody = detailPanel.createDiv({ cls: "ultimate-publisher-normal-detail-body" });
     const selectedDraft = this.getSelectedDraft();
     if (selectedDraft && this.sessionState && this.selectedTargetId) {
       renderTargetForm({
-        container: details,
+        container: detailBody,
         draft: selectedDraft,
         remoteOptions: this.sessionState.remoteOptions[this.selectedTargetId],
         i18n,
@@ -271,24 +411,21 @@ export class NormalPublishModal extends Modal {
       });
     }
 
-    const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
-    const selectedAction = selectedSummary?.action ?? "publish";
-    contentEl.createEl("p", {
+    const actions = main.createDiv({ cls: "ultimate-publisher-normal-actions ultimate-publisher-normal-panel" });
+    actions.createEl("p", {
+      cls: "ultimate-publisher-normal-action-summary",
       text: i18n.t("publish.normal.summary.selectedAction", {
         action: i18n.t(`publish.shared.summary.action.${selectedAction}`),
       }),
     });
 
-    if (this.errorMessage) {
-      contentEl.createEl("p", {
-        cls: "mod-warning",
-        text: i18n.t("publish.shared.error.last", { error: this.errorMessage }),
-      });
+    if (selectedTargetError) {
+      renderHelperText(actions, i18n.t("publish.shared.error.last", { error: selectedTargetError }), "warning");
     }
 
-    const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const actionRow = actions.createDiv({ cls: "ultimate-publisher-setting-actions" });
 
-    const publishButton = actions.createEl("button", {
+    const publishButton = actionRow.createEl("button", {
       text: i18n.t(`publish.shared.summary.action.${selectedAction}`),
     });
     publishButton.toggleClass("mod-cta", true);
@@ -299,15 +436,16 @@ export class NormalPublishModal extends Modal {
       }
       const target = this.getTargetById(this.selectedTargetId);
       if (!target || !target.enabled) {
-        this.errorMessage = i18n.t("publish.shared.error.targetUnavailable");
-        new Notice(this.errorMessage, 6000);
+        const message = i18n.t("publish.shared.error.targetUnavailable");
+        this.setSelectedTargetError(message);
+        new Notice(message, 6000);
         void this.render();
         return;
       }
       void this.handlePublish(target);
     });
 
-    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+    const settingsButton = actionRow.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
     settingsButton.disabled = this.isPublishing;
     settingsButton.addEventListener("click", () => {
       this.openPublishSettings();

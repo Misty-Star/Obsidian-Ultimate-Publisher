@@ -35036,8 +35036,13 @@ var messages = {
     "publish.shared.error.last": "Last error: {error}",
     "publish.shared.error.targetUnavailable": "Selected target is not available.",
     "publish.normal.title": "Normal Publish",
+    "publish.normal.subtitle": "Review one enabled target at a time and publish only the current destination.",
     "publish.normal.loading": "Loading publish details...",
+    "publish.normal.noteCard.title": "Current Note",
+    "publish.normal.sidebar.description": "Switch targets on the left. Detailed fields stay scoped to the current target only.",
+    "publish.normal.section.common": "Common Fields",
     "publish.normal.section.details": "Details",
+    "publish.normal.section.currentTarget": "Current target: {target}",
     "publish.normal.field.title": "Article Title",
     "publish.normal.field.slug": "Slug",
     "publish.normal.field.excerpt": "Excerpt",
@@ -35050,7 +35055,17 @@ var messages = {
     "publish.normal.field.categoryId": "Category ID",
     "publish.normal.field.tagIds": "Tag IDs",
     "publish.normal.field.briefContent": "Brief Content",
+    "publish.normal.remote.loading": "Loading remote options...",
     "publish.normal.remote.fallback": "Remote options failed to load. Switched to manual input.",
+    "publish.normal.remote.selectHint": "Remote options are available for this field.",
+    "publish.normal.remote.manualHint": "Remote options are available, but you can still edit the value manually.",
+    "publish.normal.remote.manualFallbackHint": "Enter the raw ID manually when remote options are unavailable.",
+    "publish.normal.option.status.draft": "Draft",
+    "publish.normal.option.status.publish": "Published",
+    "publish.normal.option.status.private": "Private",
+    "publish.normal.option.status.pending": "Pending Review",
+    "publish.normal.option.visibility.private": "Private",
+    "publish.normal.option.visibility.public": "Public",
     "publish.normal.summary.selectedAction": "Selected action: {action}",
     "publish.batch.title": "Batch Publish",
     "publish.batch.button.run": "Run Batch Publish",
@@ -35138,8 +35153,13 @@ var messages = {
     "publish.shared.error.last": "\u6700\u8FD1\u9519\u8BEF\uFF1A{error}",
     "publish.shared.error.targetUnavailable": "\u6240\u9009\u76EE\u6807\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
     "publish.normal.title": "\u666E\u901A\u53D1\u5E03",
+    "publish.normal.subtitle": "\u4E00\u6B21\u53EA\u7F16\u8F91\u4E00\u4E2A\u5DF2\u542F\u7528\u76EE\u6807\uFF0C\u5E76\u53EA\u53D1\u5E03\u5F53\u524D\u9009\u4E2D\u7684\u6E20\u9053\u3002",
     "publish.normal.loading": "\u6B63\u5728\u52A0\u8F7D\u53D1\u5E03\u8BE6\u60C5...",
+    "publish.normal.noteCard.title": "\u5F53\u524D\u7B14\u8BB0",
+    "publish.normal.sidebar.description": "\u5DE6\u4FA7\u5207\u6362\u76EE\u6807\uFF0C\u53F3\u4FA7\u53EA\u7F16\u8F91\u5F53\u524D\u76EE\u6807\u7684\u6309\u6B21\u8986\u76D6\u5B57\u6BB5\u3002",
+    "publish.normal.section.common": "\u516C\u5171\u5B57\u6BB5",
     "publish.normal.section.details": "\u8BE6\u7EC6\u8BBE\u7F6E",
+    "publish.normal.section.currentTarget": "\u5F53\u524D\u76EE\u6807\uFF1A{target}",
     "publish.normal.field.title": "\u6587\u7AE0\u6807\u9898",
     "publish.normal.field.slug": "\u522B\u540D",
     "publish.normal.field.excerpt": "\u6458\u8981",
@@ -35152,7 +35172,17 @@ var messages = {
     "publish.normal.field.categoryId": "\u5206\u7C7B ID",
     "publish.normal.field.tagIds": "\u6807\u7B7E ID",
     "publish.normal.field.briefContent": "\u6458\u8981\u5185\u5BB9",
+    "publish.normal.remote.loading": "\u6B63\u5728\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879...",
     "publish.normal.remote.fallback": "\u8FDC\u7AEF\u9009\u9879\u62C9\u53D6\u5931\u8D25\uFF0C\u5DF2\u5207\u6362\u4E3A\u624B\u52A8\u8F93\u5165\u3002",
+    "publish.normal.remote.selectHint": "\u8BE5\u5B57\u6BB5\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF0C\u53EF\u76F4\u63A5\u9009\u62E9\u3002",
+    "publish.normal.remote.manualHint": "\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF1B\u5982\u6709\u9700\u8981\uFF0C\u4ECD\u53EF\u624B\u52A8\u7F16\u8F91\u539F\u59CB\u503C\u3002",
+    "publish.normal.remote.manualFallbackHint": "\u5F53\u524D\u65E0\u6CD5\u4F7F\u7528\u8FDC\u7AEF\u9009\u9879\uFF0C\u8BF7\u624B\u52A8\u586B\u5199\u539F\u59CB ID\u3002",
+    "publish.normal.option.status.draft": "\u8349\u7A3F",
+    "publish.normal.option.status.publish": "\u5DF2\u53D1\u5E03",
+    "publish.normal.option.status.private": "\u79C1\u5BC6",
+    "publish.normal.option.status.pending": "\u5F85\u5BA1\u6838",
+    "publish.normal.option.visibility.private": "\u79C1\u5BC6",
+    "publish.normal.option.visibility.public": "\u516C\u5F00",
     "publish.normal.summary.selectedAction": "\u5F53\u524D\u64CD\u4F5C\uFF1A{action}",
     "publish.batch.title": "\u6279\u91CF\u53D1\u5E03",
     "publish.batch.button.run": "\u6267\u884C\u6279\u91CF\u53D1\u5E03",
@@ -38050,13 +38080,19 @@ function validateTargetDraft(draft) {
 }
 
 // src/ui/normalPublish/formControls.ts
-function createFieldContainer(container, label) {
+function createFieldContainer(container, label, description) {
   const field = container.createDiv({ cls: "ultimate-publisher-normal-field" });
   field.createEl("label", { text: label });
+  if (description) {
+    field.createEl("p", {
+      cls: "ultimate-publisher-normal-helper",
+      text: description
+    });
+  }
   return field;
 }
 function renderTextInput(container, options) {
-  const field = createFieldContainer(container, options.label);
+  const field = createFieldContainer(container, options.label, options.description);
   const input = field.createEl("input", { type: "text" });
   input.name = options.name;
   input.value = options.value;
@@ -38066,7 +38102,7 @@ function renderTextInput(container, options) {
   return input;
 }
 function renderTextArea(container, options) {
-  const field = createFieldContainer(container, options.label);
+  const field = createFieldContainer(container, options.label, options.description);
   const input = field.createEl("textarea");
   input.name = options.name;
   input.value = options.value;
@@ -38080,6 +38116,7 @@ function renderStringListInput(container, options) {
     label: options.label,
     name: options.name,
     value: options.value.join(", "),
+    description: options.description,
     onInput: (value) => {
       options.onInput(
         value.split(",").map((item) => item.trim()).filter(Boolean)
@@ -38087,18 +38124,49 @@ function renderStringListInput(container, options) {
     }
   });
 }
-function renderHelperText(container, text) {
-  container.createEl("p", {
+function renderSelectInput(container, options) {
+  const field = createFieldContainer(container, options.label, options.description);
+  const select = field.createEl("select");
+  select.name = options.name;
+  for (const choice of options.choices) {
+    const option = select.createEl("option");
+    option.value = choice.value;
+    option.textContent = choice.label;
+  }
+  select.value = options.value;
+  select.addEventListener("change", () => {
+    options.onChange(select.value);
+  });
+  return select;
+}
+function renderHelperText(container, text, tone = "muted") {
+  const helper = container.createEl("p", {
     cls: "ultimate-publisher-normal-helper",
     text
   });
+  if (tone !== "muted") {
+    helper.addClass(`is-${tone}`);
+  }
 }
 
 // src/ui/normalPublish/renderTargetForm.ts
 function renderTargetForm(options) {
   const { container, draft, remoteOptions, i18n, onChange } = options;
+  const readOptionItems = (key) => {
+    const raw = remoteOptions?.data[key];
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+    return raw.filter(
+      (item) => typeof item === "object" && item !== null && typeof item.id === "string" && typeof item.label === "string"
+    );
+  };
+  const findOption = (items, id) => items.find((item) => item.id === id);
+  if (remoteOptions?.status === "loading") {
+    renderHelperText(container, i18n.t("publish.normal.remote.loading"), "info");
+  }
   if (remoteOptions?.status === "error") {
-    renderHelperText(container, i18n.t("publish.normal.remote.fallback"));
+    renderHelperText(container, i18n.t("publish.normal.remote.fallback"), "warning");
   }
   switch (draft.provider) {
     case "wordpress":
@@ -38118,19 +38186,27 @@ function renderTargetForm(options) {
         label: i18n.t("publish.normal.field.tags"),
         name: "normal-publish-wordpress-tags",
         value: draft.tags,
+        description: readOptionItems("wordpressTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
         onInput: (value) => onChange({ ...draft, tags: value })
       });
       renderStringListInput(container, {
         label: i18n.t("publish.normal.field.categories"),
         name: "normal-publish-wordpress-categories",
         value: draft.categories,
+        description: readOptionItems("wordpressCategories").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
         onInput: (value) => onChange({ ...draft, categories: value })
       });
-      renderTextInput(container, {
+      renderSelectInput(container, {
         label: i18n.t("publish.normal.field.status"),
         name: "normal-publish-wordpress-status",
         value: draft.status,
-        onInput: (value) => onChange({ ...draft, status: value })
+        choices: [
+          { value: "draft", label: i18n.t("publish.normal.option.status.draft") },
+          { value: "publish", label: i18n.t("publish.normal.option.status.publish") },
+          { value: "private", label: i18n.t("publish.normal.option.status.private") },
+          { value: "pending", label: i18n.t("publish.normal.option.status.pending") }
+        ],
+        onChange: (value) => onChange({ ...draft, status: value })
       });
       renderTextInput(container, {
         label: i18n.t("publish.normal.field.password"),
@@ -38146,11 +38222,15 @@ function renderTargetForm(options) {
         value: draft.slug,
         onInput: (value) => onChange({ ...draft, slug: value })
       });
-      renderTextInput(container, {
+      renderSelectInput(container, {
         label: i18n.t("publish.normal.field.publicLevel"),
         name: "normal-publish-yuque-publicLevel",
         value: String(draft.publicLevel),
-        onInput: (value) => onChange({ ...draft, publicLevel: value === "1" ? 1 : 0 })
+        choices: [
+          { value: "0", label: i18n.t("publish.normal.option.visibility.private") },
+          { value: "1", label: i18n.t("publish.normal.option.visibility.public") }
+        ],
+        onChange: (value) => onChange({ ...draft, publicLevel: value === "1" ? 1 : 0 })
       });
       return;
     case "local-export":
@@ -38180,12 +38260,39 @@ function renderTargetForm(options) {
       });
       return;
     case "zhihu":
-      renderTextInput(container, {
-        label: i18n.t("publish.normal.field.columnId"),
-        name: "normal-publish-zhihu-columnId",
-        value: draft.columnId,
-        onInput: (value) => onChange({ ...draft, columnId: value })
-      });
+      const columns = readOptionItems("zhihuColumns");
+      if (columns.length > 0 && !remoteOptions?.manualFallbackFields.includes("columnId")) {
+        renderSelectInput(container, {
+          label: i18n.t("publish.normal.field.columnId"),
+          name: "normal-publish-zhihu-columnId",
+          value: draft.columnId,
+          choices: columns.map((column) => ({
+            value: column.id,
+            label: `${column.label} (${column.id})`
+          })),
+          description: i18n.t("publish.normal.remote.selectHint"),
+          onChange: (value) => {
+            const selected = findOption(columns, value);
+            onChange({
+              ...draft,
+              columnId: value,
+              columnTitle: selected?.label ?? draft.columnTitle
+            });
+          }
+        });
+        const selectedColumn = findOption(columns, draft.columnId);
+        if (selectedColumn?.description) {
+          renderHelperText(container, selectedColumn.description);
+        }
+      } else {
+        renderTextInput(container, {
+          label: i18n.t("publish.normal.field.columnId"),
+          name: "normal-publish-zhihu-columnId",
+          value: draft.columnId,
+          description: i18n.t("publish.normal.remote.manualFallbackHint"),
+          onInput: (value) => onChange({ ...draft, columnId: value })
+        });
+      }
       return;
     case "csdn":
       renderTextArea(container, {
@@ -38198,26 +38305,52 @@ function renderTargetForm(options) {
         label: i18n.t("publish.normal.field.tags"),
         name: "normal-publish-csdn-tags",
         value: draft.tags,
+        description: readOptionItems("csdnTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
         onInput: (value) => onChange({ ...draft, tags: value })
       });
       renderStringListInput(container, {
         label: i18n.t("publish.normal.field.categories"),
         name: "normal-publish-csdn-categories",
         value: draft.categories,
+        description: readOptionItems("csdnCategories").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
         onInput: (value) => onChange({ ...draft, categories: value })
       });
       return;
     case "juejin":
-      renderTextInput(container, {
-        label: i18n.t("publish.normal.field.categoryId"),
-        name: "normal-publish-juejin-categoryId",
-        value: draft.categoryId,
-        onInput: (value) => onChange({ ...draft, categoryId: value })
-      });
+      const categories = readOptionItems("juejinCategories");
+      if (categories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categoryId")) {
+        renderSelectInput(container, {
+          label: i18n.t("publish.normal.field.categoryId"),
+          name: "normal-publish-juejin-categoryId",
+          value: draft.categoryId,
+          choices: categories.map((category) => ({
+            value: category.id,
+            label: `${category.label} (${category.id})`
+          })),
+          description: i18n.t("publish.normal.remote.selectHint"),
+          onChange: (value) => {
+            const selected = findOption(categories, value);
+            onChange({
+              ...draft,
+              categoryId: value,
+              categoryName: selected?.label ?? draft.categoryName
+            });
+          }
+        });
+      } else {
+        renderTextInput(container, {
+          label: i18n.t("publish.normal.field.categoryId"),
+          name: "normal-publish-juejin-categoryId",
+          value: draft.categoryId,
+          description: i18n.t("publish.normal.remote.manualFallbackHint"),
+          onInput: (value) => onChange({ ...draft, categoryId: value })
+        });
+      }
       renderStringListInput(container, {
         label: i18n.t("publish.normal.field.tagIds"),
         name: "normal-publish-juejin-tagIds",
         value: draft.tagIds,
+        description: readOptionItems("juejinTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
         onInput: (value) => onChange({ ...draft, tagIds: value })
       });
       renderTextArea(container, {
@@ -38231,6 +38364,8 @@ function renderTargetForm(options) {
 }
 
 // src/ui/modals/NormalPublishModal.ts
+var NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
+var NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
 var NormalPublishModal = class extends import_obsidian15.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote) {
     super(plugin.app);
@@ -38247,6 +38382,8 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     this.note = null;
   }
   async onOpen() {
+    this.containerEl.addClass(NORMAL_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.addClass(NORMAL_PUBLISH_MODAL_FRAME_CLASS);
     this.isInitializing = true;
     await this.render();
     try {
@@ -38262,6 +38399,9 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     await this.render();
   }
   onClose() {
+    this.containerEl.removeClass(NORMAL_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.removeClass(NORMAL_PUBLISH_MODAL_FRAME_CLASS);
+    this.contentEl.removeClass("ultimate-publisher-normal-modal");
     this.contentEl.empty();
   }
   openPublishSettings() {
@@ -38273,9 +38413,15 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     return this.plugin.settings.targets.find((target) => target.id === targetId);
   }
   createInfoRow(container, label, value) {
-    const row = container.createDiv();
-    row.createEl("strong", { text: `${label}: ` });
-    row.createSpan({ text: value });
+    const row = container.createDiv({ cls: "ultimate-publisher-normal-note-row" });
+    row.createSpan({
+      cls: "ultimate-publisher-normal-note-label",
+      text: label
+    });
+    row.createSpan({
+      cls: "ultimate-publisher-normal-note-value",
+      text: value
+    });
   }
   getSelectedDraft() {
     if (!this.sessionState || !this.selectedTargetId) {
@@ -38295,6 +38441,12 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
       provider: draft
     };
   }
+  syncSelectedTarget(targetId) {
+    this.selectedTargetId = targetId;
+    if (this.sessionState) {
+      this.sessionState.selectedTargetId = targetId;
+    }
+  }
   updateSelectedDraft(draft) {
     if (!this.sessionState || !this.selectedTargetId) {
       return;
@@ -38307,6 +38459,45 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
       }
     };
   }
+  setSelectedTargetError(message) {
+    if (!this.sessionState || !this.selectedTargetId) {
+      this.errorMessage = message;
+      return;
+    }
+    this.sessionState = {
+      ...this.sessionState,
+      lastErrorByTargetId: {
+        ...this.sessionState.lastErrorByTargetId,
+        [this.selectedTargetId]: message
+      }
+    };
+  }
+  getSelectedTargetError() {
+    if (!this.sessionState || !this.selectedTargetId) {
+      return this.errorMessage;
+    }
+    return this.sessionState.lastErrorByTargetId[this.selectedTargetId] ?? null;
+  }
+  markRemoteOptionsLoading(targetId) {
+    if (!this.sessionState) {
+      return;
+    }
+    const current = this.sessionState.remoteOptions[targetId];
+    if (!current || current.status !== "idle") {
+      return;
+    }
+    this.sessionState = {
+      ...this.sessionState,
+      remoteOptions: {
+        ...this.sessionState.remoteOptions,
+        [targetId]: {
+          ...current,
+          status: "loading",
+          errorMessage: void 0
+        }
+      }
+    };
+  }
   async loadRemoteOptionsForSelectedTarget() {
     if (!this.sessionState || !this.selectedTargetId) {
       return;
@@ -38314,6 +38505,13 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     const target = this.getTargetById(this.selectedTargetId);
     if (!target || !target.enabled) {
       return;
+    }
+    const current = this.sessionState.remoteOptions[target.id];
+    if (current?.status === "loaded" || current?.status === "error") {
+      return;
+    }
+    if (current?.status !== "loading") {
+      this.markRemoteOptionsLoading(target.id);
     }
     const nextState = await ensureRemoteOptionsLoaded(this.sessionState, target, this.providerRegistry);
     if (!this.sessionState) {
@@ -38328,20 +38526,29 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
       }
     };
   }
+  async handleTargetSelection(targetId) {
+    this.syncSelectedTarget(targetId);
+    if (this.sessionState?.remoteOptions[targetId]?.status === "idle") {
+      this.markRemoteOptionsLoading(targetId);
+      await this.render();
+      await this.loadRemoteOptionsForSelectedTarget();
+    }
+    await this.render();
+  }
   async handlePublish(target) {
     const i18n = createI18nFromObsidianLanguage();
     const draft = this.getSelectedDraft();
     if (draft) {
       const validationError = validateTargetDraft(draft);
       if (validationError) {
-        this.errorMessage = validationError;
+        this.setSelectedTargetError(validationError);
         new import_obsidian15.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
         await this.render();
         return;
       }
     }
     this.isPublishing = true;
-    this.errorMessage = null;
+    this.setSelectedTargetError(null);
     await this.render();
     try {
       const result = await this.workflow.runSingle(
@@ -38359,24 +38566,61 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
           action: actionLabel
         })
       );
+      this.setSelectedTargetError(null);
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : String(error);
-      new import_obsidian15.Notice(i18n.t("notice.publish.failed", { error: this.errorMessage }), 8e3);
+      const message = error instanceof Error ? error.message : String(error);
+      this.setSelectedTargetError(message);
+      new import_obsidian15.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
     }
   }
+  renderHeader(container, i18n) {
+    const header = container.createDiv({ cls: "ultimate-publisher-normal-header" });
+    header.createEl("h2", { text: i18n.t("publish.normal.title") });
+    header.createEl("p", {
+      text: i18n.t("publish.normal.subtitle")
+    });
+  }
+  renderNoteCard(container, i18n) {
+    const noteCard = container.createDiv({ cls: "ultimate-publisher-normal-note-card" });
+    noteCard.createEl("h3", {
+      text: i18n.t("publish.normal.noteCard.title")
+    });
+    const noteInline = noteCard.createDiv({ cls: "ultimate-publisher-normal-note-inline" });
+    this.createInfoRow(noteInline, i18n.t("publish.shared.note"), this.file.basename);
+  }
+  renderTargetButton(container, summary, isSelected, i18n) {
+    const item = container.createDiv({ cls: "ultimate-publisher-normal-target-item" });
+    const button = item.createEl("button", { cls: "ultimate-publisher-normal-target-button" });
+    if (isSelected) {
+      button.addClass("is-selected");
+    }
+    button.disabled = this.isPublishing;
+    button.addEventListener("click", () => {
+      void this.handleTargetSelection(summary.targetId);
+    });
+    const content = button.createDiv({ cls: "ultimate-publisher-normal-target-button-content" });
+    content.createEl("span", {
+      cls: "ultimate-publisher-normal-target-name",
+      text: summary.name
+    });
+    content.createEl("span", {
+      cls: "ultimate-publisher-normal-target-action",
+      text: i18n.t(`publish.shared.summary.action.${summary.action}`)
+    });
+  }
   async render() {
     const { contentEl } = this;
     contentEl.empty();
+    contentEl.addClass("ultimate-publisher-normal-modal");
     const i18n = createI18nFromObsidianLanguage();
-    contentEl.createEl("h2", { text: i18n.t("publish.normal.title") });
-    const noteInfo = contentEl.createDiv();
-    this.createInfoRow(noteInfo, i18n.t("publish.shared.note"), this.file.basename);
-    this.createInfoRow(noteInfo, i18n.t("publish.shared.path"), this.file.path);
+    this.renderHeader(contentEl, i18n);
+    this.renderNoteCard(contentEl, i18n);
     if (this.isInitializing) {
-      contentEl.createEl("p", {
+      const loadingPanel = contentEl.createDiv({ cls: "ultimate-publisher-normal-panel" });
+      loadingPanel.createEl("p", {
         text: i18n.t("publish.normal.loading")
       });
       return;
@@ -38384,42 +38628,39 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
     const summaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path);
     const enabledSummaries = summaries.filter((item) => item.enabled);
     if (enabledSummaries.length === 0) {
-      contentEl.createEl("p", {
+      const emptyPanel = contentEl.createDiv({ cls: "ultimate-publisher-normal-panel" });
+      emptyPanel.createEl("p", {
         cls: "ultimate-publisher-empty-state",
         text: i18n.t("publish.shared.empty.noEnabledTargets")
       });
-      const settingsButton2 = contentEl.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+      const settingsButton2 = emptyPanel.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
       settingsButton2.addEventListener("click", () => {
         this.openPublishSettings();
       });
       return;
     }
     if (!this.selectedTargetId || !summaries.some((item) => item.targetId === this.selectedTargetId && item.enabled)) {
-      this.selectedTargetId = enabledSummaries[0].targetId;
+      this.syncSelectedTarget(enabledSummaries[0].targetId);
     }
-    if (this.sessionState) {
-      this.sessionState.selectedTargetId = this.selectedTargetId;
-    }
-    const layout = contentEl.createDiv({ cls: "ultimate-publisher-normal-layout" });
-    const targetList = layout.createDiv({ cls: "ultimate-publisher-normal-targets" });
-    targetList.createEl("h3", { text: i18n.t("publish.shared.targets") });
+    const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
+    const selectedAction = selectedSummary?.action ?? "publish";
+    const selectedTargetError = this.getSelectedTargetError();
+    const shell = contentEl.createDiv({ cls: "ultimate-publisher-normal-shell" });
+    const sidebar = shell.createDiv({ cls: "ultimate-publisher-normal-sidebar ultimate-publisher-normal-panel" });
+    sidebar.createEl("h3", { text: i18n.t("publish.shared.targets") });
+    sidebar.createEl("p", {
+      cls: "ultimate-publisher-normal-helper",
+      text: i18n.t("publish.normal.sidebar.description")
+    });
+    const targetList = sidebar.createDiv({ cls: "ultimate-publisher-normal-target-list" });
     for (const summary of enabledSummaries) {
-      const button = targetList.createEl("button", { text: summary.name });
-      button.toggleClass("mod-cta", summary.targetId === this.selectedTargetId);
-      button.disabled = this.isPublishing;
-      button.addEventListener("click", () => {
-        this.selectedTargetId = summary.targetId;
-        if (this.sessionState) {
-          this.sessionState.selectedTargetId = summary.targetId;
-        }
-        void this.render();
-        void this.loadRemoteOptionsForSelectedTarget().then(() => this.render());
-      });
+      this.renderTargetButton(targetList, summary, summary.targetId === this.selectedTargetId, i18n);
     }
-    const details = layout.createDiv({ cls: "ultimate-publisher-normal-details" });
-    details.createEl("h3", { text: i18n.t("publish.normal.section.details") });
+    const main = shell.createDiv({ cls: "ultimate-publisher-normal-main" });
+    const commonPanel = main.createDiv({ cls: "ultimate-publisher-normal-panel" });
+    commonPanel.createEl("h3", { text: i18n.t("publish.normal.section.common") });
     if (this.sessionState) {
-      renderTextInput(details, {
+      renderTextInput(commonPanel, {
         label: i18n.t("publish.normal.field.title"),
         name: "normal-publish-title",
         value: this.sessionState.commonDraft.title,
@@ -38437,10 +38678,25 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
         }
       });
     }
+    const detailPanel = main.createDiv({ cls: "ultimate-publisher-normal-panel ultimate-publisher-normal-detail-panel" });
+    const detailHeader = detailPanel.createDiv({ cls: "ultimate-publisher-normal-detail-header" });
+    const detailCopy = detailHeader.createDiv();
+    detailCopy.createEl("h3", { text: i18n.t("publish.normal.section.details") });
+    if (selectedSummary) {
+      detailCopy.createEl("p", {
+        cls: "ultimate-publisher-normal-helper",
+        text: i18n.t("publish.normal.section.currentTarget", { target: selectedSummary.name })
+      });
+      detailHeader.createEl("span", {
+        cls: "ultimate-publisher-normal-target-action",
+        text: i18n.t(`publish.shared.summary.action.${selectedSummary.action}`)
+      });
+    }
+    const detailBody = detailPanel.createDiv({ cls: "ultimate-publisher-normal-detail-body" });
     const selectedDraft = this.getSelectedDraft();
     if (selectedDraft && this.sessionState && this.selectedTargetId) {
       renderTargetForm({
-        container: details,
+        container: detailBody,
         draft: selectedDraft,
         remoteOptions: this.sessionState.remoteOptions[this.selectedTargetId],
         i18n,
@@ -38449,21 +38705,18 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
         }
       });
     }
-    const selectedSummary = summaries.find((item) => item.targetId === this.selectedTargetId) ?? null;
-    const selectedAction = selectedSummary?.action ?? "publish";
-    contentEl.createEl("p", {
+    const actions = main.createDiv({ cls: "ultimate-publisher-normal-actions ultimate-publisher-normal-panel" });
+    actions.createEl("p", {
+      cls: "ultimate-publisher-normal-action-summary",
       text: i18n.t("publish.normal.summary.selectedAction", {
         action: i18n.t(`publish.shared.summary.action.${selectedAction}`)
       })
     });
-    if (this.errorMessage) {
-      contentEl.createEl("p", {
-        cls: "mod-warning",
-        text: i18n.t("publish.shared.error.last", { error: this.errorMessage })
-      });
+    if (selectedTargetError) {
+      renderHelperText(actions, i18n.t("publish.shared.error.last", { error: selectedTargetError }), "warning");
     }
-    const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
-    const publishButton = actions.createEl("button", {
+    const actionRow = actions.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const publishButton = actionRow.createEl("button", {
       text: i18n.t(`publish.shared.summary.action.${selectedAction}`)
     });
     publishButton.toggleClass("mod-cta", true);
@@ -38474,14 +38727,15 @@ var NormalPublishModal = class extends import_obsidian15.Modal {
       }
       const target = this.getTargetById(this.selectedTargetId);
       if (!target || !target.enabled) {
-        this.errorMessage = i18n.t("publish.shared.error.targetUnavailable");
-        new import_obsidian15.Notice(this.errorMessage, 6e3);
+        const message = i18n.t("publish.shared.error.targetUnavailable");
+        this.setSelectedTargetError(message);
+        new import_obsidian15.Notice(message, 6e3);
         void this.render();
         return;
       }
       void this.handlePublish(target);
     });
-    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+    const settingsButton = actionRow.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
     settingsButton.disabled = this.isPublishing;
     settingsButton.addEventListener("click", () => {
       this.openPublishSettings();

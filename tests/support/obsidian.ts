@@ -297,10 +297,26 @@ export class ItemView extends Component {
 }
 
 export class Modal extends Component {
-  readonly contentEl = new FakeElement("div");
+  readonly containerEl: FakeElement;
+  readonly modalEl: FakeElement;
+  readonly titleEl: FakeElement;
+  readonly contentEl: FakeElement;
 
   constructor(public readonly app: App) {
     super();
+    this.containerEl = new FakeElement("div");
+    this.modalEl = new FakeElement("div");
+    this.titleEl = new FakeElement("div");
+    this.contentEl = new FakeElement("div");
+
+    this.modalEl.parentElement = this.containerEl;
+    this.containerEl.children.push(this.modalEl);
+
+    this.titleEl.parentElement = this.modalEl;
+    this.modalEl.children.push(this.titleEl);
+
+    this.contentEl.parentElement = this.modalEl;
+    this.modalEl.children.push(this.contentEl);
   }
 
   open(): this {
