@@ -29,8 +29,9 @@ function findAllByClass(root: FakeElement, className: string): FakeElement[] {
 }
 
 function listInputNames(root: FakeElement): string[] {
+  const relevantTags = new Set(["input", "textarea", "select"]);
   return walk(root)
-    .filter((element) => element.tagName === "input" || element.tagName === "textarea")
+    .filter((element) => relevantTags.has(element.tagName))
     .map((element) => element.name)
     .filter((name): name is string => typeof name === "string" && name.length > 0);
 }
@@ -225,8 +226,32 @@ describe("renderTargetForm", () => {
 
     expect(inputNames).toContain("batch-wp-wordpress-slug");
     expect(inputNames).toContain("batch-wp-wordpress-categories");
+    expect(inputNames).toContain("batch-wp-wordpress-status");
     expect(inputNames).not.toContain("batch-wp-wordpress-excerpt");
     expect(inputNames).not.toContain("batch-wp-wordpress-tags");
+  });
+
+  it("does not render select fields when they are hidden for batch cards", () => {
+    const container = new FakeElement("div");
+    renderTargetForm({
+      container,
+      draft: {
+        provider: "wordpress",
+        slug: "post",
+        excerpt: "Excerpt",
+        tags: ["tag-a"],
+        categories: ["cat-a"],
+        status: "draft",
+        password: "",
+      },
+      remoteOptions: undefined,
+      i18n: createI18n("en"),
+      hiddenFields: ["status"],
+      fieldNamePrefix: "batch-wp",
+      onChange: () => {},
+    });
+
+    expect(listInputNames(container)).not.toContain("batch-wp-wordpress-status");
   });
 
   it("keeps the existing normal-publish names by default", () => {

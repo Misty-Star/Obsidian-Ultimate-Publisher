@@ -27,7 +27,7 @@ interface RenderTargetFormOptions {
 
 export function renderTargetForm(options: RenderTargetFormOptions): void {
   const { container, draft, remoteOptions, i18n, onChange } = options;
-  const hiddenFields = new Set(options.hiddenFields ?? []);
+  const hiddenFields = new Set(options.hiddenFields ?? []); // per-render hidden fields for this card batch
   const prefix = options.fieldNamePrefix ?? "normal-publish";
   const fieldName = (suffix: string): string => `${prefix}-${suffix}`;
 
