@@ -108,7 +108,7 @@ export function updateBatchCommonDraft<K extends keyof BatchPublishCommonDraft>(
 export function updateBatchTargetDraft(
   state: BatchPublishWizardState,
   targetId: string,
-  update: Partial<ProviderPublishDraft>
+  update: (draft: ProviderPublishDraft) => ProviderPublishDraft
 ): BatchPublishWizardState {
   const currentDraft = state.targetDrafts[targetId];
   if (!currentDraft) {
@@ -119,10 +119,7 @@ export function updateBatchTargetDraft(
     ...state,
     targetDrafts: {
       ...state.targetDrafts,
-      [targetId]: {
-        ...currentDraft,
-        ...update,
-      } as ProviderPublishDraft,
+      [targetId]: update(currentDraft),
     },
   };
 }

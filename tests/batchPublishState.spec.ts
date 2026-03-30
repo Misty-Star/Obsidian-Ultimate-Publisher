@@ -4,6 +4,7 @@ import {
   buildBatchPublishExecutionContext,
   buildBatchPublishWizardState,
   updateBatchCommonDraft,
+  updateBatchTargetDraft,
 } from "../src/core/batchPublish/state";
 import {
   createCsdnTarget,
@@ -122,5 +123,35 @@ describe("batch publish wizard state", () => {
     expect(() => buildBatchPublishExecutionContext(state, "missing")).toThrowError(
       "Batch publish target draft not found: missing"
     );
+  });
+
+  it("updates target draft via callback updater", () => {
+    const state = buildBatchPublishWizardState(createNote(), [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }]);
+
+    const next = updateBatchTargetDraft(state, "wp", (draft) => {
+      expect(draft).toMatchObject({
+        provider: "wordpress",
+        excerpt: "Batch excerpt",
+      });
+      return {
+        ...draft,
+        excerpt: "Callback excerpt",
+      };
+    });
+
+    expect(next.targetDrafts.wp).toMatchObject({
+      provider: "wordpress",
+      excerpt: "Callback excerpt",
+    });
+  });
+
+  it("throws clear error when callback updater target does not exist", () => {
+    const state = buildBatchPublishWizardState(createNote(), [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }]);
+
+    expect(() =>
+      updateBatchTargetDraft(state, "missing", (draft) => ({
+        ...draft,
+      }))
+    ).toThrowError("Batch publish target draft not found: missing");
   });
 });
