@@ -34869,6 +34869,12 @@ var PublishWorkflow = class {
   constructor(publishService) {
     this.publishService = publishService;
   }
+  async emitProgressSafely(options, event) {
+    try {
+      await options.onProgress?.(event);
+    } catch {
+    }
+  }
   resolveAction(file, target, settings) {
     return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
   }
@@ -34882,28 +34888,65 @@ var PublishWorkflow = class {
       settings: nextSettings
     };
   }
-  async runBatch(file, targets, settings) {
+  async runBatch(file, targets, settings, options = {}) {
     let currentSettings = settings;
     const results = [];
-    for (const target of targets) {
+    const totalCount = targets.length;
+    for (const [index, target] of targets.entries()) {
       const action = this.resolveAction(file, target, currentSettings);
+      const context = options.contextByTargetId?.[target.id];
+      const currentIndex = index + 1;
+      await this.emitProgressSafely(options, {
+        targetId: target.id,
+        targetName: target.name,
+        action,
+        status: "running",
+        currentIndex,
+        totalCount
+      });
+      const startedAt = Date.now();
       try {
-        const singleResult = await this.runSingle(file, target, currentSettings);
+        const singleResult = await this.runSingle(file, target, currentSettings, context);
+        const durationMs = Date.now() - startedAt;
         currentSettings = singleResult.settings;
         results.push({
           targetId: target.id,
           targetName: target.name,
           action: singleResult.action,
           status: "success",
+          durationMs,
+          remoteUrl: singleResult.record.remoteUrl
+        });
+        await this.emitProgressSafely(options, {
+          targetId: target.id,
+          targetName: target.name,
+          action: singleResult.action,
+          status: "success",
+          currentIndex,
+          totalCount,
+          durationMs,
           remoteUrl: singleResult.record.remoteUrl
         });
       } catch (error) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        const durationMs = Date.now() - startedAt;
         results.push({
           targetId: target.id,
           targetName: target.name,
           action,
           status: "failure",
-          error: error instanceof Error ? error : new Error(String(error))
+          durationMs,
+          error: normalizedError
+        });
+        await this.emitProgressSafely(options, {
+          targetId: target.id,
+          targetName: target.name,
+          action,
+          status: "failure",
+          currentIndex,
+          totalCount,
+          durationMs,
+          error: normalizedError
         });
       }
     }
@@ -34911,7 +34954,7 @@ var PublishWorkflow = class {
     const failureCount = results.length - successCount;
     return {
       results,
-      totalCount: results.length,
+      totalCount,
       successCount,
       failureCount,
       settings: currentSettings
@@ -35043,6 +35086,25 @@ var messages = {
     "publish.normal.option.visibility.public": "Public",
     "publish.normal.summary.selectedAction": "Selected action: {action}",
     "publish.batch.title": "Batch Publish",
+    "publish.batch.wizard.step1.title": "Select Targets",
+    "publish.batch.wizard.step2.title": "Edit Fields",
+    "publish.batch.wizard.step1.selectTargets": "Choose which enabled targets should be included in this batch run.",
+    "publish.batch.wizard.step1.selectedCount": "{selectedCount} targets selected.",
+    "publish.batch.wizard.step1.action.next": "Next: Edit Fields",
+    "publish.batch.wizard.step2.commonFields": "Common Fields",
+    "publish.batch.wizard.step2.targetFields": "Target Fields",
+    "publish.batch.wizard.step2.action.prev": "Back: Select Targets",
+    "publish.batch.wizard.step2.action.publish": "Start Publishing",
+    "publish.batch.wizard.step3.title": "Run Batch Publish",
+    "publish.batch.wizard.step3.publishing": "Publishing",
+    "publish.batch.wizard.step3.completed": "Publish Completed",
+    "publish.batch.wizard.step3.summary": "Summary: {successCount} succeeded, {failureCount} failed",
+    "publish.batch.wizard.step3.action.background": "Run in Background",
+    "publish.batch.wizard.step3.action.close": "Close",
+    "publish.batch.wizard.status.waiting": "Waiting",
+    "publish.batch.wizard.status.publishing": "Publishing",
+    "publish.batch.wizard.status.success": "Success",
+    "publish.batch.wizard.status.failed": "Failed",
     "publish.batch.button.run": "Run Batch Publish",
     "publish.batch.summary.selected": "Selected {selectedCount} targets ({publishCount} publish, {updateCount} update).",
     "publish.batch.running": "Batch publish is running sequentially. Please wait...",
@@ -35052,6 +35114,10 @@ var messages = {
     "publish.batch.results.item.success": "{targetName}: success ({action}){remoteDetail}",
     "publish.batch.results.item.failed": "{targetName}: failed ({action}) - {error}",
     "publish.batch.results.unknownError": "Unknown error",
+    "publish.batch.validation.zhihu.columnIdRequired": "Zhihu publish requires a columnId.",
+    "publish.batch.validation.juejin.categoryIdRequired": "Juejin publish requires a categoryId.",
+    "publish.batch.validation.juejin.tagIdsRequired": "Juejin publish requires at least one tagId.",
+    "notice.batch.invalidDraft": "Fix the invalid target draft before starting batch publish.",
     "i18n.only-en.demo": "English only message"
   },
   "zh-CN": {
@@ -35161,6 +35227,25 @@ var messages = {
     "publish.normal.option.visibility.public": "\u516C\u5F00",
     "publish.normal.summary.selectedAction": "\u5F53\u524D\u64CD\u4F5C\uFF1A{action}",
     "publish.batch.title": "\u6279\u91CF\u53D1\u5E03",
+    "publish.batch.wizard.step1.title": "\u9009\u62E9\u76EE\u6807",
+    "publish.batch.wizard.step2.title": "\u7F16\u8F91\u5B57\u6BB5",
+    "publish.batch.wizard.step1.selectTargets": "\u9009\u62E9\u672C\u6B21\u6279\u91CF\u53D1\u5E03\u8981\u5305\u542B\u7684\u5DF2\u542F\u7528\u76EE\u6807\u3002",
+    "publish.batch.wizard.step1.selectedCount": "\u5DF2\u9009\u62E9 {selectedCount} \u4E2A\u76EE\u6807\u3002",
+    "publish.batch.wizard.step1.action.next": "\u4E0B\u4E00\u6B65\uFF1A\u7F16\u8F91\u5B57\u6BB5",
+    "publish.batch.wizard.step2.commonFields": "\u516C\u5171\u5B57\u6BB5",
+    "publish.batch.wizard.step2.targetFields": "\u76EE\u6807\u7279\u5B9A\u5B57\u6BB5",
+    "publish.batch.wizard.step2.action.prev": "\u4E0A\u4E00\u6B65\uFF1A\u9009\u62E9\u76EE\u6807",
+    "publish.batch.wizard.step2.action.publish": "\u5F00\u59CB\u53D1\u5E03",
+    "publish.batch.wizard.step3.title": "\u6267\u884C\u53D1\u5E03",
+    "publish.batch.wizard.step3.publishing": "\u53D1\u5E03\u4E2D",
+    "publish.batch.wizard.step3.completed": "\u53D1\u5E03\u5B8C\u6210",
+    "publish.batch.wizard.step3.summary": "\u6C47\u603B\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A",
+    "publish.batch.wizard.step3.action.background": "\u540E\u53F0\u8FD0\u884C",
+    "publish.batch.wizard.step3.action.close": "\u5173\u95ED",
+    "publish.batch.wizard.status.waiting": "\u7B49\u5F85\u4E2D",
+    "publish.batch.wizard.status.publishing": "\u53D1\u5E03\u4E2D",
+    "publish.batch.wizard.status.success": "\u6210\u529F",
+    "publish.batch.wizard.status.failed": "\u5931\u8D25",
     "publish.batch.button.run": "\u6267\u884C\u6279\u91CF\u53D1\u5E03",
     "publish.batch.summary.selected": "\u5DF2\u9009\u62E9 {selectedCount} \u4E2A\u76EE\u6807\uFF08\u53D1\u5E03 {publishCount} \u4E2A\uFF0C\u66F4\u65B0 {updateCount} \u4E2A\uFF09\u3002",
     "publish.batch.running": "\u6279\u91CF\u53D1\u5E03\u6B63\u5728\u6309\u987A\u5E8F\u6267\u884C\uFF0C\u8BF7\u7A0D\u5019...",
@@ -35169,7 +35254,11 @@ var messages = {
     "publish.batch.results.summary": "\u5171\u5B8C\u6210 {totalCount} \u4E2A\u76EE\u6807\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
     "publish.batch.results.item.success": "{targetName}\uFF1A\u6210\u529F\uFF08{action}\uFF09{remoteDetail}",
     "publish.batch.results.item.failed": "{targetName}\uFF1A\u5931\u8D25\uFF08{action}\uFF09- {error}",
-    "publish.batch.results.unknownError": "\u672A\u77E5\u9519\u8BEF"
+    "publish.batch.results.unknownError": "\u672A\u77E5\u9519\u8BEF",
+    "publish.batch.validation.zhihu.columnIdRequired": "\u77E5\u4E4E\u53D1\u5E03\u8981\u6C42\u586B\u5199\u4E13\u680F ID\u3002",
+    "publish.batch.validation.juejin.categoryIdRequired": "\u7A00\u571F\u6398\u91D1\u53D1\u5E03\u8981\u6C42\u586B\u5199\u5206\u7C7B ID\u3002",
+    "publish.batch.validation.juejin.tagIdsRequired": "\u7A00\u571F\u6398\u91D1\u53D1\u5E03\u8981\u6C42\u81F3\u5C11\u586B\u5199\u4E00\u4E2A\u6807\u7B7E ID\u3002",
+    "notice.batch.invalidDraft": "\u8BF7\u5148\u4FEE\u6B63\u65E0\u6548\u7684\u76EE\u6807\u8349\u7A3F\u540E\u518D\u5F00\u59CB\u6279\u91CF\u53D1\u5E03\u3002"
   }
 };
 
@@ -37367,294 +37456,6 @@ var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingT
 // src/ui/modals/BatchPublishModal.ts
 var import_obsidian13 = require("obsidian");
 
-// src/ui/publishSummary.ts
-var DEFAULT_DASHBOARD_RECORD_LIMIT = 10;
-function parseTimestamp(timestamp) {
-  const parsed = Date.parse(timestamp);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-function compareTimestampsDesc(a, b) {
-  return parseTimestamp(b) - parseTimestamp(a);
-}
-function isAfter(candidate, reference) {
-  return parseTimestamp(candidate) > parseTimestamp(reference);
-}
-function compareTargetsForModalDefaults(a, b) {
-  if (a.enabled === b.enabled) {
-    return a.name.localeCompare(b.name);
-  }
-  return a.enabled ? -1 : 1;
-}
-function mapLatestRecordByTarget(records) {
-  return records.reduce((acc, record) => {
-    const existing = acc.get(record.targetId);
-    if (!existing || isAfter(record.lastPublishedAt, existing.lastPublishedAt)) {
-      acc.set(record.targetId, record);
-    }
-    return acc;
-  }, /* @__PURE__ */ new Map());
-}
-function deriveDashboardSummary(settings, recordLimit = DEFAULT_DASHBOARD_RECORD_LIMIT) {
-  const configuredCount = settings.targets.length;
-  const enabledCount = settings.targets.filter((target) => target.enabled).length;
-  const limit = Math.max(0, recordLimit);
-  const recentRecords = [...settings.records].sort((a, b) => compareTimestampsDesc(a.lastPublishedAt, b.lastPublishedAt)).slice(0, limit);
-  const latestRecords = mapLatestRecordByTarget(settings.records);
-  const targetSummaries = settings.targets.map((target) => ({
-    targetId: target.id,
-    name: target.name,
-    provider: target.provider,
-    enabled: target.enabled,
-    lastPublishedAt: latestRecords.get(target.id)?.lastPublishedAt
-  })).sort((a, b) => a.name.localeCompare(b.name));
-  return {
-    configuredCount,
-    enabledCount,
-    recentRecords,
-    recordLimit: limit,
-    targetSummaries
-  };
-}
-function deriveNoteTargetSummaries(settings, notePath) {
-  const recordsForNote = settings.records.filter((record) => record.notePath === notePath);
-  const latestRecords = mapLatestRecordByTarget(recordsForNote);
-  const summaries = settings.targets.map((target) => {
-    const record = latestRecords.get(target.id);
-    return {
-      targetId: target.id,
-      name: target.name,
-      provider: target.provider,
-      enabled: target.enabled,
-      action: record ? "update" : "publish",
-      lastPublishedAt: record?.lastPublishedAt
-    };
-  });
-  return summaries.sort(compareTargetsForModalDefaults);
-}
-function summarizeBatchSelection(targets, selectedTargetIds) {
-  const selectedSet = new Set(selectedTargetIds);
-  const selectedTargets = targets.filter((target) => selectedSet.has(target.targetId));
-  const publishCount = selectedTargets.filter((target) => target.action === "publish").length;
-  const updateCount = selectedTargets.filter((target) => target.action === "update").length;
-  return {
-    selectedCount: selectedTargets.length,
-    publishCount,
-    updateCount
-  };
-}
-
-// src/ui/modals/BatchPublishModal.ts
-var BatchPublishModal = class extends import_obsidian13.Modal {
-  constructor(plugin, file, workflow) {
-    super(plugin.app);
-    this.plugin = plugin;
-    this.file = file;
-    this.workflow = workflow;
-    this.selectedTargetIds = /* @__PURE__ */ new Set();
-    this.noteSnapshot = null;
-    this.enabledSummaries = [];
-    this.isPublishing = false;
-    this.fatalErrorMessage = null;
-    this.results = [];
-    this.lastRunSummary = null;
-  }
-  async onOpen() {
-    this.noteSnapshot = {
-      basename: this.file.basename,
-      path: this.file.path
-    };
-    this.enabledSummaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path).filter((item) => item.enabled);
-    this.selectedTargetIds.clear();
-    for (const summary of this.enabledSummaries) {
-      this.selectedTargetIds.add(summary.targetId);
-    }
-    await this.render();
-  }
-  onClose() {
-    this.contentEl.empty();
-  }
-  openPublishSettings() {
-    const appWithSettings = this.app;
-    appWithSettings.setting?.open();
-    appWithSettings.setting?.openTabById(this.plugin.manifest.id);
-  }
-  getSelectedTargets() {
-    return this.plugin.settings.targets.filter(
-      (target) => target.enabled && this.selectedTargetIds.has(target.id)
-    );
-  }
-  toggleTargetSelection(targetId, checked) {
-    if (checked) {
-      this.selectedTargetIds.add(targetId);
-      return;
-    }
-    this.selectedTargetIds.delete(targetId);
-  }
-  renderResultSection(container) {
-    const i18n = createI18nFromObsidianLanguage();
-    if (this.results.length === 0) {
-      return;
-    }
-    container.createEl("h3", { text: i18n.t("publish.batch.results.title") });
-    const summary = this.lastRunSummary ?? {
-      totalCount: this.results.length,
-      successCount: this.results.filter((item) => item.status === "success").length,
-      failureCount: this.results.filter((item) => item.status === "failure").length
-    };
-    container.createEl("p", {
-      text: i18n.t("publish.batch.results.summary", {
-        totalCount: summary.totalCount,
-        successCount: summary.successCount,
-        failureCount: summary.failureCount
-      })
-    });
-    const list = container.createEl("ul");
-    for (const result of this.results) {
-      const item = list.createEl("li");
-      const actionLabel = i18n.t(`publish.shared.summary.action.${result.action}`);
-      if (result.status === "success") {
-        const remoteDetail = result.remoteUrl ? ` (${result.remoteUrl})` : "";
-        item.setText(
-          i18n.t("publish.batch.results.item.success", {
-            targetName: result.targetName,
-            action: actionLabel,
-            remoteDetail
-          })
-        );
-        continue;
-      }
-      const failure = result.error?.message ?? i18n.t("publish.batch.results.unknownError");
-      item.setText(
-        i18n.t("publish.batch.results.item.failed", {
-          targetName: result.targetName,
-          action: actionLabel,
-          error: failure
-        })
-      );
-    }
-  }
-  async handleBatchPublish() {
-    const i18n = createI18nFromObsidianLanguage();
-    const selectedTargets = this.getSelectedTargets();
-    if (selectedTargets.length === 0) {
-      new import_obsidian13.Notice(i18n.t("notice.batch.selectOne"), 6e3);
-      return;
-    }
-    this.isPublishing = true;
-    this.fatalErrorMessage = null;
-    this.results = [];
-    this.lastRunSummary = null;
-    await this.render();
-    try {
-      const result = await this.workflow.runBatch(this.file, selectedTargets, this.plugin.settings);
-      this.plugin.settings = result.settings;
-      await this.plugin.saveSettings();
-      this.results = result.results;
-      this.lastRunSummary = {
-        totalCount: result.totalCount,
-        successCount: result.successCount,
-        failureCount: result.failureCount
-      };
-      new import_obsidian13.Notice(
-        i18n.t("notice.batch.finished", {
-          successCount: this.lastRunSummary.successCount,
-          failureCount: this.lastRunSummary.failureCount
-        }),
-        6e3
-      );
-    } catch (error) {
-      this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
-      new import_obsidian13.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
-    } finally {
-      this.isPublishing = false;
-      await this.render();
-    }
-  }
-  async render() {
-    const { contentEl } = this;
-    contentEl.empty();
-    const i18n = createI18nFromObsidianLanguage();
-    contentEl.createEl("h2", { text: i18n.t("publish.batch.title") });
-    if (this.noteSnapshot) {
-      const noteInfo = contentEl.createDiv();
-      noteInfo.createEl("strong", { text: `${i18n.t("publish.shared.note")}: ` });
-      noteInfo.createSpan({ text: this.noteSnapshot.basename });
-      noteInfo.createEl("br");
-      noteInfo.createEl("strong", { text: `${i18n.t("publish.shared.path")}: ` });
-      noteInfo.createSpan({ text: this.noteSnapshot.path });
-    }
-    if (this.enabledSummaries.length === 0) {
-      contentEl.createEl("p", {
-        cls: "ultimate-publisher-empty-state",
-        text: i18n.t("publish.shared.empty.noEnabledTargets")
-      });
-      const settingsButton2 = contentEl.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
-      settingsButton2.addEventListener("click", () => {
-        this.openPublishSettings();
-      });
-      return;
-    }
-    const targetSection = contentEl.createDiv();
-    targetSection.createEl("h3", { text: i18n.t("publish.shared.targets") });
-    for (const summary of this.enabledSummaries) {
-      const row = targetSection.createEl("label");
-      row.style.display = "block";
-      row.style.margin = "6px 0";
-      const input = row.createEl("input", { type: "checkbox" });
-      input.checked = this.selectedTargetIds.has(summary.targetId);
-      input.disabled = this.isPublishing;
-      input.addEventListener("change", () => {
-        this.toggleTargetSelection(summary.targetId, input.checked);
-        void this.render();
-      });
-      const actionLabel = summary.action === "update" ? i18n.t("publish.shared.summary.updateExistingPost") : i18n.t("publish.shared.summary.publishNewPost");
-      row.appendText(` ${summary.name} (${summary.provider}) - ${actionLabel}`);
-    }
-    const selectionSummary = summarizeBatchSelection(
-      this.enabledSummaries.map((item) => ({
-        targetId: item.targetId,
-        action: item.action,
-        enabled: item.enabled
-      })),
-      Array.from(this.selectedTargetIds)
-    );
-    contentEl.createEl("p", {
-      text: i18n.t("publish.batch.summary.selected", {
-        selectedCount: selectionSummary.selectedCount,
-        publishCount: selectionSummary.publishCount,
-        updateCount: selectionSummary.updateCount
-      })
-    });
-    if (this.isPublishing) {
-      contentEl.createEl("p", {
-        text: i18n.t("publish.batch.running")
-      });
-    }
-    if (this.fatalErrorMessage) {
-      contentEl.createEl("p", {
-        cls: "mod-warning",
-        text: i18n.t("publish.batch.error.fatal", { error: this.fatalErrorMessage })
-      });
-    }
-    this.renderResultSection(contentEl);
-    const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
-    const runButton = actions.createEl("button", { text: i18n.t("publish.batch.button.run") });
-    runButton.toggleClass("mod-cta", true);
-    runButton.disabled = this.isPublishing || this.selectedTargetIds.size === 0;
-    runButton.addEventListener("click", () => {
-      void this.handleBatchPublish();
-    });
-    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
-    settingsButton.disabled = this.isPublishing;
-    settingsButton.addEventListener("click", () => {
-      this.openPublishSettings();
-    });
-  }
-};
-
-// src/ui/modals/NormalPublishModal.ts
-var import_obsidian14 = require("obsidian");
-
 // src/core/normalPublish/drafts.ts
 function createIdleRemoteOptionsState() {
   return {
@@ -37747,6 +37548,156 @@ function buildNormalPublishSessionState(note, targets) {
   };
 }
 
+// src/core/batchPublish/state.ts
+function cloneStringList3(values) {
+  return values.slice();
+}
+function createIdleRemoteOptionsState2() {
+  return {
+    status: "idle",
+    data: {},
+    manualFallbackFields: []
+  };
+}
+function updateProviderDraftField(draft, update) {
+  if (draft.provider !== "wordpress" && draft.provider !== "csdn") {
+    return draft;
+  }
+  if (update.field === "excerpt") {
+    return {
+      ...draft,
+      excerpt: update.value
+    };
+  }
+  return {
+    ...draft,
+    tags: cloneStringList3(update.value)
+  };
+}
+function buildBatchPublishWizardState(note, targets) {
+  const enabledTargets = targets.filter((target) => target.enabled);
+  const targetDrafts = {};
+  const remoteOptions = {};
+  const validationErrors = {};
+  for (const target of enabledTargets) {
+    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
+    remoteOptions[target.id] = createIdleRemoteOptionsState2();
+    validationErrors[target.id] = null;
+  }
+  return {
+    step: 1,
+    selectedTargetIds: new Set(enabledTargets.map((target) => target.id)),
+    commonDraft: {
+      title: note.title,
+      tags: cloneStringList3(note.tags),
+      excerpt: note.excerpt
+    },
+    targetDrafts,
+    remoteOptions,
+    validationErrors,
+    executionState: {
+      status: "idle",
+      currentIndex: 0,
+      runningInBackground: false,
+      results: enabledTargets.map((target) => ({
+        targetId: target.id,
+        targetName: target.name,
+        // Task 1 state-layer default: action is publish until workflow computes real action.
+        action: "publish",
+        status: "waiting"
+      }))
+    }
+  };
+}
+function updateBatchCommonDraft(state, field, value) {
+  let commonDraft;
+  if (field === "tags") {
+    if (!Array.isArray(value)) {
+      throw new Error("Batch publish common draft field 'tags' requires string array value");
+    }
+    commonDraft = {
+      ...state.commonDraft,
+      tags: cloneStringList3(value)
+    };
+  } else {
+    if (typeof value !== "string") {
+      throw new Error(`Batch publish common draft field '${field}' requires string value`);
+    }
+    commonDraft = {
+      ...state.commonDraft,
+      [field]: value
+    };
+  }
+  if (field === "title") {
+    return {
+      ...state,
+      commonDraft
+    };
+  }
+  const targetDrafts = {};
+  for (const [targetId, draft] of Object.entries(state.targetDrafts)) {
+    if (field === "excerpt") {
+      if (typeof value !== "string") {
+        throw new Error("Batch publish common draft field 'excerpt' requires string value");
+      }
+      targetDrafts[targetId] = updateProviderDraftField(draft, { field: "excerpt", value });
+      continue;
+    }
+    if (!Array.isArray(value)) {
+      throw new Error("Batch publish common draft field 'tags' requires string array value");
+    }
+    targetDrafts[targetId] = updateProviderDraftField(draft, { field: "tags", value });
+  }
+  return {
+    ...state,
+    commonDraft,
+    targetDrafts
+  };
+}
+function updateBatchTargetDraft(state, targetId, update) {
+  const currentDraft = state.targetDrafts[targetId];
+  if (!currentDraft) {
+    throw new Error(`Batch publish target draft not found: ${targetId}`);
+  }
+  return {
+    ...state,
+    targetDrafts: {
+      ...state.targetDrafts,
+      [targetId]: update(currentDraft)
+    }
+  };
+}
+function buildBatchPublishExecutionContext(state, targetId) {
+  const providerDraft = state.targetDrafts[targetId];
+  if (!providerDraft) {
+    throw new Error(`Batch publish target draft not found: ${targetId}`);
+  }
+  return {
+    common: {
+      title: state.commonDraft.title
+    },
+    provider: providerDraft
+  };
+}
+
+// src/core/normalPublish/validation.ts
+function validateTargetDraft(draft) {
+  switch (draft.provider) {
+    case "zhihu":
+      return draft.columnId.trim() ? null : "Zhihu publish requires a columnId.";
+    case "juejin":
+      if (!draft.categoryId.trim()) {
+        return "Juejin publish requires a categoryId.";
+      }
+      if (draft.tagIds.length === 0) {
+        return "Juejin publish requires at least one tagId.";
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
 // src/core/normalPublish/remoteOptions.ts
 function getManualFallbackFields(target) {
   switch (target.provider) {
@@ -37807,24 +37758,6 @@ async function ensureRemoteOptionsLoaded(state, target, registry) {
         )
       }
     };
-  }
-}
-
-// src/core/normalPublish/validation.ts
-function validateTargetDraft(draft) {
-  switch (draft.provider) {
-    case "zhihu":
-      return draft.columnId.trim() ? null : "Zhihu publish requires a columnId.";
-    case "juejin":
-      if (!draft.categoryId.trim()) {
-        return "Juejin publish requires a categoryId.";
-      }
-      if (draft.tagIds.length === 0) {
-        return "Juejin publish requires at least one tagId.";
-      }
-      return null;
-    default:
-      return null;
   }
 }
 
@@ -38022,6 +37955,9 @@ function renderHelperText(container, text, tone = "muted") {
 // src/ui/normalPublish/renderTargetForm.ts
 function renderTargetForm(options) {
   const { container, draft, remoteOptions, i18n, onChange } = options;
+  const hiddenFields = new Set(options.hiddenFields ?? []);
+  const prefix = options.fieldNamePrefix ?? "normal-publish";
+  const fieldName = (suffix) => `${prefix}-${suffix}`;
   const readOptionItems = (key) => {
     const raw = remoteOptions?.data[key];
     if (!Array.isArray(raw)) {
@@ -38049,193 +37985,914 @@ function renderTargetForm(options) {
   }
   switch (draft.provider) {
     case "wordpress":
-      renderTextInput(container, {
-        label: i18n.t("publish.normal.field.slug"),
-        name: "normal-publish-wordpress-slug",
-        value: draft.slug,
-        onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, slug: value }))
-      });
-      renderTextArea(container, {
-        label: i18n.t("publish.normal.field.excerpt"),
-        name: "normal-publish-wordpress-excerpt",
-        value: draft.excerpt,
-        onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, excerpt: value }))
-      });
+      if (!hiddenFields.has("slug")) {
+        renderTextInput(container, {
+          label: i18n.t("publish.normal.field.slug"),
+          name: fieldName("wordpress-slug"),
+          value: draft.slug,
+          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, slug: value }))
+        });
+      }
+      if (!hiddenFields.has("excerpt")) {
+        renderTextArea(container, {
+          label: i18n.t("publish.normal.field.excerpt"),
+          name: fieldName("wordpress-excerpt"),
+          value: draft.excerpt,
+          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, excerpt: value }))
+        });
+      }
       const wordpressTags = readOptionItems("wordpressTags");
       const wordpressCategories = readOptionItems("wordpressCategories");
-      if (wordpressTags.length > 0 && !remoteOptions?.manualFallbackFields.includes("tags")) {
-        renderSelectableStringListInput(container, {
-          label: i18n.t("publish.normal.field.tags"),
-          name: "normal-publish-wordpress-tags",
-          value: draft.tags,
-          choices: toSelectableStringChoices(wordpressTags),
-          description: i18n.t("publish.normal.remote.manualHint"),
-          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, tags: value }))
-        });
-      } else {
-        renderStringListInput(container, {
-          label: i18n.t("publish.normal.field.tags"),
-          name: "normal-publish-wordpress-tags",
-          value: draft.tags,
-          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, tags: value }))
+      if (!hiddenFields.has("tags")) {
+        if (wordpressTags.length > 0 && !remoteOptions?.manualFallbackFields.includes("tags")) {
+          renderSelectableStringListInput(container, {
+            label: i18n.t("publish.normal.field.tags"),
+            name: fieldName("wordpress-tags"),
+            value: draft.tags,
+            choices: toSelectableStringChoices(wordpressTags),
+            description: i18n.t("publish.normal.remote.manualHint"),
+            onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, tags: value }))
+          });
+        } else {
+          renderStringListInput(container, {
+            label: i18n.t("publish.normal.field.tags"),
+            name: fieldName("wordpress-tags"),
+            value: draft.tags,
+            onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, tags: value }))
+          });
+        }
+      }
+      if (!hiddenFields.has("categories")) {
+        if (wordpressCategories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categories")) {
+          renderDropdownSelectableStringListInput(container, {
+            label: i18n.t("publish.normal.field.categories"),
+            name: fieldName("wordpress-categories"),
+            value: draft.categories,
+            choices: toSelectableStringChoices(wordpressCategories),
+            description: i18n.t("publish.normal.remote.dropdownInputHint"),
+            onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, categories: value }))
+          });
+        } else {
+          renderStringListInput(container, {
+            label: i18n.t("publish.normal.field.categories"),
+            name: fieldName("wordpress-categories"),
+            value: draft.categories,
+            onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, categories: value }))
+          });
+        }
+      }
+      if (!hiddenFields.has("status")) {
+        renderSelectInput(container, {
+          label: i18n.t("publish.normal.field.status"),
+          name: fieldName("wordpress-status"),
+          value: draft.status,
+          choices: [
+            { value: "draft", label: i18n.t("publish.normal.option.status.draft") },
+            { value: "publish", label: i18n.t("publish.normal.option.status.publish") },
+            { value: "private", label: i18n.t("publish.normal.option.status.private") },
+            { value: "pending", label: i18n.t("publish.normal.option.status.pending") }
+          ],
+          onChange: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, status: value }))
         });
       }
-      if (wordpressCategories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categories")) {
-        renderDropdownSelectableStringListInput(container, {
-          label: i18n.t("publish.normal.field.categories"),
-          name: "normal-publish-wordpress-categories",
-          value: draft.categories,
-          choices: toSelectableStringChoices(wordpressCategories),
-          description: i18n.t("publish.normal.remote.dropdownInputHint"),
-          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, categories: value }))
-        });
-      } else {
-        renderStringListInput(container, {
-          label: i18n.t("publish.normal.field.categories"),
-          name: "normal-publish-wordpress-categories",
-          value: draft.categories,
-          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, categories: value }))
+      if (!hiddenFields.has("password")) {
+        renderTextInput(container, {
+          label: i18n.t("publish.normal.field.password"),
+          name: fieldName("wordpress-password"),
+          value: draft.password,
+          onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, password: value }))
         });
       }
-      renderSelectInput(container, {
-        label: i18n.t("publish.normal.field.status"),
-        name: "normal-publish-wordpress-status",
-        value: draft.status,
-        choices: [
-          { value: "draft", label: i18n.t("publish.normal.option.status.draft") },
-          { value: "publish", label: i18n.t("publish.normal.option.status.publish") },
-          { value: "private", label: i18n.t("publish.normal.option.status.private") },
-          { value: "pending", label: i18n.t("publish.normal.option.status.pending") }
-        ],
-        onChange: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, status: value }))
-      });
-      renderTextInput(container, {
-        label: i18n.t("publish.normal.field.password"),
-        name: "normal-publish-wordpress-password",
-        value: draft.password,
-        onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, password: value }))
-      });
       return;
     case "yuque":
-      renderTextInput(container, {
-        label: i18n.t("publish.normal.field.slug"),
-        name: "normal-publish-yuque-slug",
-        value: draft.slug,
-        onInput: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, slug: value }))
-      });
-      renderSelectInput(container, {
-        label: i18n.t("publish.normal.field.publicLevel"),
-        name: "normal-publish-yuque-publicLevel",
-        value: String(draft.publicLevel),
-        choices: [
-          { value: "0", label: i18n.t("publish.normal.option.visibility.private") },
-          { value: "1", label: i18n.t("publish.normal.option.visibility.public") }
-        ],
-        onChange: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, publicLevel: value === "1" ? 1 : 0 }))
-      });
+      if (!hiddenFields.has("slug")) {
+        renderTextInput(container, {
+          label: i18n.t("publish.normal.field.slug"),
+          name: fieldName("yuque-slug"),
+          value: draft.slug,
+          onInput: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, slug: value }))
+        });
+      }
+      if (!hiddenFields.has("publicLevel")) {
+        renderSelectInput(container, {
+          label: i18n.t("publish.normal.field.publicLevel"),
+          name: fieldName("yuque-publicLevel"),
+          value: String(draft.publicLevel),
+          choices: [
+            { value: "0", label: i18n.t("publish.normal.option.visibility.private") },
+            { value: "1", label: i18n.t("publish.normal.option.visibility.public") }
+          ],
+          onChange: (value) => applyDraftUpdate("yuque", (currentDraft) => ({ ...currentDraft, publicLevel: value === "1" ? 1 : 0 }))
+        });
+      }
       return;
     case "zhihu":
       const columns = readOptionItems("zhihuColumns");
-      if (columns.length > 0 && !remoteOptions?.manualFallbackFields.includes("columnId")) {
-        renderSelectInput(container, {
-          label: i18n.t("publish.normal.field.columnId"),
-          name: "normal-publish-zhihu-columnId",
-          value: draft.columnId,
-          choices: columns.map((column) => ({
-            value: column.id,
-            label: `${column.label} (${column.id})`
-          })),
-          description: i18n.t("publish.normal.remote.selectHint"),
-          onChange: (value) => {
-            const selected = findOption(columns, value);
-            applyDraftUpdate("zhihu", (currentDraft) => ({
-              ...currentDraft,
-              columnId: value,
-              columnTitle: selected?.label ?? currentDraft.columnTitle
-            }));
+      if (!hiddenFields.has("columnId")) {
+        if (columns.length > 0 && !remoteOptions?.manualFallbackFields.includes("columnId")) {
+          renderSelectInput(container, {
+            label: i18n.t("publish.normal.field.columnId"),
+            name: fieldName("zhihu-columnId"),
+            value: draft.columnId,
+            choices: columns.map((column) => ({
+              value: column.id,
+              label: `${column.label} (${column.id})`
+            })),
+            description: i18n.t("publish.normal.remote.selectHint"),
+            onChange: (value) => {
+              const selected = findOption(columns, value);
+              applyDraftUpdate("zhihu", (currentDraft) => ({
+                ...currentDraft,
+                columnId: value,
+                columnTitle: selected?.label ?? currentDraft.columnTitle
+              }));
+            }
+          });
+          const selectedColumn = findOption(columns, draft.columnId);
+          if (selectedColumn?.description) {
+            renderHelperText(container, selectedColumn.description);
           }
-        });
-        const selectedColumn = findOption(columns, draft.columnId);
-        if (selectedColumn?.description) {
-          renderHelperText(container, selectedColumn.description);
+        } else {
+          renderTextInput(container, {
+            label: i18n.t("publish.normal.field.columnId"),
+            name: fieldName("zhihu-columnId"),
+            value: draft.columnId,
+            description: i18n.t("publish.normal.remote.manualFallbackHint"),
+            onInput: (value) => applyDraftUpdate("zhihu", (currentDraft) => ({ ...currentDraft, columnId: value }))
+          });
         }
-      } else {
-        renderTextInput(container, {
-          label: i18n.t("publish.normal.field.columnId"),
-          name: "normal-publish-zhihu-columnId",
-          value: draft.columnId,
-          description: i18n.t("publish.normal.remote.manualFallbackHint"),
-          onInput: (value) => applyDraftUpdate("zhihu", (currentDraft) => ({ ...currentDraft, columnId: value }))
-        });
       }
       return;
     case "csdn":
-      renderTextArea(container, {
-        label: i18n.t("publish.normal.field.excerpt"),
-        name: "normal-publish-csdn-excerpt",
-        value: draft.excerpt,
-        onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, excerpt: value }))
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.tags"),
-        name: "normal-publish-csdn-tags",
-        value: draft.tags,
-        description: readOptionItems("csdnTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
-        onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, tags: value }))
-      });
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.categories"),
-        name: "normal-publish-csdn-categories",
-        value: draft.categories,
-        description: readOptionItems("csdnCategories").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
-        onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, categories: value }))
-      });
+      if (!hiddenFields.has("excerpt")) {
+        renderTextArea(container, {
+          label: i18n.t("publish.normal.field.excerpt"),
+          name: fieldName("csdn-excerpt"),
+          value: draft.excerpt,
+          onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, excerpt: value }))
+        });
+      }
+      if (!hiddenFields.has("tags")) {
+        renderStringListInput(container, {
+          label: i18n.t("publish.normal.field.tags"),
+          name: fieldName("csdn-tags"),
+          value: draft.tags,
+          description: readOptionItems("csdnTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
+          onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, tags: value }))
+        });
+      }
+      if (!hiddenFields.has("categories")) {
+        renderStringListInput(container, {
+          label: i18n.t("publish.normal.field.categories"),
+          name: fieldName("csdn-categories"),
+          value: draft.categories,
+          description: readOptionItems("csdnCategories").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
+          onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, categories: value }))
+        });
+      }
       return;
     case "juejin":
       const categories = readOptionItems("juejinCategories");
-      if (categories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categoryId")) {
-        renderSelectInput(container, {
-          label: i18n.t("publish.normal.field.categoryId"),
-          name: "normal-publish-juejin-categoryId",
-          value: draft.categoryId,
-          choices: categories.map((category) => ({
-            value: category.id,
-            label: `${category.label} (${category.id})`
-          })),
-          description: i18n.t("publish.normal.remote.selectHint"),
-          onChange: (value) => {
-            const selected = findOption(categories, value);
-            applyDraftUpdate("juejin", (currentDraft) => ({
-              ...currentDraft,
-              categoryId: value,
-              categoryName: selected?.label ?? currentDraft.categoryName
-            }));
-          }
-        });
-      } else {
-        renderTextInput(container, {
-          label: i18n.t("publish.normal.field.categoryId"),
-          name: "normal-publish-juejin-categoryId",
-          value: draft.categoryId,
-          description: i18n.t("publish.normal.remote.manualFallbackHint"),
-          onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, categoryId: value }))
+      if (!hiddenFields.has("categoryId")) {
+        if (categories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categoryId")) {
+          renderSelectInput(container, {
+            label: i18n.t("publish.normal.field.categoryId"),
+            name: fieldName("juejin-categoryId"),
+            value: draft.categoryId,
+            choices: categories.map((category) => ({
+              value: category.id,
+              label: `${category.label} (${category.id})`
+            })),
+            description: i18n.t("publish.normal.remote.selectHint"),
+            onChange: (value) => {
+              const selected = findOption(categories, value);
+              applyDraftUpdate("juejin", (currentDraft) => ({
+                ...currentDraft,
+                categoryId: value,
+                categoryName: selected?.label ?? currentDraft.categoryName
+              }));
+            }
+          });
+        } else {
+          renderTextInput(container, {
+            label: i18n.t("publish.normal.field.categoryId"),
+            name: fieldName("juejin-categoryId"),
+            value: draft.categoryId,
+            description: i18n.t("publish.normal.remote.manualFallbackHint"),
+            onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, categoryId: value }))
+          });
+        }
+      }
+      if (!hiddenFields.has("tagIds")) {
+        renderStringListInput(container, {
+          label: i18n.t("publish.normal.field.tagIds"),
+          name: fieldName("juejin-tagIds"),
+          value: draft.tagIds,
+          description: readOptionItems("juejinTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
+          onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, tagIds: value }))
         });
       }
-      renderStringListInput(container, {
-        label: i18n.t("publish.normal.field.tagIds"),
-        name: "normal-publish-juejin-tagIds",
-        value: draft.tagIds,
-        description: readOptionItems("juejinTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
-        onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, tagIds: value }))
-      });
-      renderTextArea(container, {
-        label: i18n.t("publish.normal.field.briefContent"),
-        name: "normal-publish-juejin-briefContent",
-        value: draft.briefContent,
-        onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, briefContent: value }))
-      });
+      if (!hiddenFields.has("briefContent")) {
+        renderTextArea(container, {
+          label: i18n.t("publish.normal.field.briefContent"),
+          name: fieldName("juejin-briefContent"),
+          value: draft.briefContent,
+          onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, briefContent: value }))
+        });
+      }
       return;
   }
+}
+
+// src/ui/modals/BatchPublishModal.ts
+var BATCH_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-batch-modal-frame";
+var BATCH_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-batch-modal-container";
+var VALIDATION_MESSAGE_KEY_BY_TEXT = {
+  "Zhihu publish requires a columnId.": "publish.batch.validation.zhihu.columnIdRequired",
+  "Juejin publish requires a categoryId.": "publish.batch.validation.juejin.categoryIdRequired",
+  "Juejin publish requires at least one tagId.": "publish.batch.validation.juejin.tagIdsRequired"
+};
+var BatchPublishModal = class extends import_obsidian13.Modal {
+  constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote) {
+    super(plugin.app);
+    this.plugin = plugin;
+    this.file = file;
+    this.workflow = workflow;
+    this.providerRegistry = providerRegistry;
+    this.noteLoader = noteLoader;
+    this.wizardState = null;
+    this.note = null;
+    this.isInitializing = false;
+    this.isModalVisible = false;
+    this.isPublishing = false;
+    this.fatalErrorMessage = null;
+  }
+  async onOpen() {
+    this.containerEl.addClass(BATCH_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.addClass(BATCH_PUBLISH_MODAL_FRAME_CLASS);
+    this.isModalVisible = true;
+    this.isInitializing = true;
+    this.fatalErrorMessage = null;
+    await this.render();
+    try {
+      this.note = await this.noteLoader(this.app, this.file);
+      this.wizardState = buildBatchPublishWizardState(this.note, this.plugin.settings.targets);
+    } catch (error) {
+      this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
+      this.note = null;
+      this.wizardState = null;
+    } finally {
+      this.isInitializing = false;
+    }
+    await this.render();
+  }
+  onClose() {
+    this.isModalVisible = false;
+    this.containerEl.removeClass(BATCH_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.removeClass(BATCH_PUBLISH_MODAL_FRAME_CLASS);
+    this.contentEl.removeClass("ultimate-publisher-batch-modal");
+    this.contentEl.empty();
+  }
+  openPublishSettings() {
+    const appWithSettings = this.app;
+    appWithSettings.setting?.open();
+    appWithSettings.setting?.openTabById(this.plugin.manifest.id);
+  }
+  getEnabledTargets() {
+    return this.plugin.settings.targets.filter((target) => target.enabled);
+  }
+  getTargetById(targetId) {
+    return this.plugin.settings.targets.find((target) => target.id === targetId);
+  }
+  getSelectedTargets() {
+    if (!this.wizardState) {
+      return [];
+    }
+    return this.getEnabledTargets().filter((target) => this.wizardState?.selectedTargetIds.has(target.id));
+  }
+  toggleTargetSelection(targetId, checked) {
+    if (!this.wizardState) {
+      return;
+    }
+    const selectedTargetIds = new Set(this.wizardState.selectedTargetIds);
+    if (checked) {
+      selectedTargetIds.add(targetId);
+    } else {
+      selectedTargetIds.delete(targetId);
+    }
+    this.wizardState = {
+      ...this.wizardState,
+      selectedTargetIds
+    };
+  }
+  updateCommonField(field, value) {
+    if (!this.wizardState) {
+      return;
+    }
+    this.wizardState = updateBatchCommonDraft(this.wizardState, field, value);
+  }
+  updateTargetField(targetId, update) {
+    if (!this.wizardState) {
+      return;
+    }
+    const next = updateBatchTargetDraft(this.wizardState, targetId, update);
+    this.wizardState = {
+      ...next,
+      validationErrors: {
+        ...next.validationErrors,
+        [targetId]: null
+      }
+    };
+  }
+  getLocalizedValidationError(message) {
+    const i18n = createI18nFromObsidianLanguage();
+    const key = VALIDATION_MESSAGE_KEY_BY_TEXT[message];
+    return key ? i18n.t(key) : message;
+  }
+  async ensureRemoteOptionsLoadedForTarget(target) {
+    if (!this.wizardState) {
+      return;
+    }
+    const current = this.wizardState.remoteOptions[target.id];
+    if (!current || current.status === "loaded" || current.status === "error" || current.status === "loading") {
+      return;
+    }
+    this.wizardState = {
+      ...this.wizardState,
+      remoteOptions: {
+        ...this.wizardState.remoteOptions,
+        [target.id]: {
+          ...current,
+          status: "loading",
+          errorMessage: void 0
+        }
+      }
+    };
+    await this.render();
+    const sessionState = {
+      selectedTargetId: target.id,
+      commonDraft: {
+        title: this.wizardState.commonDraft.title
+      },
+      targetDrafts: this.wizardState.targetDrafts,
+      remoteOptions: this.wizardState.remoteOptions,
+      lastErrorByTargetId: {}
+    };
+    const nextState = await ensureRemoteOptionsLoaded(sessionState, target, this.providerRegistry);
+    if (!this.wizardState) {
+      return;
+    }
+    this.wizardState = {
+      ...this.wizardState,
+      remoteOptions: {
+        ...this.wizardState.remoteOptions,
+        [target.id]: nextState.remoteOptions[target.id]
+      }
+    };
+  }
+  async goToStep(step) {
+    if (!this.wizardState) {
+      return;
+    }
+    if (step === 2 && this.wizardState.selectedTargetIds.size === 0) {
+      await this.render();
+      return;
+    }
+    this.wizardState = {
+      ...this.wizardState,
+      step
+    };
+    await this.render();
+    if (step !== 2) {
+      return;
+    }
+    for (const target of this.getSelectedTargets()) {
+      await this.ensureRemoteOptionsLoadedForTarget(target);
+    }
+    await this.render();
+  }
+  renderStepIndicator(container) {
+    if (!this.wizardState) {
+      return;
+    }
+    const i18n = createI18nFromObsidianLanguage();
+    const progressLabel = i18n.locale === "zh-CN" ? `\u6B65\u9AA4 ${this.wizardState.step}/3` : `Step ${this.wizardState.step}/3`;
+    const indicator = container.createDiv({ cls: "ultimate-publisher-batch-step-indicator" });
+    const header = indicator.createDiv();
+    header.createEl("h2", {
+      text: `${i18n.t("publish.batch.title")} - ${progressLabel}`
+    });
+    if (this.note) {
+      const noteRow = header.createDiv();
+      noteRow.createEl("strong", { text: `${i18n.t("publish.shared.note")}: ` });
+      noteRow.createSpan({ text: this.file.basename });
+    }
+    const steps = [
+      i18n.t("publish.batch.wizard.step1.title"),
+      i18n.t("publish.batch.wizard.step2.title"),
+      i18n.t("publish.batch.wizard.step3.title")
+    ];
+    const stepList = indicator.createDiv();
+    for (const [index, label] of steps.entries()) {
+      const item = stepList.createDiv();
+      const dot = item.createSpan({ cls: "ultimate-publisher-batch-step-dot" });
+      dot.toggleClass("is-active", this.wizardState.step === index + 1);
+      item.createSpan({ text: label });
+    }
+  }
+  renderStep1(container) {
+    if (!this.wizardState) {
+      return;
+    }
+    const i18n = createI18nFromObsidianLanguage();
+    const enabledTargets = this.getEnabledTargets();
+    const panel = container.createDiv({ cls: "ultimate-publisher-batch-panel" });
+    panel.createEl("h3", { text: i18n.t("publish.batch.wizard.step1.title") });
+    panel.createEl("p", {
+      text: i18n.t("publish.batch.wizard.step1.selectTargets")
+    });
+    if (enabledTargets.length === 0) {
+      panel.createEl("p", {
+        cls: "ultimate-publisher-empty-state",
+        text: i18n.t("publish.shared.empty.noEnabledTargets")
+      });
+      const settingsButton2 = panel.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+      settingsButton2.addEventListener("click", () => {
+        this.openPublishSettings();
+      });
+      return;
+    }
+    const targetList = panel.createDiv();
+    for (const target of enabledTargets) {
+      const row = targetList.createEl("label", { cls: "ultimate-publisher-batch-target-card" });
+      const input = row.createEl("input", { type: "checkbox" });
+      input.name = `batch-publish-target-${target.id}`;
+      input.checked = this.wizardState.selectedTargetIds.has(target.id);
+      input.disabled = this.isPublishing;
+      input.addEventListener("change", () => {
+        this.toggleTargetSelection(target.id, input.checked);
+        void this.render();
+      });
+      row.appendText(` ${target.name}`);
+    }
+    panel.createEl("p", {
+      text: i18n.t("publish.batch.wizard.step1.selectedCount", {
+        selectedCount: this.wizardState.selectedTargetIds.size
+      })
+    });
+    const actions = panel.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const nextButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step1.action.next")
+    });
+    nextButton.toggleClass("mod-cta", true);
+    nextButton.disabled = this.isPublishing || this.wizardState.selectedTargetIds.size === 0;
+    nextButton.addEventListener("click", () => {
+      void this.goToStep(2);
+    });
+    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+    settingsButton.disabled = this.isPublishing;
+    settingsButton.addEventListener("click", () => {
+      this.openPublishSettings();
+    });
+  }
+  renderStep2(container) {
+    if (!this.wizardState) {
+      return;
+    }
+    const i18n = createI18nFromObsidianLanguage();
+    const selectedTargets = this.getSelectedTargets();
+    const panel = container.createDiv({ cls: "ultimate-publisher-batch-panel" });
+    panel.createEl("h3", { text: i18n.t("publish.batch.wizard.step2.title") });
+    const commonSection = panel.createDiv();
+    commonSection.createEl("h4", { text: i18n.t("publish.batch.wizard.step2.commonFields") });
+    renderTextInput(commonSection, {
+      label: i18n.t("publish.normal.field.title"),
+      name: "batch-publish-common-title",
+      value: this.wizardState.commonDraft.title,
+      onInput: (value) => {
+        this.updateCommonField("title", value);
+      }
+    });
+    renderStringListInput(commonSection, {
+      label: i18n.t("publish.normal.field.tags"),
+      name: "batch-publish-common-tags",
+      value: this.wizardState.commonDraft.tags,
+      onInput: (value) => {
+        this.updateCommonField("tags", value);
+      }
+    });
+    renderTextArea(commonSection, {
+      label: i18n.t("publish.normal.field.excerpt"),
+      name: "batch-publish-common-excerpt",
+      value: this.wizardState.commonDraft.excerpt,
+      onInput: (value) => {
+        this.updateCommonField("excerpt", value);
+      }
+    });
+    const targetSection = panel.createDiv();
+    targetSection.createEl("h4", { text: i18n.t("publish.batch.wizard.step2.targetFields") });
+    for (const target of selectedTargets) {
+      const card = targetSection.createDiv({ cls: "ultimate-publisher-batch-target-card" });
+      card.createEl("h5", { text: target.name });
+      const validationError = this.wizardState.validationErrors[target.id];
+      if (validationError) {
+        card.createEl("p", {
+          cls: "mod-warning",
+          text: this.getLocalizedValidationError(validationError)
+        });
+      }
+      renderTargetForm({
+        container: card,
+        draft: this.wizardState.targetDrafts[target.id],
+        remoteOptions: this.wizardState.remoteOptions[target.id],
+        i18n,
+        hiddenFields: target.provider === "wordpress" || target.provider === "csdn" ? ["excerpt", "tags"] : void 0,
+        fieldNamePrefix: `batch-${target.id}`,
+        onChange: (update) => {
+          this.updateTargetField(target.id, update);
+        }
+      });
+    }
+    const actions = panel.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const prevButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step2.action.prev")
+    });
+    prevButton.disabled = this.isPublishing;
+    prevButton.addEventListener("click", () => {
+      void this.goToStep(1);
+    });
+    const publishButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step2.action.publish")
+    });
+    publishButton.toggleClass("mod-cta", true);
+    publishButton.disabled = this.isPublishing || selectedTargets.length === 0;
+    publishButton.addEventListener("click", () => {
+      void this.startBatchPublish();
+    });
+  }
+  renderStep3(container) {
+    if (!this.wizardState) {
+      return;
+    }
+    const i18n = createI18nFromObsidianLanguage();
+    const { executionState } = this.wizardState;
+    const summary = this.getExecutionSummary();
+    const completedCount = executionState.results.filter(
+      (row) => row.status === "success" || row.status === "failure"
+    ).length;
+    const progressPercent = summary.totalCount === 0 ? 0 : Math.round(completedCount / summary.totalCount * 100);
+    const panel = container.createDiv({ cls: "ultimate-publisher-batch-panel" });
+    panel.createEl("h3", { text: i18n.t("publish.batch.wizard.step3.title") });
+    panel.createEl("p", {
+      text: executionState.status === "completed" ? i18n.t("publish.batch.wizard.step3.completed") : i18n.t("publish.batch.wizard.step3.publishing")
+    });
+    const progressBar = panel.createDiv({ cls: "ultimate-publisher-batch-progress-bar" });
+    const progressFill = progressBar.createDiv({ cls: "ultimate-publisher-batch-progress-bar-fill" });
+    progressFill.style.width = `${progressPercent}%`;
+    if (executionState.status === "completed") {
+      panel.createEl("p", {
+        text: i18n.t("publish.batch.wizard.step3.summary", {
+          successCount: summary.successCount,
+          failureCount: summary.failureCount
+        })
+      });
+    }
+    const resultList = panel.createDiv();
+    for (const row of executionState.results) {
+      const resultItem = resultList.createDiv({ cls: "ultimate-publisher-batch-result-item" });
+      resultItem.createEl("strong", { text: row.targetName });
+      resultItem.createEl("p", {
+        text: `${i18n.t(`publish.shared.summary.action.${row.action}`)} \xB7 ${i18n.t(
+          `publish.batch.wizard.status.${this.toStatusMessageKey(row.status)}`
+        )}`
+      });
+      if (typeof row.durationMs === "number") {
+        resultItem.createEl("p", { text: `${row.durationMs} ms` });
+      }
+      if (row.remoteUrl) {
+        resultItem.createEl("p", { text: row.remoteUrl });
+      }
+      if (row.errorMessage) {
+        resultItem.createEl("p", {
+          cls: "mod-warning",
+          text: row.errorMessage
+        });
+      }
+    }
+    const actions = panel.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    if (executionState.status === "running") {
+      const backgroundButton = actions.createEl("button", {
+        text: i18n.t("publish.batch.wizard.step3.action.background")
+      });
+      backgroundButton.addEventListener("click", () => {
+        this.markBackgroundRun();
+      });
+    }
+    const closeButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step3.action.close")
+    });
+    closeButton.disabled = executionState.status === "running";
+    closeButton.addEventListener("click", () => {
+      this.close();
+    });
+  }
+  buildExecutionRows(targets) {
+    return targets.map((target) => ({
+      targetId: target.id,
+      targetName: target.name,
+      action: "publish",
+      status: "waiting"
+    }));
+  }
+  getExecutionSummary() {
+    const rows = this.wizardState?.executionState.results ?? [];
+    const successCount = rows.filter((row) => row.status === "success").length;
+    const failureCount = rows.filter((row) => row.status === "failure").length;
+    return {
+      totalCount: rows.length,
+      successCount,
+      failureCount
+    };
+  }
+  toStatusMessageKey(status) {
+    switch (status) {
+      case "running":
+        return "publishing";
+      case "failure":
+        return "failed";
+      default:
+        return status;
+    }
+  }
+  buildBatchRunOptions(selectedTargets) {
+    const contextByTargetId = Object.fromEntries(
+      selectedTargets.map((target) => [target.id, buildBatchPublishExecutionContext(this.wizardState, target.id)])
+    );
+    return {
+      contextByTargetId,
+      onProgress: async (event) => {
+        this.updateExecutionRow(event);
+        this.requestRender();
+      }
+    };
+  }
+  updateExecutionResults(results) {
+    if (!this.wizardState) {
+      return;
+    }
+    const resultMap = new Map(results.map((result) => [result.targetId, result]));
+    this.wizardState = {
+      ...this.wizardState,
+      executionState: {
+        ...this.wizardState.executionState,
+        currentIndex: results.length,
+        results: this.wizardState.executionState.results.map((row) => {
+          const result = resultMap.get(row.targetId);
+          if (!result) {
+            return row;
+          }
+          return {
+            ...row,
+            action: result.action,
+            status: result.status,
+            durationMs: result.durationMs,
+            remoteUrl: result.remoteUrl,
+            errorMessage: result.error?.message
+          };
+        })
+      }
+    };
+  }
+  updateExecutionRow(event) {
+    if (!this.wizardState) {
+      return;
+    }
+    const nextStatus = event.status === "running" ? "running" : event.status === "success" ? "success" : "failure";
+    this.wizardState = {
+      ...this.wizardState,
+      executionState: {
+        ...this.wizardState.executionState,
+        currentIndex: event.currentIndex,
+        results: this.wizardState.executionState.results.map((row) => {
+          if (row.targetId !== event.targetId) {
+            return row;
+          }
+          return {
+            ...row,
+            targetName: event.targetName,
+            action: event.action,
+            status: nextStatus,
+            durationMs: event.durationMs ?? row.durationMs,
+            remoteUrl: event.remoteUrl ?? row.remoteUrl,
+            errorMessage: event.error?.message
+          };
+        })
+      }
+    };
+  }
+  markBackgroundRun() {
+    if (!this.wizardState) {
+      return;
+    }
+    this.wizardState = {
+      ...this.wizardState,
+      executionState: {
+        ...this.wizardState.executionState,
+        runningInBackground: true
+      }
+    };
+    this.close();
+  }
+  requestRender() {
+    if (this.isModalVisible) {
+      void this.render();
+    }
+  }
+  async startBatchPublish() {
+    const i18n = createI18nFromObsidianLanguage();
+    if (!this.wizardState) {
+      return;
+    }
+    const selectedTargets = this.getSelectedTargets();
+    if (selectedTargets.length === 0) {
+      new import_obsidian13.Notice(i18n.t("notice.batch.selectOne"), 6e3);
+      return;
+    }
+    const validationErrors = selectedTargets.reduce((acc, target) => {
+      acc[target.id] = validateTargetDraft(this.wizardState.targetDrafts[target.id]);
+      return acc;
+    }, {});
+    const hasValidationError = Object.values(validationErrors).some((value) => value !== null);
+    this.wizardState = {
+      ...this.wizardState,
+      step: hasValidationError ? 2 : 3,
+      validationErrors: {
+        ...this.wizardState.validationErrors,
+        ...validationErrors
+      },
+      executionState: hasValidationError ? this.wizardState.executionState : {
+        status: "running",
+        currentIndex: 0,
+        runningInBackground: false,
+        results: this.buildExecutionRows(selectedTargets)
+      }
+    };
+    this.requestRender();
+    if (hasValidationError) {
+      new import_obsidian13.Notice(i18n.t("notice.batch.invalidDraft"), 8e3);
+      return;
+    }
+    this.isPublishing = true;
+    this.fatalErrorMessage = null;
+    this.requestRender();
+    try {
+      const result = await this.workflow.runBatch(
+        this.file,
+        selectedTargets,
+        this.plugin.settings,
+        this.buildBatchRunOptions(selectedTargets)
+      );
+      this.plugin.settings = result.settings;
+      await this.plugin.saveSettings();
+      this.updateExecutionResults(result.results);
+      if (this.wizardState) {
+        this.wizardState = {
+          ...this.wizardState,
+          step: 3,
+          executionState: {
+            ...this.wizardState.executionState,
+            status: "completed",
+            currentIndex: result.totalCount
+          }
+        };
+      }
+      new import_obsidian13.Notice(
+        i18n.t("notice.batch.finished", {
+          successCount: result.successCount,
+          failureCount: result.failureCount
+        }),
+        6e3
+      );
+    } catch (error) {
+      this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
+      if (this.wizardState) {
+        this.wizardState = {
+          ...this.wizardState,
+          step: 3,
+          executionState: {
+            ...this.wizardState.executionState,
+            status: "completed"
+          }
+        };
+      }
+      new import_obsidian13.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
+    } finally {
+      this.isPublishing = false;
+      this.requestRender();
+    }
+  }
+  async render() {
+    if (!this.isModalVisible) {
+      return;
+    }
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("ultimate-publisher-batch-modal");
+    const i18n = createI18nFromObsidianLanguage();
+    this.renderStepIndicator(contentEl);
+    if (this.isInitializing) {
+      contentEl.createEl("p", {
+        text: i18n.t("publish.normal.loading")
+      });
+      return;
+    }
+    if (this.fatalErrorMessage) {
+      contentEl.createEl("p", {
+        cls: "mod-warning",
+        text: this.fatalErrorMessage
+      });
+    }
+    if (!this.wizardState) {
+      return;
+    }
+    if (this.wizardState.step === 1) {
+      this.renderStep1(contentEl);
+      return;
+    }
+    if (this.wizardState.step === 2) {
+      this.renderStep2(contentEl);
+      return;
+    }
+    this.renderStep3(contentEl);
+  }
+};
+
+// src/ui/modals/NormalPublishModal.ts
+var import_obsidian14 = require("obsidian");
+
+// src/ui/publishSummary.ts
+var DEFAULT_DASHBOARD_RECORD_LIMIT = 10;
+function parseTimestamp(timestamp) {
+  const parsed = Date.parse(timestamp);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+function compareTimestampsDesc(a, b) {
+  return parseTimestamp(b) - parseTimestamp(a);
+}
+function isAfter(candidate, reference) {
+  return parseTimestamp(candidate) > parseTimestamp(reference);
+}
+function compareTargetsForModalDefaults(a, b) {
+  if (a.enabled === b.enabled) {
+    return a.name.localeCompare(b.name);
+  }
+  return a.enabled ? -1 : 1;
+}
+function mapLatestRecordByTarget(records) {
+  return records.reduce((acc, record) => {
+    const existing = acc.get(record.targetId);
+    if (!existing || isAfter(record.lastPublishedAt, existing.lastPublishedAt)) {
+      acc.set(record.targetId, record);
+    }
+    return acc;
+  }, /* @__PURE__ */ new Map());
+}
+function deriveDashboardSummary(settings, recordLimit = DEFAULT_DASHBOARD_RECORD_LIMIT) {
+  const configuredCount = settings.targets.length;
+  const enabledCount = settings.targets.filter((target) => target.enabled).length;
+  const limit = Math.max(0, recordLimit);
+  const recentRecords = [...settings.records].sort((a, b) => compareTimestampsDesc(a.lastPublishedAt, b.lastPublishedAt)).slice(0, limit);
+  const latestRecords = mapLatestRecordByTarget(settings.records);
+  const targetSummaries = settings.targets.map((target) => ({
+    targetId: target.id,
+    name: target.name,
+    provider: target.provider,
+    enabled: target.enabled,
+    lastPublishedAt: latestRecords.get(target.id)?.lastPublishedAt
+  })).sort((a, b) => a.name.localeCompare(b.name));
+  return {
+    configuredCount,
+    enabledCount,
+    recentRecords,
+    recordLimit: limit,
+    targetSummaries
+  };
+}
+function deriveNoteTargetSummaries(settings, notePath) {
+  const recordsForNote = settings.records.filter((record) => record.notePath === notePath);
+  const latestRecords = mapLatestRecordByTarget(recordsForNote);
+  const summaries = settings.targets.map((target) => {
+    const record = latestRecords.get(target.id);
+    return {
+      targetId: target.id,
+      name: target.name,
+      provider: target.provider,
+      enabled: target.enabled,
+      action: record ? "update" : "publish",
+      lastPublishedAt: record?.lastPublishedAt
+    };
+  });
+  return summaries.sort(compareTargetsForModalDefaults);
 }
 
 // src/ui/modals/NormalPublishModal.ts
