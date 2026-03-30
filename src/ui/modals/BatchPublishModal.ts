@@ -1,9 +1,20 @@
 import { Modal, Notice, TFile } from "obsidian";
+import {
+  buildBatchPublishWizardState,
+  updateBatchCommonDraft,
+  updateBatchTargetDraft,
+} from "../../core/batchPublish/state";
+import { BatchPublishStep, BatchPublishWizardState } from "../../core/batchPublish/types";
+import { extractPublishableNote, PublishableNote } from "../../core/note";
+import { ensureRemoteOptionsLoaded } from "../../core/normalPublish/remoteOptions";
+import { NormalPublishSessionState, ProviderPublishDraft } from "../../core/normalPublish/types";
 import { BatchPublishTargetResult, PublishWorkflow } from "../../core/publishWorkflow";
 import { createI18nFromObsidianLanguage } from "../../i18n";
 import UltimatePublisherPlugin from "../../plugin";
+import { ProviderRegistry } from "../../providers/registry";
 import { PublishTargetConfig } from "../../types";
-import { NoteTargetSummary, deriveNoteTargetSummaries, summarizeBatchSelection } from "../publishSummary";
+import { renderStringListInput, renderTextArea, renderTextInput } from "../normalPublish/formControls";
+import { renderTargetForm } from "../normalPublish/renderTargetForm";
 
 interface AppSettingsController {
   open(): void;
@@ -14,10 +25,7 @@ interface AppWithSettings {
   setting?: AppSettingsController;
 }
 
-interface NoteSnapshot {
-  basename: string;
-  path: string;
-}
+type NoteLoader = (app: typeof Modal.prototype.app, file: TFile) => Promise<PublishableNote>;
 
 interface BatchRunSummary {
   totalCount: number;
@@ -26,9 +34,10 @@ interface BatchRunSummary {
 }
 
 export class BatchPublishModal extends Modal {
-  private readonly selectedTargetIds = new Set<string>();
-  private noteSnapshot: NoteSnapshot | null = null;
-  private enabledSummaries: NoteTargetSummary[] = [];
+  private wizardState: BatchPublishWizardState | null = null;
+  private note: PublishableNote | null = null;
+  private isInitializing = false;
+  private isModalVisible = false;
   private isPublishing = false;
   private fatalErrorMessage: string | null = null;
   private results: BatchPublishTargetResult[] = [];
@@ -37,27 +46,35 @@ export class BatchPublishModal extends Modal {
   constructor(
     private readonly plugin: UltimatePublisherPlugin,
     private readonly file: TFile,
-    private readonly workflow: PublishWorkflow
+    private readonly workflow: PublishWorkflow,
+    private readonly providerRegistry: ProviderRegistry = new ProviderRegistry(plugin.app),
+    private readonly noteLoader: NoteLoader = extractPublishableNote
   ) {
     super(plugin.app);
   }
 
   async onOpen(): Promise<void> {
-    this.noteSnapshot = {
-      basename: this.file.basename,
-      path: this.file.path,
-    };
-    this.enabledSummaries = deriveNoteTargetSummaries(this.plugin.settings, this.file.path).filter((item) => item.enabled);
+    this.isModalVisible = true;
+    this.isInitializing = true;
+    this.fatalErrorMessage = null;
+    await this.render();
 
-    this.selectedTargetIds.clear();
-    for (const summary of this.enabledSummaries) {
-      this.selectedTargetIds.add(summary.targetId);
+    try {
+      this.note = await this.noteLoader(this.app, this.file);
+      this.wizardState = buildBatchPublishWizardState(this.note, this.plugin.settings.targets);
+    } catch (error) {
+      this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
+      this.note = null;
+      this.wizardState = null;
+    } finally {
+      this.isInitializing = false;
     }
 
     await this.render();
   }
 
   onClose(): void {
+    this.isModalVisible = false;
     this.contentEl.empty();
   }
 
@@ -67,66 +84,290 @@ export class BatchPublishModal extends Modal {
     appWithSettings.setting?.openTabById(this.plugin.manifest.id);
   }
 
+  private getEnabledTargets(): PublishTargetConfig[] {
+    return this.plugin.settings.targets.filter((target) => target.enabled);
+  }
+
+  private getTargetById(targetId: string): PublishTargetConfig | undefined {
+    return this.plugin.settings.targets.find((target) => target.id === targetId);
+  }
+
   private getSelectedTargets(): PublishTargetConfig[] {
-    return this.plugin.settings.targets.filter(
-      (target) => target.enabled && this.selectedTargetIds.has(target.id)
-    );
+    if (!this.wizardState) {
+      return [];
+    }
+
+    return this.getEnabledTargets().filter((target) => this.wizardState?.selectedTargetIds.has(target.id));
   }
 
   private toggleTargetSelection(targetId: string, checked: boolean): void {
-    if (checked) {
-      this.selectedTargetIds.add(targetId);
+    if (!this.wizardState) {
       return;
     }
-    this.selectedTargetIds.delete(targetId);
+
+    const selectedTargetIds = new Set(this.wizardState.selectedTargetIds);
+    if (checked) {
+      selectedTargetIds.add(targetId);
+    } else {
+      selectedTargetIds.delete(targetId);
+    }
+
+    this.wizardState = {
+      ...this.wizardState,
+      selectedTargetIds,
+    };
   }
 
-  private renderResultSection(container: HTMLElement): void {
-    const i18n = createI18nFromObsidianLanguage();
-    if (this.results.length === 0) {
+  private updateCommonField(field: "title" | "tags" | "excerpt", value: string | string[]): void {
+    if (!this.wizardState) {
       return;
     }
 
-    container.createEl("h3", { text: i18n.t("publish.batch.results.title") });
+    this.wizardState = updateBatchCommonDraft(this.wizardState, field, value as never);
+  }
 
-    const summary = this.lastRunSummary ?? {
-      totalCount: this.results.length,
-      successCount: this.results.filter((item) => item.status === "success").length,
-      failureCount: this.results.filter((item) => item.status === "failure").length,
+  private updateTargetField(targetId: string, update: (draft: ProviderPublishDraft) => ProviderPublishDraft): void {
+    if (!this.wizardState) {
+      return;
+    }
+
+    this.wizardState = updateBatchTargetDraft(this.wizardState, targetId, update);
+  }
+
+  private async ensureRemoteOptionsLoadedForTarget(target: PublishTargetConfig): Promise<void> {
+    if (!this.wizardState) {
+      return;
+    }
+
+    const current = this.wizardState.remoteOptions[target.id];
+    if (!current || current.status === "loaded" || current.status === "error" || current.status === "loading") {
+      return;
+    }
+
+    this.wizardState = {
+      ...this.wizardState,
+      remoteOptions: {
+        ...this.wizardState.remoteOptions,
+        [target.id]: {
+          ...current,
+          status: "loading",
+          errorMessage: undefined,
+        },
+      },
     };
+    await this.render();
+
+    const sessionState: NormalPublishSessionState = {
+      selectedTargetId: target.id,
+      commonDraft: {
+        title: this.wizardState.commonDraft.title,
+      },
+      targetDrafts: this.wizardState.targetDrafts,
+      remoteOptions: this.wizardState.remoteOptions,
+      lastErrorByTargetId: {},
+    };
+    const nextState = await ensureRemoteOptionsLoaded(sessionState, target, this.providerRegistry);
+
+    if (!this.wizardState) {
+      return;
+    }
+
+    this.wizardState = {
+      ...this.wizardState,
+      remoteOptions: {
+        ...this.wizardState.remoteOptions,
+        [target.id]: nextState.remoteOptions[target.id],
+      },
+    };
+  }
+
+  private async goToStep(step: BatchPublishStep): Promise<void> {
+    if (!this.wizardState) {
+      return;
+    }
+
+    if (step === 2 && this.wizardState.selectedTargetIds.size === 0) {
+      await this.render();
+      return;
+    }
+
+    this.wizardState = {
+      ...this.wizardState,
+      step,
+    };
+    await this.render();
+
+    if (step !== 2) {
+      return;
+    }
+
+    for (const target of this.getSelectedTargets()) {
+      await this.ensureRemoteOptionsLoadedForTarget(target);
+    }
+
+    await this.render();
+  }
+
+  private renderStepIndicator(container: HTMLElement): void {
+    if (!this.wizardState) {
+      return;
+    }
+
+    const i18n = createI18nFromObsidianLanguage();
+    const progressLabel = i18n.locale === "zh-CN" ? `步骤 ${this.wizardState.step}/3` : `Step ${this.wizardState.step}/3`;
+    container.createEl("h2", {
+      text: `${i18n.t("publish.batch.title")} - ${progressLabel}`,
+    });
+
+    if (this.note) {
+      const noteRow = container.createDiv();
+      noteRow.createEl("strong", { text: `${i18n.t("publish.shared.note")}: ` });
+      noteRow.createSpan({ text: this.file.basename });
+    }
+  }
+
+  private renderStep1(container: HTMLElement): void {
+    if (!this.wizardState) {
+      return;
+    }
+
+    const i18n = createI18nFromObsidianLanguage();
+    const enabledTargets = this.getEnabledTargets();
+
+    container.createEl("h3", { text: i18n.t("publish.batch.wizard.step1.title") });
+    container.createEl("p", {
+      text: i18n.t("publish.batch.wizard.step1.selectTargets"),
+    });
+
+    if (enabledTargets.length === 0) {
+      container.createEl("p", {
+        cls: "ultimate-publisher-empty-state",
+        text: i18n.t("publish.shared.empty.noEnabledTargets"),
+      });
+      const settingsButton = container.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+      settingsButton.addEventListener("click", () => {
+        this.openPublishSettings();
+      });
+      return;
+    }
+
+    const targetList = container.createDiv();
+    for (const target of enabledTargets) {
+      const row = targetList.createEl("label");
+      row.style.display = "block";
+      row.style.margin = "6px 0";
+
+      const input = row.createEl("input", { type: "checkbox" });
+      input.name = `batch-publish-target-${target.id}`;
+      input.checked = this.wizardState.selectedTargetIds.has(target.id);
+      input.disabled = this.isPublishing;
+      input.addEventListener("change", () => {
+        this.toggleTargetSelection(target.id, input.checked);
+        void this.render();
+      });
+
+      row.appendText(` ${target.name}`);
+    }
 
     container.createEl("p", {
-      text: i18n.t("publish.batch.results.summary", {
-        totalCount: summary.totalCount,
-        successCount: summary.successCount,
-        failureCount: summary.failureCount,
+      text: i18n.t("publish.batch.wizard.step1.selectedCount", {
+        selectedCount: this.wizardState.selectedTargetIds.size,
       }),
     });
 
-    const list = container.createEl("ul");
-    for (const result of this.results) {
-      const item = list.createEl("li");
-      const actionLabel = i18n.t(`publish.shared.summary.action.${result.action}`);
-      if (result.status === "success") {
-        const remoteDetail = result.remoteUrl ? ` (${result.remoteUrl})` : "";
-        item.setText(
-          i18n.t("publish.batch.results.item.success", {
-            targetName: result.targetName,
-            action: actionLabel,
-            remoteDetail,
-          })
-        );
-        continue;
-      }
-      const failure = result.error?.message ?? i18n.t("publish.batch.results.unknownError");
-      item.setText(
-        i18n.t("publish.batch.results.item.failed", {
-          targetName: result.targetName,
-          action: actionLabel,
-          error: failure,
-        })
-      );
+    const actions = container.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const nextButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step1.action.next"),
+    });
+    nextButton.toggleClass("mod-cta", true);
+    nextButton.disabled = this.isPublishing || this.wizardState.selectedTargetIds.size === 0;
+    nextButton.addEventListener("click", () => {
+      void this.goToStep(2);
+    });
+
+    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+    settingsButton.disabled = this.isPublishing;
+    settingsButton.addEventListener("click", () => {
+      this.openPublishSettings();
+    });
+  }
+
+  private renderStep2(container: HTMLElement): void {
+    if (!this.wizardState) {
+      return;
     }
+
+    const i18n = createI18nFromObsidianLanguage();
+    const selectedTargets = this.getSelectedTargets();
+
+    container.createEl("h3", { text: i18n.t("publish.batch.wizard.step2.title") });
+
+    const commonSection = container.createDiv();
+    commonSection.createEl("h4", { text: i18n.t("publish.batch.wizard.step2.commonFields") });
+
+    renderTextInput(commonSection, {
+      label: i18n.t("publish.normal.field.title"),
+      name: "batch-publish-common-title",
+      value: this.wizardState.commonDraft.title,
+      onInput: (value) => {
+        this.updateCommonField("title", value);
+      },
+    });
+    renderStringListInput(commonSection, {
+      label: i18n.t("publish.normal.field.tags"),
+      name: "batch-publish-common-tags",
+      value: this.wizardState.commonDraft.tags,
+      onInput: (value) => {
+        this.updateCommonField("tags", value);
+      },
+    });
+    renderTextArea(commonSection, {
+      label: i18n.t("publish.normal.field.excerpt"),
+      name: "batch-publish-common-excerpt",
+      value: this.wizardState.commonDraft.excerpt,
+      onInput: (value) => {
+        this.updateCommonField("excerpt", value);
+      },
+    });
+
+    const targetSection = container.createDiv();
+    targetSection.createEl("h4", { text: i18n.t("publish.batch.wizard.step2.targetFields") });
+
+    for (const target of selectedTargets) {
+      const card = targetSection.createDiv();
+      card.createEl("h5", { text: target.name });
+
+      renderTargetForm({
+        container: card,
+        draft: this.wizardState.targetDrafts[target.id],
+        remoteOptions: this.wizardState.remoteOptions[target.id],
+        i18n,
+        hiddenFields: target.provider === "wordpress" || target.provider === "csdn" ? ["excerpt", "tags"] : undefined,
+        fieldNamePrefix: `batch-${target.id}`,
+        onChange: (update) => {
+          this.updateTargetField(target.id, update);
+        },
+      });
+    }
+
+    const actions = container.createDiv({ cls: "ultimate-publisher-setting-actions" });
+
+    const prevButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step2.action.prev"),
+    });
+    prevButton.disabled = this.isPublishing;
+    prevButton.addEventListener("click", () => {
+      void this.goToStep(1);
+    });
+
+    const publishButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step2.action.publish"),
+    });
+    publishButton.toggleClass("mod-cta", true);
+    publishButton.disabled = this.isPublishing || selectedTargets.length === 0;
+    publishButton.addEventListener("click", () => {
+      void this.handleBatchPublish();
+    });
   }
 
   private async handleBatchPublish(): Promise<void> {
@@ -172,101 +413,39 @@ export class BatchPublishModal extends Modal {
   }
 
   private async render(): Promise<void> {
+    if (!this.isModalVisible) {
+      return;
+    }
+
     const { contentEl } = this;
     contentEl.empty();
     const i18n = createI18nFromObsidianLanguage();
 
-    contentEl.createEl("h2", { text: i18n.t("publish.batch.title") });
+    this.renderStepIndicator(contentEl);
 
-    if (this.noteSnapshot) {
-      const noteInfo = contentEl.createDiv();
-      noteInfo.createEl("strong", { text: `${i18n.t("publish.shared.note")}: ` });
-      noteInfo.createSpan({ text: this.noteSnapshot.basename });
-      noteInfo.createEl("br");
-      noteInfo.createEl("strong", { text: `${i18n.t("publish.shared.path")}: ` });
-      noteInfo.createSpan({ text: this.noteSnapshot.path });
-    }
-
-    if (this.enabledSummaries.length === 0) {
+    if (this.isInitializing) {
       contentEl.createEl("p", {
-        cls: "ultimate-publisher-empty-state",
-        text: i18n.t("publish.shared.empty.noEnabledTargets"),
-      });
-      const settingsButton = contentEl.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
-      settingsButton.addEventListener("click", () => {
-        this.openPublishSettings();
+        text: i18n.t("publish.normal.loading"),
       });
       return;
-    }
-
-    const targetSection = contentEl.createDiv();
-    targetSection.createEl("h3", { text: i18n.t("publish.shared.targets") });
-
-    for (const summary of this.enabledSummaries) {
-      const row = targetSection.createEl("label");
-      row.style.display = "block";
-      row.style.margin = "6px 0";
-
-      const input = row.createEl("input", { type: "checkbox" });
-      input.checked = this.selectedTargetIds.has(summary.targetId);
-      input.disabled = this.isPublishing;
-      input.addEventListener("change", () => {
-        this.toggleTargetSelection(summary.targetId, input.checked);
-        void this.render();
-      });
-
-      const actionLabel =
-        summary.action === "update"
-          ? i18n.t("publish.shared.summary.updateExistingPost")
-          : i18n.t("publish.shared.summary.publishNewPost");
-      row.appendText(` ${summary.name} (${summary.provider}) - ${actionLabel}`);
-    }
-
-    const selectionSummary = summarizeBatchSelection(
-      this.enabledSummaries.map((item) => ({
-        targetId: item.targetId,
-        action: item.action,
-        enabled: item.enabled,
-      })),
-      Array.from(this.selectedTargetIds)
-    );
-
-    contentEl.createEl("p", {
-      text: i18n.t("publish.batch.summary.selected", {
-        selectedCount: selectionSummary.selectedCount,
-        publishCount: selectionSummary.publishCount,
-        updateCount: selectionSummary.updateCount,
-      }),
-    });
-
-    if (this.isPublishing) {
-      contentEl.createEl("p", {
-        text: i18n.t("publish.batch.running"),
-      });
     }
 
     if (this.fatalErrorMessage) {
       contentEl.createEl("p", {
         cls: "mod-warning",
-        text: i18n.t("publish.batch.error.fatal", { error: this.fatalErrorMessage }),
+        text: this.fatalErrorMessage,
       });
     }
 
-    this.renderResultSection(contentEl);
+    if (!this.wizardState) {
+      return;
+    }
 
-    const actions = contentEl.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    if (this.wizardState.step === 1) {
+      this.renderStep1(contentEl);
+      return;
+    }
 
-    const runButton = actions.createEl("button", { text: i18n.t("publish.batch.button.run") });
-    runButton.toggleClass("mod-cta", true);
-    runButton.disabled = this.isPublishing || this.selectedTargetIds.size === 0;
-    runButton.addEventListener("click", () => {
-      void this.handleBatchPublish();
-    });
-
-    const settingsButton = actions.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
-    settingsButton.disabled = this.isPublishing;
-    settingsButton.addEventListener("click", () => {
-      this.openPublishSettings();
-    });
+    this.renderStep2(contentEl);
   }
 }
