@@ -3,6 +3,19 @@ import { PublishTargetConfig, WordpressStatus } from "../../types";
 
 export type LoadStatus = "idle" | "loading" | "loaded" | "error";
 
+export type NormalPublishFieldKey =
+  | "slug"
+  | "excerpt"
+  | "tags"
+  | "categories"
+  | "status"
+  | "password"
+  | "publicLevel"
+  | "columnId"
+  | "categoryId"
+  | "tagIds"
+  | "briefContent";
+
 export interface CommonPublishDraft {
   title: string;
 }

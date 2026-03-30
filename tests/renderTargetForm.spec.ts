@@ -28,6 +28,13 @@ function findAllByClass(root: FakeElement, className: string): FakeElement[] {
   return walk(root).filter((element) => element.className.split(/\s+/).includes(className));
 }
 
+function listInputNames(root: FakeElement): string[] {
+  return walk(root)
+    .filter((element) => element.tagName === "input")
+    .map((element) => element.name)
+    .filter((name): name is string => typeof name === "string" && name.length > 0);
+}
+
 describe("renderTargetForm", () => {
   it("opens the wordpress category dropdown from the input and syncs checked remote categories", () => {
     const container = new FakeElement("div");
@@ -190,5 +197,53 @@ describe("renderTargetForm", () => {
     expect(alias.textContent).toBe("ai");
     expect(inlineText.children.map((child) => child.textContent)).toEqual(["人工智能", "ai"]);
     expect(helperLines).toHaveLength(0);
+  });
+
+  it("hides shared fields and prefixes input names for batch cards", () => {
+    const container = new FakeElement("div");
+    const draft: WordpressPublishDraft = {
+      provider: "wordpress",
+      slug: "post",
+      excerpt: "Excerpt",
+      tags: ["tag-a"],
+      categories: ["cat-a"],
+      status: "draft",
+      password: "",
+    };
+
+    renderTargetForm({
+      container,
+      draft,
+      remoteOptions: undefined,
+      i18n: createI18n("en"),
+      hiddenFields: ["excerpt", "tags"],
+      fieldNamePrefix: "batch-wp",
+      onChange: () => {},
+    });
+
+    const inputNames = listInputNames(container);
+
+    expect(inputNames).toContain("batch-wp-wordpress-slug");
+    expect(inputNames).toContain("batch-wp-wordpress-categories");
+    expect(inputNames).not.toContain("batch-wp-wordpress-excerpt");
+    expect(inputNames).not.toContain("batch-wp-wordpress-tags");
+  });
+
+  it("keeps the existing normal-publish names by default", () => {
+    const container = new FakeElement("div");
+
+    renderTargetForm({
+      container,
+      draft: {
+        provider: "yuque",
+        slug: "yuque-note",
+        publicLevel: 1,
+      },
+      remoteOptions: undefined,
+      i18n: createI18n("en"),
+      onChange: () => {},
+    });
+
+    expect(findInputByName(container, "normal-publish-yuque-slug")).toBeDefined();
   });
 });
