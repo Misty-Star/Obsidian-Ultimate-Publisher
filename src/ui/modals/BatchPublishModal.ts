@@ -1,14 +1,25 @@
 import { Modal, Notice, TFile } from "obsidian";
 import {
+  buildBatchPublishExecutionContext,
   buildBatchPublishWizardState,
   updateBatchCommonDraft,
   updateBatchTargetDraft,
 } from "../../core/batchPublish/state";
-import { BatchPublishStep, BatchPublishWizardState } from "../../core/batchPublish/types";
+import {
+  BatchPublishExecutionRow,
+  BatchPublishStep,
+  BatchPublishWizardState,
+} from "../../core/batchPublish/types";
+import { validateTargetDraft } from "../../core/normalPublish/validation";
 import { extractPublishableNote, PublishableNote } from "../../core/note";
 import { ensureRemoteOptionsLoaded } from "../../core/normalPublish/remoteOptions";
 import { NormalPublishSessionState, ProviderPublishDraft } from "../../core/normalPublish/types";
-import { BatchPublishTargetResult, PublishWorkflow } from "../../core/publishWorkflow";
+import {
+  BatchPublishProgressEvent,
+  BatchPublishRunOptions,
+  BatchPublishTargetResult,
+  PublishWorkflow,
+} from "../../core/publishWorkflow";
 import { createI18nFromObsidianLanguage } from "../../i18n";
 import UltimatePublisherPlugin from "../../plugin";
 import { ProviderRegistry } from "../../providers/registry";
@@ -27,6 +38,9 @@ interface AppWithSettings {
 
 type NoteLoader = (app: typeof Modal.prototype.app, file: TFile) => Promise<PublishableNote>;
 
+const BATCH_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-batch-modal-frame";
+const BATCH_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-batch-modal-container";
+
 interface BatchRunSummary {
   totalCount: number;
   successCount: number;
@@ -40,8 +54,6 @@ export class BatchPublishModal extends Modal {
   private isModalVisible = false;
   private isPublishing = false;
   private fatalErrorMessage: string | null = null;
-  private results: BatchPublishTargetResult[] = [];
-  private lastRunSummary: BatchRunSummary | null = null;
 
   constructor(
     private readonly plugin: UltimatePublisherPlugin,
@@ -54,6 +66,8 @@ export class BatchPublishModal extends Modal {
   }
 
   async onOpen(): Promise<void> {
+    this.containerEl.addClass(BATCH_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.addClass(BATCH_PUBLISH_MODAL_FRAME_CLASS);
     this.isModalVisible = true;
     this.isInitializing = true;
     this.fatalErrorMessage = null;
@@ -75,6 +89,9 @@ export class BatchPublishModal extends Modal {
 
   onClose(): void {
     this.isModalVisible = false;
+    this.containerEl.removeClass(BATCH_PUBLISH_MODAL_CONTAINER_CLASS);
+    this.modalEl.removeClass(BATCH_PUBLISH_MODAL_FRAME_CLASS);
+    this.contentEl.removeClass("ultimate-publisher-batch-modal");
     this.contentEl.empty();
   }
 
@@ -131,7 +148,13 @@ export class BatchPublishModal extends Modal {
       return;
     }
 
-    this.wizardState = updateBatchTargetDraft(this.wizardState, targetId, update);
+    this.wizardState = {
+      ...updateBatchTargetDraft(this.wizardState, targetId, update),
+      validationErrors: {
+        ...this.wizardState.validationErrors,
+        [targetId]: null,
+      },
+    };
   }
 
   private async ensureRemoteOptionsLoadedForTarget(target: PublishTargetConfig): Promise<void> {
@@ -215,14 +238,29 @@ export class BatchPublishModal extends Modal {
 
     const i18n = createI18nFromObsidianLanguage();
     const progressLabel = i18n.locale === "zh-CN" ? `步骤 ${this.wizardState.step}/3` : `Step ${this.wizardState.step}/3`;
-    container.createEl("h2", {
+    const indicator = container.createDiv({ cls: "ultimate-publisher-batch-step-indicator" });
+    const header = indicator.createDiv();
+    header.createEl("h2", {
       text: `${i18n.t("publish.batch.title")} - ${progressLabel}`,
     });
 
     if (this.note) {
-      const noteRow = container.createDiv();
+      const noteRow = header.createDiv();
       noteRow.createEl("strong", { text: `${i18n.t("publish.shared.note")}: ` });
       noteRow.createSpan({ text: this.file.basename });
+    }
+
+    const steps = [
+      i18n.t("publish.batch.wizard.step1.title"),
+      i18n.t("publish.batch.wizard.step2.title"),
+      i18n.t("publish.batch.wizard.step3.title"),
+    ];
+    const stepList = indicator.createDiv();
+    for (const [index, label] of steps.entries()) {
+      const item = stepList.createDiv();
+      const dot = item.createSpan({ cls: "ultimate-publisher-batch-step-dot" });
+      dot.toggleClass("is-active", this.wizardState.step === index + 1);
+      item.createSpan({ text: label });
     }
   }
 
@@ -234,28 +272,27 @@ export class BatchPublishModal extends Modal {
     const i18n = createI18nFromObsidianLanguage();
     const enabledTargets = this.getEnabledTargets();
 
-    container.createEl("h3", { text: i18n.t("publish.batch.wizard.step1.title") });
-    container.createEl("p", {
+    const panel = container.createDiv({ cls: "ultimate-publisher-batch-panel" });
+    panel.createEl("h3", { text: i18n.t("publish.batch.wizard.step1.title") });
+    panel.createEl("p", {
       text: i18n.t("publish.batch.wizard.step1.selectTargets"),
     });
 
     if (enabledTargets.length === 0) {
-      container.createEl("p", {
+      panel.createEl("p", {
         cls: "ultimate-publisher-empty-state",
         text: i18n.t("publish.shared.empty.noEnabledTargets"),
       });
-      const settingsButton = container.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
+      const settingsButton = panel.createEl("button", { text: i18n.t("publish.shared.action.openSettings") });
       settingsButton.addEventListener("click", () => {
         this.openPublishSettings();
       });
       return;
     }
 
-    const targetList = container.createDiv();
+    const targetList = panel.createDiv();
     for (const target of enabledTargets) {
-      const row = targetList.createEl("label");
-      row.style.display = "block";
-      row.style.margin = "6px 0";
+      const row = targetList.createEl("label", { cls: "ultimate-publisher-batch-target-card" });
 
       const input = row.createEl("input", { type: "checkbox" });
       input.name = `batch-publish-target-${target.id}`;
@@ -269,13 +306,13 @@ export class BatchPublishModal extends Modal {
       row.appendText(` ${target.name}`);
     }
 
-    container.createEl("p", {
+    panel.createEl("p", {
       text: i18n.t("publish.batch.wizard.step1.selectedCount", {
         selectedCount: this.wizardState.selectedTargetIds.size,
       }),
     });
 
-    const actions = container.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const actions = panel.createDiv({ cls: "ultimate-publisher-setting-actions" });
     const nextButton = actions.createEl("button", {
       text: i18n.t("publish.batch.wizard.step1.action.next"),
     });
@@ -300,9 +337,10 @@ export class BatchPublishModal extends Modal {
     const i18n = createI18nFromObsidianLanguage();
     const selectedTargets = this.getSelectedTargets();
 
-    container.createEl("h3", { text: i18n.t("publish.batch.wizard.step2.title") });
+    const panel = container.createDiv({ cls: "ultimate-publisher-batch-panel" });
+    panel.createEl("h3", { text: i18n.t("publish.batch.wizard.step2.title") });
 
-    const commonSection = container.createDiv();
+    const commonSection = panel.createDiv();
     commonSection.createEl("h4", { text: i18n.t("publish.batch.wizard.step2.commonFields") });
 
     renderTextInput(commonSection, {
@@ -330,12 +368,19 @@ export class BatchPublishModal extends Modal {
       },
     });
 
-    const targetSection = container.createDiv();
+    const targetSection = panel.createDiv();
     targetSection.createEl("h4", { text: i18n.t("publish.batch.wizard.step2.targetFields") });
 
     for (const target of selectedTargets) {
-      const card = targetSection.createDiv();
+      const card = targetSection.createDiv({ cls: "ultimate-publisher-batch-target-card" });
       card.createEl("h5", { text: target.name });
+      const validationError = this.wizardState.validationErrors[target.id];
+      if (validationError) {
+        card.createEl("p", {
+          cls: "mod-warning",
+          text: validationError,
+        });
+      }
 
       renderTargetForm({
         container: card,
@@ -350,7 +395,7 @@ export class BatchPublishModal extends Modal {
       });
     }
 
-    const actions = container.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const actions = panel.createDiv({ cls: "ultimate-publisher-setting-actions" });
 
     const prevButton = actions.createEl("button", {
       text: i18n.t("publish.batch.wizard.step2.action.prev"),
@@ -366,49 +411,314 @@ export class BatchPublishModal extends Modal {
     publishButton.toggleClass("mod-cta", true);
     publishButton.disabled = this.isPublishing || selectedTargets.length === 0;
     publishButton.addEventListener("click", () => {
-      void this.handleBatchPublish();
+      void this.startBatchPublish();
     });
   }
 
-  private async handleBatchPublish(): Promise<void> {
+  private renderStep3(container: HTMLElement): void {
+    if (!this.wizardState) {
+      return;
+    }
+
     const i18n = createI18nFromObsidianLanguage();
+    const { executionState } = this.wizardState;
+    const summary = this.getExecutionSummary();
+    const completedCount = executionState.results.filter(
+      (row) => row.status === "success" || row.status === "failure"
+    ).length;
+    const progressPercent = summary.totalCount === 0 ? 0 : Math.round((completedCount / summary.totalCount) * 100);
+
+    const panel = container.createDiv({ cls: "ultimate-publisher-batch-panel" });
+    panel.createEl("h3", { text: i18n.t("publish.batch.wizard.step3.title") });
+    panel.createEl("p", {
+      text:
+        executionState.status === "completed"
+          ? i18n.t("publish.batch.wizard.step3.completed")
+          : i18n.t("publish.batch.wizard.step3.publishing"),
+    });
+
+    const progressBar = panel.createDiv({ cls: "ultimate-publisher-batch-progress-bar" });
+    const progressFill = progressBar.createDiv({ cls: "ultimate-publisher-batch-progress-bar-fill" });
+    progressFill.style.width = `${progressPercent}%`;
+
+    if (executionState.status === "completed") {
+      panel.createEl("p", {
+        text: i18n.t("publish.batch.wizard.step3.summary", {
+          successCount: summary.successCount,
+          failureCount: summary.failureCount,
+        }),
+      });
+    }
+
+    const resultList = panel.createDiv();
+    for (const row of executionState.results) {
+      const resultItem = resultList.createDiv({ cls: "ultimate-publisher-batch-result-item" });
+      resultItem.createEl("strong", { text: row.targetName });
+      resultItem.createEl("p", {
+        text: `${i18n.t(`publish.shared.summary.action.${row.action}`)} · ${i18n.t(
+          `publish.batch.wizard.status.${this.toStatusMessageKey(row.status)}`
+        )}`,
+      });
+
+      if (typeof row.durationMs === "number") {
+        resultItem.createEl("p", { text: `${row.durationMs} ms` });
+      }
+
+      if (row.remoteUrl) {
+        resultItem.createEl("p", { text: row.remoteUrl });
+      }
+
+      if (row.errorMessage) {
+        resultItem.createEl("p", {
+          cls: "mod-warning",
+          text: row.errorMessage,
+        });
+      }
+    }
+
+    const actions = panel.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    if (executionState.status === "running") {
+      const backgroundButton = actions.createEl("button", {
+        text: i18n.t("publish.batch.wizard.step3.action.background"),
+      });
+      backgroundButton.addEventListener("click", () => {
+        this.markBackgroundRun();
+      });
+    }
+
+    const closeButton = actions.createEl("button", {
+      text: i18n.t("publish.batch.wizard.step3.action.close"),
+    });
+    closeButton.disabled = executionState.status === "running";
+    closeButton.addEventListener("click", () => {
+      this.close();
+    });
+  }
+
+  private buildExecutionRows(targets: PublishTargetConfig[]): BatchPublishExecutionRow[] {
+    return targets.map((target) => ({
+      targetId: target.id,
+      targetName: target.name,
+      action: "publish",
+      status: "waiting",
+    }));
+  }
+
+  private getExecutionSummary(): BatchRunSummary {
+    const rows = this.wizardState?.executionState.results ?? [];
+    const successCount = rows.filter((row) => row.status === "success").length;
+    const failureCount = rows.filter((row) => row.status === "failure").length;
+
+    return {
+      totalCount: rows.length,
+      successCount,
+      failureCount,
+    };
+  }
+
+  private toStatusMessageKey(status: BatchPublishExecutionRow["status"]): "waiting" | "publishing" | "success" | "failed" {
+    switch (status) {
+      case "running":
+        return "publishing";
+      case "failure":
+        return "failed";
+      default:
+        return status;
+    }
+  }
+
+  private buildBatchRunOptions(selectedTargets: PublishTargetConfig[]): BatchPublishRunOptions {
+    const contextByTargetId = Object.fromEntries(
+      selectedTargets.map((target) => [target.id, buildBatchPublishExecutionContext(this.wizardState!, target.id)])
+    );
+
+    return {
+      contextByTargetId,
+      onProgress: async (event) => {
+        this.updateExecutionRow(event);
+        this.requestRender();
+      },
+    };
+  }
+
+  private updateExecutionResults(results: BatchPublishTargetResult[]): void {
+    if (!this.wizardState) {
+      return;
+    }
+
+    const resultMap = new Map(results.map((result) => [result.targetId, result]));
+    this.wizardState = {
+      ...this.wizardState,
+      executionState: {
+        ...this.wizardState.executionState,
+        currentIndex: results.length,
+        results: this.wizardState.executionState.results.map((row) => {
+          const result = resultMap.get(row.targetId);
+          if (!result) {
+            return row;
+          }
+
+          return {
+            ...row,
+            action: result.action,
+            status: result.status,
+            durationMs: result.durationMs,
+            remoteUrl: result.remoteUrl,
+            errorMessage: result.error?.message,
+          };
+        }),
+      },
+    };
+  }
+
+  private updateExecutionRow(event: BatchPublishProgressEvent): void {
+    if (!this.wizardState) {
+      return;
+    }
+
+    const nextStatus =
+      event.status === "running"
+        ? "running"
+        : event.status === "success"
+          ? "success"
+          : "failure";
+
+    this.wizardState = {
+      ...this.wizardState,
+      executionState: {
+        ...this.wizardState.executionState,
+        currentIndex: event.currentIndex,
+        results: this.wizardState.executionState.results.map((row) => {
+          if (row.targetId !== event.targetId) {
+            return row;
+          }
+
+          return {
+            ...row,
+            targetName: event.targetName,
+            action: event.action,
+            status: nextStatus,
+            durationMs: event.durationMs ?? row.durationMs,
+            remoteUrl: event.remoteUrl ?? row.remoteUrl,
+            errorMessage: event.error?.message,
+          };
+        }),
+      },
+    };
+  }
+
+  private markBackgroundRun(): void {
+    if (!this.wizardState) {
+      return;
+    }
+
+    this.wizardState = {
+      ...this.wizardState,
+      executionState: {
+        ...this.wizardState.executionState,
+        runningInBackground: true,
+      },
+    };
+    this.close();
+  }
+
+  private requestRender(): void {
+    if (this.isModalVisible) {
+      void this.render();
+    }
+  }
+
+  private async startBatchPublish(): Promise<void> {
+    const i18n = createI18nFromObsidianLanguage();
+    if (!this.wizardState) {
+      return;
+    }
+
     const selectedTargets = this.getSelectedTargets();
     if (selectedTargets.length === 0) {
       new Notice(i18n.t("notice.batch.selectOne"), 6000);
       return;
     }
 
+    const validationErrors = selectedTargets.reduce<Record<string, string | null>>((acc, target) => {
+      acc[target.id] = validateTargetDraft(this.wizardState!.targetDrafts[target.id]);
+      return acc;
+    }, {});
+    const hasValidationError = Object.values(validationErrors).some((value) => value !== null);
+
+    this.wizardState = {
+      ...this.wizardState,
+      step: hasValidationError ? 2 : 3,
+      validationErrors: {
+        ...this.wizardState.validationErrors,
+        ...validationErrors,
+      },
+      executionState: hasValidationError
+        ? this.wizardState.executionState
+        : {
+            status: "running",
+            currentIndex: 0,
+            runningInBackground: false,
+            results: this.buildExecutionRows(selectedTargets),
+          },
+    };
+    this.requestRender();
+
+    if (hasValidationError) {
+      new Notice(i18n.t("notice.batch.invalidDraft"), 8000);
+      return;
+    }
+
     this.isPublishing = true;
     this.fatalErrorMessage = null;
-    this.results = [];
-    this.lastRunSummary = null;
-    await this.render();
+    this.requestRender();
 
     try {
-      const result = await this.workflow.runBatch(this.file, selectedTargets, this.plugin.settings);
+      const result = await this.workflow.runBatch(
+        this.file,
+        selectedTargets,
+        this.plugin.settings,
+        this.buildBatchRunOptions(selectedTargets)
+      );
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
+      this.updateExecutionResults(result.results);
 
-      this.results = result.results;
-      this.lastRunSummary = {
-        totalCount: result.totalCount,
-        successCount: result.successCount,
-        failureCount: result.failureCount,
-      };
+      if (this.wizardState) {
+        this.wizardState = {
+          ...this.wizardState,
+          step: 3,
+          executionState: {
+            ...this.wizardState.executionState,
+            status: "completed",
+            currentIndex: result.totalCount,
+          },
+        };
+      }
 
       new Notice(
         i18n.t("notice.batch.finished", {
-          successCount: this.lastRunSummary.successCount,
-          failureCount: this.lastRunSummary.failureCount,
+          successCount: result.successCount,
+          failureCount: result.failureCount,
         }),
         6000
       );
     } catch (error) {
       this.fatalErrorMessage = error instanceof Error ? error.message : String(error);
+      if (this.wizardState) {
+        this.wizardState = {
+          ...this.wizardState,
+          step: 3,
+          executionState: {
+            ...this.wizardState.executionState,
+            status: "completed",
+          },
+        };
+      }
       new Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8000);
     } finally {
       this.isPublishing = false;
-      await this.render();
+      this.requestRender();
     }
   }
 
@@ -419,6 +729,7 @@ export class BatchPublishModal extends Modal {
 
     const { contentEl } = this;
     contentEl.empty();
+    contentEl.addClass("ultimate-publisher-batch-modal");
     const i18n = createI18nFromObsidianLanguage();
 
     this.renderStepIndicator(contentEl);
@@ -446,6 +757,11 @@ export class BatchPublishModal extends Modal {
       return;
     }
 
-    this.renderStep2(contentEl);
+    if (this.wizardState.step === 2) {
+      this.renderStep2(contentEl);
+      return;
+    }
+
+    this.renderStep3(contentEl);
   }
 }
