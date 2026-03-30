@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { NormalPublishExecutionContext } from "../src/core/normalPublish/types";
-import { PublishWorkflow } from "../src/core/publishWorkflow";
+import { BatchPublishProgressEvent, PublishWorkflow } from "../src/core/publishWorkflow";
 
 describe("PublishWorkflow", () => {
   it("runs a single publish and reports update when a record already exists", async () => {
@@ -140,7 +140,7 @@ describe("PublishWorkflow", () => {
         topics: ["TopicA"],
       },
     };
-    const progressEvents: Array<{ targetId: string; status: string }> = [];
+    const progressEvents: BatchPublishProgressEvent[] = [];
     const publishService = {
       publishFile: vi
         .fn()
@@ -183,11 +183,20 @@ describe("PublishWorkflow", () => {
           zh: zhContext,
         },
         onProgress: async (event) => {
-          progressEvents.push({ targetId: event.targetId, status: event.status });
+          progressEvents.push(event);
         },
       }
     );
 
+    expect(publishService.publishFile).toHaveBeenNthCalledWith(
+      2,
+      file,
+      zhihu,
+      expect.objectContaining({
+        targets: [wp, zhihu],
+      }),
+      zhContext
+    );
     expect(publishService.publishFile).toHaveBeenNthCalledWith(
       1,
       file,
@@ -198,12 +207,96 @@ describe("PublishWorkflow", () => {
       },
       wpContext
     );
+    expect(progressEvents[0]).toMatchObject({
+      targetId: "wp",
+      status: "running",
+      currentIndex: 1,
+      totalCount: 2,
+    });
+    expect(progressEvents[1]).toMatchObject({
+      targetId: "wp",
+      status: "success",
+      durationMs: expect.any(Number),
+    });
+    expect(progressEvents[2]).toMatchObject({
+      targetId: "zh",
+      status: "running",
+      currentIndex: 2,
+      totalCount: 2,
+    });
+    expect(progressEvents[3]).toMatchObject({
+      targetId: "zh",
+      status: "success",
+      durationMs: expect.any(Number),
+    });
     expect(progressEvents).toEqual([
-      { targetId: "wp", status: "running" },
-      { targetId: "wp", status: "success" },
-      { targetId: "zh", status: "running" },
-      { targetId: "zh", status: "success" },
+      expect.objectContaining({ targetId: "wp", status: "running" }),
+      expect.objectContaining({ targetId: "wp", status: "success" }),
+      expect.objectContaining({ targetId: "zh", status: "running" }),
+      expect.objectContaining({ targetId: "zh", status: "success" }),
     ]);
+  });
+
+  it("swallows progress callback errors so batch publishing continues", async () => {
+    const file = { path: "Notes/Post.md", basename: "Post" };
+    const wp = { id: "wp", name: "WordPress", provider: "wordpress", enabled: true };
+    const zhihu = { id: "zh", name: "Zhihu", provider: "zhihu", enabled: true };
+    const onProgress = vi.fn().mockImplementation(() => {
+      throw new Error("progress ui crashed");
+    });
+    const publishService = {
+      publishFile: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("bad target config"))
+        .mockResolvedValueOnce({
+          record: {
+            notePath: "Notes/Post.md",
+            provider: "zhihu",
+            targetId: "zh",
+            remoteId: "zh-1",
+            lastPublishedAt: "2026-03-17T00:00:00.000Z",
+            contentHash: "hash",
+          },
+          created: true,
+        }),
+      updateSettings: vi.fn((settings, nextRecord) => ({ ...settings, records: [...settings.records, nextRecord] })),
+    };
+
+    const workflow = new PublishWorkflow(publishService as never);
+    const result = await workflow.runBatch(
+      file as never,
+      [wp, zhihu] as never,
+      {
+        targets: [wp, zhihu],
+        records: [],
+      } as never,
+      {
+        onProgress,
+      }
+    );
+
+    expect(publishService.publishFile).toHaveBeenCalledTimes(2);
+    expect(onProgress).toHaveBeenCalledTimes(4);
+    expect(result.results.map((item) => [item.targetId, item.status])).toEqual([
+      ["wp", "failure"],
+      ["zh", "success"],
+    ]);
+    expect(onProgress).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        targetId: "wp",
+        status: "failure",
+        durationMs: expect.any(Number),
+      })
+    );
+    expect(onProgress).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({
+        targetId: "zh",
+        status: "success",
+        durationMs: expect.any(Number),
+      })
+    );
   });
 
   it("records failures with duration and still publishes later targets", async () => {

@@ -52,6 +52,17 @@ export interface BatchPublishWorkflowResult {
 export class PublishWorkflow {
   constructor(private readonly publishService: PublishService) {}
 
+  private async emitProgressSafely(
+    options: BatchPublishRunOptions,
+    event: BatchPublishProgressEvent
+  ): Promise<void> {
+    try {
+      await options.onProgress?.(event);
+    } catch {
+      // Swallow progress callback errors so they do not interrupt batch publishing.
+    }
+  }
+
   private resolveAction(file: TFile, target: PublishTargetConfig, settings: UltimatePublisherSettings): PublishAction {
     return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
   }
@@ -86,10 +97,9 @@ export class PublishWorkflow {
     for (const [index, target] of targets.entries()) {
       const action = this.resolveAction(file, target, currentSettings);
       const context = options.contextByTargetId?.[target.id];
-      const startedAt = Date.now();
       const currentIndex = index + 1;
 
-      await options.onProgress?.({
+      await this.emitProgressSafely(options, {
         targetId: target.id,
         targetName: target.name,
         action,
@@ -97,6 +107,7 @@ export class PublishWorkflow {
         currentIndex,
         totalCount,
       });
+      const startedAt = Date.now();
 
       try {
         const singleResult = await this.runSingle(file, target, currentSettings, context);
@@ -112,7 +123,7 @@ export class PublishWorkflow {
           remoteUrl: singleResult.record.remoteUrl,
         });
 
-        await options.onProgress?.({
+        await this.emitProgressSafely(options, {
           targetId: target.id,
           targetName: target.name,
           action: singleResult.action,
@@ -135,7 +146,7 @@ export class PublishWorkflow {
           error: normalizedError,
         });
 
-        await options.onProgress?.({
+        await this.emitProgressSafely(options, {
           targetId: target.id,
           targetName: target.name,
           action,
@@ -153,7 +164,7 @@ export class PublishWorkflow {
 
     return {
       results,
-      totalCount: results.length,
+      totalCount,
       successCount,
       failureCount,
       settings: currentSettings,
