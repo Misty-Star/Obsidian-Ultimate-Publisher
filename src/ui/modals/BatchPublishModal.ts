@@ -47,6 +47,12 @@ interface BatchRunSummary {
   failureCount: number;
 }
 
+const VALIDATION_MESSAGE_KEY_BY_TEXT: Record<string, string> = {
+  "Zhihu publish requires a columnId.": "publish.batch.validation.zhihu.columnIdRequired",
+  "Juejin publish requires a categoryId.": "publish.batch.validation.juejin.categoryIdRequired",
+  "Juejin publish requires at least one tagId.": "publish.batch.validation.juejin.tagIdsRequired",
+};
+
 export class BatchPublishModal extends Modal {
   private wizardState: BatchPublishWizardState | null = null;
   private note: PublishableNote | null = null;
@@ -148,13 +154,20 @@ export class BatchPublishModal extends Modal {
       return;
     }
 
+    const next = updateBatchTargetDraft(this.wizardState, targetId, update);
     this.wizardState = {
-      ...updateBatchTargetDraft(this.wizardState, targetId, update),
+      ...next,
       validationErrors: {
-        ...this.wizardState.validationErrors,
+        ...next.validationErrors,
         [targetId]: null,
       },
     };
+  }
+
+  private getLocalizedValidationError(message: string): string {
+    const i18n = createI18nFromObsidianLanguage();
+    const key = VALIDATION_MESSAGE_KEY_BY_TEXT[message];
+    return key ? i18n.t(key) : message;
   }
 
   private async ensureRemoteOptionsLoadedForTarget(target: PublishTargetConfig): Promise<void> {
@@ -378,7 +391,7 @@ export class BatchPublishModal extends Modal {
       if (validationError) {
         card.createEl("p", {
           cls: "mod-warning",
-          text: validationError,
+          text: this.getLocalizedValidationError(validationError),
         });
       }
 
