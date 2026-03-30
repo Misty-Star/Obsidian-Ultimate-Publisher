@@ -30,7 +30,7 @@ function findAllByClass(root: FakeElement, className: string): FakeElement[] {
 
 function listInputNames(root: FakeElement): string[] {
   return walk(root)
-    .filter((element) => element.tagName === "input")
+    .filter((element) => element.tagName === "input" || element.tagName === "textarea")
     .map((element) => element.name)
     .filter((name): name is string => typeof name === "string" && name.length > 0);
 }
