@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PublishableNote } from "../src/core/note";
+import type { PublishableNote } from "../src/core/note";
 import {
   buildBatchPublishExecutionContext,
   buildBatchPublishWizardState,
