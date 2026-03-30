@@ -6,6 +6,7 @@ import { PublishTargetConfig, UltimatePublisherSettings } from "../types";
 
 export type PublishAction = "publish" | "update";
 export type BatchPublishTargetStatus = "success" | "failure";
+export type BatchPublishProgressStatus = "running" | "success" | "failure";
 
 export interface SinglePublishWorkflowResult {
   action: PublishAction;
@@ -18,8 +19,26 @@ export interface BatchPublishTargetResult {
   targetName: string;
   action: PublishAction;
   status: BatchPublishTargetStatus;
+  durationMs?: number;
   remoteUrl?: string;
   error?: Error;
+}
+
+export interface BatchPublishProgressEvent {
+  targetId: string;
+  targetName: string;
+  action: PublishAction;
+  status: BatchPublishProgressStatus;
+  currentIndex: number;
+  totalCount: number;
+  durationMs?: number;
+  remoteUrl?: string;
+  error?: Error;
+}
+
+export interface BatchPublishRunOptions {
+  contextByTargetId?: Record<string, NormalPublishExecutionContext>;
+  onProgress?: (event: BatchPublishProgressEvent) => void | Promise<void>;
 }
 
 export interface BatchPublishWorkflowResult {
@@ -57,16 +76,31 @@ export class PublishWorkflow {
   async runBatch(
     file: TFile,
     targets: PublishTargetConfig[],
-    settings: UltimatePublisherSettings
+    settings: UltimatePublisherSettings,
+    options: BatchPublishRunOptions = {}
   ): Promise<BatchPublishWorkflowResult> {
     let currentSettings = settings;
     const results: BatchPublishTargetResult[] = [];
+    const totalCount = targets.length;
 
-    for (const target of targets) {
+    for (const [index, target] of targets.entries()) {
       const action = this.resolveAction(file, target, currentSettings);
+      const context = options.contextByTargetId?.[target.id];
+      const startedAt = Date.now();
+      const currentIndex = index + 1;
+
+      await options.onProgress?.({
+        targetId: target.id,
+        targetName: target.name,
+        action,
+        status: "running",
+        currentIndex,
+        totalCount,
+      });
 
       try {
-        const singleResult = await this.runSingle(file, target, currentSettings);
+        const singleResult = await this.runSingle(file, target, currentSettings, context);
+        const durationMs = Date.now() - startedAt;
         currentSettings = singleResult.settings;
 
         results.push({
@@ -74,15 +108,42 @@ export class PublishWorkflow {
           targetName: target.name,
           action: singleResult.action,
           status: "success",
+          durationMs,
+          remoteUrl: singleResult.record.remoteUrl,
+        });
+
+        await options.onProgress?.({
+          targetId: target.id,
+          targetName: target.name,
+          action: singleResult.action,
+          status: "success",
+          currentIndex,
+          totalCount,
+          durationMs,
           remoteUrl: singleResult.record.remoteUrl,
         });
       } catch (error) {
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        const durationMs = Date.now() - startedAt;
+
         results.push({
           targetId: target.id,
           targetName: target.name,
           action,
           status: "failure",
-          error: error instanceof Error ? error : new Error(String(error)),
+          durationMs,
+          error: normalizedError,
+        });
+
+        await options.onProgress?.({
+          targetId: target.id,
+          targetName: target.name,
+          action,
+          status: "failure",
+          currentIndex,
+          totalCount,
+          durationMs,
+          error: normalizedError,
         });
       }
     }

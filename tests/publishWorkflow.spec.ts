@@ -117,4 +117,133 @@ describe("PublishWorkflow", () => {
     expect(result.results.filter((item) => item.status === "success")).toHaveLength(1);
     expect(result.results.filter((item) => item.status === "failure")).toHaveLength(1);
   });
+
+  it("forwards a target-specific execution context and emits ordered progress events", async () => {
+    const file = { path: "Notes/Post.md", basename: "Post" };
+    const wp = { id: "wp", name: "WordPress", provider: "wordpress", enabled: true };
+    const zhihu = { id: "zh", name: "Zhihu", provider: "zhihu", enabled: true };
+    const wpContext: NormalPublishExecutionContext = {
+      common: {
+        title: "WP Title",
+      },
+      provider: {
+        provider: "wordpress",
+        tags: ["TagA"],
+      },
+    };
+    const zhContext: NormalPublishExecutionContext = {
+      common: {
+        title: "ZH Title",
+      },
+      provider: {
+        provider: "zhihu",
+        topics: ["TopicA"],
+      },
+    };
+    const progressEvents: Array<{ targetId: string; status: string }> = [];
+    const publishService = {
+      publishFile: vi
+        .fn()
+        .mockResolvedValueOnce({
+          record: {
+            notePath: "Notes/Post.md",
+            provider: "wordpress",
+            targetId: "wp",
+            remoteId: "wp-1",
+            lastPublishedAt: "2026-03-17T00:00:00.000Z",
+            contentHash: "a",
+          },
+          created: true,
+        })
+        .mockResolvedValueOnce({
+          record: {
+            notePath: "Notes/Post.md",
+            provider: "zhihu",
+            targetId: "zh",
+            remoteId: "zh-1",
+            lastPublishedAt: "2026-03-17T00:00:00.000Z",
+            contentHash: "b",
+          },
+          created: true,
+        }),
+      updateSettings: vi.fn((settings, nextRecord) => ({ ...settings, records: [...settings.records, nextRecord] })),
+    };
+
+    const workflow = new PublishWorkflow(publishService as never);
+    await workflow.runBatch(
+      file as never,
+      [wp, zhihu] as never,
+      {
+        targets: [wp, zhihu],
+        records: [],
+      } as never,
+      {
+        contextByTargetId: {
+          wp: wpContext,
+          zh: zhContext,
+        },
+        onProgress: async (event) => {
+          progressEvents.push({ targetId: event.targetId, status: event.status });
+        },
+      }
+    );
+
+    expect(publishService.publishFile).toHaveBeenNthCalledWith(
+      1,
+      file,
+      wp,
+      {
+        targets: [wp, zhihu],
+        records: [],
+      },
+      wpContext
+    );
+    expect(progressEvents).toEqual([
+      { targetId: "wp", status: "running" },
+      { targetId: "wp", status: "success" },
+      { targetId: "zh", status: "running" },
+      { targetId: "zh", status: "success" },
+    ]);
+  });
+
+  it("records failures with duration and still publishes later targets", async () => {
+    const file = { path: "Notes/Post.md", basename: "Post" };
+    const wp = { id: "wp", name: "WordPress", provider: "wordpress", enabled: true };
+    const zhihu = { id: "zh", name: "Zhihu", provider: "zhihu", enabled: true };
+    const publishService = {
+      publishFile: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("bad target config"))
+        .mockResolvedValueOnce({
+          record: {
+            notePath: "Notes/Post.md",
+            provider: "zhihu",
+            targetId: "zh",
+            remoteId: "zh-1",
+            lastPublishedAt: "2026-03-17T00:00:00.000Z",
+            contentHash: "hash",
+          },
+          created: true,
+        }),
+      updateSettings: vi.fn((settings, nextRecord) => ({ ...settings, records: [...settings.records, nextRecord] })),
+    };
+
+    const workflow = new PublishWorkflow(publishService as never);
+    const result = await workflow.runBatch(file as never, [wp, zhihu] as never, {
+      targets: [wp, zhihu],
+      records: [],
+    } as never);
+
+    expect(result.results[0]).toMatchObject({
+      targetId: "wp",
+      status: "failure",
+      durationMs: expect.any(Number),
+    });
+    expect(result.results[1]).toMatchObject({
+      targetId: "zh",
+      status: "success",
+      durationMs: expect.any(Number),
+    });
+    expect(publishService.publishFile).toHaveBeenCalledTimes(2);
+  });
 });
