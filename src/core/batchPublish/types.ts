@@ -1,11 +1,11 @@
-import { ProviderPublishDraft, ProviderRemoteOptionsState } from "../normalPublish/types";
-import { PublishAction } from "../publishWorkflow";
+import type { ProviderPublishDraft, ProviderRemoteOptionsState } from "../normalPublish/types";
 
 export type BatchPublishStep = 1 | 2 | 3;
 
 export type BatchPublishExecutionStatus = "idle" | "running" | "completed";
 
 export type BatchPublishRowStatus = "waiting" | "running" | "success" | "failure";
+export type BatchPublishAction = "publish" | "update";
 
 export interface BatchPublishCommonDraft {
   title: string;
@@ -16,7 +16,7 @@ export interface BatchPublishCommonDraft {
 export interface BatchPublishExecutionRow {
   targetId: string;
   targetName: string;
-  action: PublishAction;
+  action: BatchPublishAction;
   status: BatchPublishRowStatus;
   remoteUrl?: string;
   durationMs?: number;

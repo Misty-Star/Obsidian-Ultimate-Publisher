@@ -1,8 +1,12 @@
-import { PublishTargetConfig } from "../../types";
-import { PublishableNote } from "../note";
+import type { PublishTargetConfig } from "../../types";
+import type { PublishableNote } from "../note";
 import { buildInitialTargetDraft } from "../normalPublish/drafts";
-import { NormalPublishExecutionContext, ProviderPublishDraft, ProviderRemoteOptionsState } from "../normalPublish/types";
-import { BatchPublishCommonDraft, BatchPublishWizardState } from "./types";
+import type {
+  NormalPublishExecutionContext,
+  ProviderPublishDraft,
+  ProviderRemoteOptionsState,
+} from "../normalPublish/types";
+import type { BatchPublishCommonDraft, BatchPublishWizardState } from "./types";
 
 function cloneStringList(values: string[]): string[] {
   return values.slice();
@@ -16,25 +20,23 @@ function createIdleRemoteOptionsState(): ProviderRemoteOptionsState {
   };
 }
 
-function updateProviderDraftField(
-  draft: ProviderPublishDraft,
-  field: "excerpt" | "tags",
-  value: string | string[]
-): ProviderPublishDraft {
+type ProviderDraftFieldUpdate = { field: "excerpt"; value: string } | { field: "tags"; value: string[] };
+
+function updateProviderDraftField(draft: ProviderPublishDraft, update: ProviderDraftFieldUpdate): ProviderPublishDraft {
   if (draft.provider !== "wordpress" && draft.provider !== "csdn") {
     return draft;
   }
 
-  if (field === "excerpt") {
+  if (update.field === "excerpt") {
     return {
       ...draft,
-      excerpt: value as string,
+      excerpt: update.value,
     };
   }
 
   return {
     ...draft,
-    tags: cloneStringList(value as string[]),
+    tags: cloneStringList(update.value),
   };
 }
 
@@ -81,10 +83,26 @@ export function updateBatchCommonDraft<K extends keyof BatchPublishCommonDraft>(
   field: K,
   value: BatchPublishCommonDraft[K]
 ): BatchPublishWizardState {
-  const commonDraft: BatchPublishCommonDraft = {
-    ...state.commonDraft,
-    [field]: field === "tags" ? cloneStringList(value as string[]) : value,
-  };
+  let commonDraft: BatchPublishCommonDraft;
+  if (field === "tags") {
+    if (!Array.isArray(value)) {
+      throw new Error("Batch publish common draft field 'tags' requires string array value");
+    }
+
+    commonDraft = {
+      ...state.commonDraft,
+      tags: cloneStringList(value),
+    };
+  } else {
+    if (typeof value !== "string") {
+      throw new Error(`Batch publish common draft field '${field}' requires string value`);
+    }
+
+    commonDraft = {
+      ...state.commonDraft,
+      [field]: value,
+    };
+  }
 
   if (field === "title") {
     return {
@@ -95,7 +113,18 @@ export function updateBatchCommonDraft<K extends keyof BatchPublishCommonDraft>(
 
   const targetDrafts: Record<string, ProviderPublishDraft> = {};
   for (const [targetId, draft] of Object.entries(state.targetDrafts)) {
-    targetDrafts[targetId] = updateProviderDraftField(draft, field, value as string | string[]);
+    if (field === "excerpt") {
+      if (typeof value !== "string") {
+        throw new Error("Batch publish common draft field 'excerpt' requires string value");
+      }
+      targetDrafts[targetId] = updateProviderDraftField(draft, { field: "excerpt", value });
+      continue;
+    }
+
+    if (!Array.isArray(value)) {
+      throw new Error("Batch publish common draft field 'tags' requires string array value");
+    }
+    targetDrafts[targetId] = updateProviderDraftField(draft, { field: "tags", value });
   }
 
   return {

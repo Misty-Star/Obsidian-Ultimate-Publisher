@@ -70,6 +70,14 @@ describe("batch publish wizard state", () => {
     ]);
   });
 
+  it("clones common tags to avoid sharing note tag references", () => {
+    const note = createNote();
+    const state = buildBatchPublishWizardState(note, [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }]);
+
+    expect(state.commonDraft.tags).toEqual(note.tags);
+    expect(state.commonDraft.tags).not.toBe(note.tags);
+  });
+
   it("fans out shared excerpt and tags only to providers with same draft fields", () => {
     const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
     const csdn = { ...createCsdnTarget(), id: "csdn", name: "CSDN" };
