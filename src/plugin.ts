@@ -33,7 +33,17 @@ interface MenuPosition {
   x: number;
   y: number;
   width?: number;
+  overlap?: boolean;
+  left?: boolean;
 }
+
+interface HoverMenuParentBridge {
+  cancelClose: () => void;
+  scheduleClose: () => void;
+  notifyHidden: (menu: Menu) => void;
+}
+
+type HoverTimer = ReturnType<typeof setTimeout> | null;
 
 interface RectAnchor {
   getBoundingClientRect(): {
@@ -297,9 +307,92 @@ export default class UltimatePublisherPlugin extends Plugin {
     return file;
   }
 
-  private showPublisherMenu(items: PublisherMenuItem[], position: MenuPosition): void {
+  private showPublisherMenu(
+    items: PublisherMenuItem[],
+    position: MenuPosition,
+    parentBridge?: HoverMenuParentBridge,
+  ): Menu {
+    const HOVER_OPEN_DELAY = 250;
+    const HOVER_CLOSE_DELAY = 300;
+
+    let openTimer: HoverTimer = null;
+    let closeTimer: HoverTimer = null;
+    let activeSubmenu: Menu | null = null;
+    let activeSection: string | null = null;
+
     const menu = new Menu();
     menu.setUseNativeMenu(false);
+    const doc = this.getMenuDocument();
+    const existingMenus = doc ? Array.from(doc.querySelectorAll(".menu")) : [];
+
+    const clearOpenTimer = () => {
+      if (openTimer === null) {
+        return;
+      }
+
+      clearTimeout(openTimer);
+      openTimer = null;
+    };
+
+    const clearCloseTimer = () => {
+      if (closeTimer === null) {
+        return;
+      }
+
+      clearTimeout(closeTimer);
+      closeTimer = null;
+    };
+
+    const closeActiveSubmenu = () => {
+      if (!activeSubmenu) {
+        return;
+      }
+
+      const submenu = activeSubmenu;
+      activeSubmenu = null;
+      activeSection = null;
+      submenu.hide();
+    };
+
+    const scheduleClose = () => {
+      clearCloseTimer();
+      if (!activeSubmenu) {
+        return;
+      }
+
+      closeTimer = setTimeout(() => {
+        closeTimer = null;
+        closeActiveSubmenu();
+      }, HOVER_CLOSE_DELAY);
+    };
+
+    const openSubmenu = (item: PublisherMenuItem, submenuPosition: MenuPosition) => {
+      clearOpenTimer();
+      clearCloseTimer();
+
+      if (!item.children?.length) {
+        return null;
+      }
+
+      if (activeSubmenu && activeSection === item.section) {
+        return activeSubmenu;
+      }
+
+      closeActiveSubmenu();
+      activeSection = item.section;
+      activeSubmenu = this.showPublisherMenu(item.children, submenuPosition, {
+        cancelClose: clearCloseTimer,
+        scheduleClose,
+        notifyHidden: (hiddenMenu) => {
+          if (activeSubmenu === hiddenMenu) {
+            activeSubmenu = null;
+            activeSection = null;
+          }
+        },
+      });
+
+      return activeSubmenu;
+    };
 
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -315,7 +408,15 @@ export default class UltimatePublisherPlugin extends Plugin {
 
         if (item.children?.length) {
           menuItem.onClick((event) => {
-            this.showPublisherMenu(item.children ?? [], this.getChildMenuPosition(event));
+            clearOpenTimer();
+            clearCloseTimer();
+
+            if (activeSubmenu && activeSection === item.section) {
+              closeActiveSubmenu();
+              return;
+            }
+
+            openSubmenu(item, this.getChildMenuPosition(event));
           });
           return;
         }
@@ -324,7 +425,73 @@ export default class UltimatePublisherPlugin extends Plugin {
       });
     }
 
-    menu.showAtPosition(position);
+    if (doc) {
+      menu.showAtPosition(position, doc);
+    } else {
+      menu.showAtPosition(position);
+    }
+
+    menu.onHide(() => {
+      clearOpenTimer();
+      clearCloseTimer();
+      closeActiveSubmenu();
+      parentBridge?.notifyHidden(menu);
+    });
+
+    if (doc) {
+      setTimeout(() => {
+        const menuEl = this.findLatestMenuElement(doc, existingMenus);
+        if (!menuEl) {
+          return;
+        }
+
+        menuEl.addEventListener("mouseenter", () => {
+          clearCloseTimer();
+          parentBridge?.cancelClose();
+        });
+
+        menuEl.addEventListener("mouseleave", () => {
+          if (activeSubmenu) {
+            scheduleClose();
+          }
+          parentBridge?.scheduleClose();
+        });
+
+        items.forEach((item) => {
+          if (!item.children?.length) {
+            return;
+          }
+
+          const menuItemEl = this.findMenuItemElement(menuEl, item);
+          if (!menuItemEl) {
+            return;
+          }
+
+          menuItemEl.addEventListener("mouseenter", () => {
+            clearCloseTimer();
+
+            if (activeSubmenu && activeSection === item.section) {
+              return;
+            }
+
+            clearOpenTimer();
+            openTimer = setTimeout(() => {
+              openTimer = null;
+              openSubmenu(item, this.getSubmenuPositionForElement(menuItemEl));
+            }, HOVER_OPEN_DELAY);
+          });
+
+          menuItemEl.addEventListener("mouseleave", () => {
+            clearOpenTimer();
+            if (activeSubmenu && activeSection === item.section) {
+              scheduleClose();
+            }
+          });
+        });
+      }, 0);
+    }
+
+    return menu;
   }
 
   private getRootMenuPosition(anchorEl: HTMLElement | null): MenuPosition {
@@ -346,12 +513,7 @@ export default class UltimatePublisherPlugin extends Plugin {
       return { x: 0, y: 0 };
     }
 
-    const rect = anchor.getBoundingClientRect();
-    return {
-      x: rect.right,
-      y: rect.top,
-      width: rect.width,
-    };
+    return this.getSubmenuPositionForElement(anchor);
   }
 
   private resolveRectAnchor(value: unknown): RectAnchor | null {
@@ -361,6 +523,73 @@ export default class UltimatePublisherPlugin extends Plugin {
 
     const candidate = value as Partial<RectAnchor>;
     return typeof candidate.getBoundingClientRect === "function" ? (candidate as RectAnchor) : null;
+  }
+
+  private getSubmenuPositionForElement(anchor: RectAnchor): MenuPosition {
+    const rect = anchor.getBoundingClientRect();
+    const parentMenu = this.findContainingMenuElement(anchor);
+    const parentMenuRect = parentMenu?.getBoundingClientRect();
+
+    return {
+      x: parentMenuRect?.left ?? rect.left,
+      y: rect.top,
+      width: parentMenuRect?.width ?? rect.width,
+    };
+  }
+
+  private findContainingMenuElement(value: unknown): RectAnchor | null {
+    let current = this.resolveParentElement(value);
+
+    while (current) {
+      if (this.elementHasClass(current, "menu")) {
+        return this.resolveRectAnchor(current);
+      }
+      current = this.resolveParentElement(current);
+    }
+
+    return null;
+  }
+
+  private resolveParentElement(value: unknown): unknown {
+    if (!value || typeof value !== "object" || !("parentElement" in value)) {
+      return null;
+    }
+
+    return (value as { parentElement?: unknown }).parentElement ?? null;
+  }
+
+  private elementHasClass(value: unknown, className: string): boolean {
+    if (!value || typeof value !== "object" || !("className" in value)) {
+      return false;
+    }
+
+    const currentClassName = (value as { className?: unknown }).className;
+    return typeof currentClassName === "string" && currentClassName.split(/\s+/).includes(className);
+  }
+
+  private getMenuDocument(): Document | null {
+    return typeof document === "undefined" ? null : document;
+  }
+
+  private findLatestMenuElement(doc: Document, existingMenus: Element[]): HTMLElement | null {
+    const currentMenus = Array.from(doc.querySelectorAll(".menu"));
+    return (currentMenus.find((menuEl) => !existingMenus.includes(menuEl)) ??
+      currentMenus[currentMenus.length - 1] ??
+      null) as HTMLElement | null;
+  }
+
+  private findMenuItemElement(menuEl: HTMLElement, item: PublisherMenuItem): HTMLElement | null {
+    const escapedSection = this.escapeAttributeSelectorValue(item.section);
+    const escapedTitle = this.escapeAttributeSelectorValue(item.title);
+
+    return (menuEl.querySelector(`[data-section="${escapedSection}"][aria-label="${escapedTitle}"]`) ??
+      menuEl.querySelector(`[data-section="${escapedSection}"]`) ??
+      menuEl.querySelector(`.menu-item[aria-label="${escapedTitle}"]`) ??
+      null) as HTMLElement | null;
+  }
+
+  private escapeAttributeSelectorValue(value: string): string {
+    return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
 
   private handleMenuItem(item: PublisherMenuItem): void {

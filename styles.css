@@ -730,6 +730,12 @@
   min-height: 28px;
 }
 
+.menu-item[data-section="ultimate-publisher-quick-publish-targets"]:only-child {
+  min-height: 32px;
+  margin-top: 2px;
+  padding-top: 6px;
+}
+
 .menu-item[data-section="ultimate-publisher-quick-publish-empty"] {
   color: var(--text-muted);
   opacity: 0.8;

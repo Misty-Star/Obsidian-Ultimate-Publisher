@@ -9,6 +9,7 @@ type EventHandler = (event?: unknown) => unknown;
 export class FakeElement {
   readonly children: FakeElement[] = [];
   readonly listeners = new Map<string, EventHandler[]>();
+  readonly attributes = new Map<string, string>();
   readonly style: Record<string, string> = {};
   className = "";
   textContent = "";
@@ -19,6 +20,14 @@ export class FakeElement {
   name = "";
   inputEl = this;
   parentElement: FakeElement | null = null;
+  private rect = {
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+  };
 
   constructor(
     readonly tagName = "div",
@@ -80,6 +89,12 @@ export class FakeElement {
     this.textContent += text;
   }
 
+  appendChild(child: FakeElement): FakeElement {
+    child.parentElement = this;
+    this.children.push(child);
+    return child;
+  }
+
   setText(text: string): void {
     this.textContent = text;
   }
@@ -114,6 +129,10 @@ export class FakeElement {
     this.listeners.set(type, handlers);
   }
 
+  removeEventListener(type: string, handler: EventHandler): void {
+    this.listeners.set(type, (this.listeners.get(type) ?? []).filter((candidate) => candidate !== handler));
+  }
+
   dispatchEvent(type: string, event?: unknown): void {
     for (const handler of this.listeners.get(type) ?? []) {
       handler(event);
@@ -123,6 +142,122 @@ export class FakeElement {
   click(): void {
     this.dispatchEvent("click", { currentTarget: this, target: this });
   }
+
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attributes.get(name) ?? null;
+  }
+
+  contains(node: unknown): boolean {
+    if (node === this) {
+      return true;
+    }
+
+    return this.children.some((child) => child.contains(node));
+  }
+
+  querySelector(selector: string): FakeElement | null {
+    return this.querySelectorAll(selector)[0] ?? null;
+  }
+
+  querySelectorAll(selector: string): FakeElement[] {
+    const results: FakeElement[] = [];
+
+    for (const child of this.children) {
+      if (matchesSelector(child, selector)) {
+        results.push(child);
+      }
+      results.push(...child.querySelectorAll(selector));
+    }
+
+    return results;
+  }
+
+  getBoundingClientRect(): {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    width: number;
+    height: number;
+  } {
+    return { ...this.rect };
+  }
+
+  setBoundingClientRect(
+    rect: Partial<{
+      left: number;
+      right: number;
+      top: number;
+      bottom: number;
+      width: number;
+      height: number;
+    }>
+  ): this {
+    this.rect = {
+      ...this.rect,
+      ...rect,
+    };
+
+    if (rect.left !== undefined && rect.width !== undefined) {
+      this.rect.right = rect.left + rect.width;
+    }
+    if (rect.right !== undefined && rect.left !== undefined) {
+      this.rect.width = rect.right - rect.left;
+    }
+    if (rect.top !== undefined && rect.height !== undefined) {
+      this.rect.bottom = rect.top + rect.height;
+    }
+    if (rect.bottom !== undefined && rect.top !== undefined) {
+      this.rect.height = rect.bottom - rect.top;
+    }
+
+    return this;
+  }
+
+  detach(): void {
+    this.remove();
+  }
+
+  remove(): void {
+    if (!this.parentElement) {
+      return;
+    }
+
+    const siblings = this.parentElement.children;
+    const index = siblings.indexOf(this);
+    if (index >= 0) {
+      siblings.splice(index, 1);
+    }
+    this.parentElement = null;
+  }
+}
+
+function matchesSelector(element: FakeElement, selector: string): boolean {
+  const trimmed = selector.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  const classMatches = [...trimmed.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((match) => match[1]);
+  if (classMatches.some((cls) => !element.className.split(/\s+/).includes(cls))) {
+    return false;
+  }
+
+  const attributeMatches = [...trimmed.matchAll(/\[([^=\]]+)="([^"]*)"\]/g)];
+  if (attributeMatches.some(([, name, value]) => element.getAttribute(name) !== value)) {
+    return false;
+  }
+
+  const tagMatch = trimmed.match(/^[a-zA-Z0-9_-]+/);
+  if (tagMatch && element.tagName.toLowerCase() !== tagMatch[0].toLowerCase()) {
+    return false;
+  }
+
+  return true;
 }
 
 export interface App {
@@ -186,8 +321,11 @@ export class Menu extends Component {
   static readonly instances: Menu[] = [];
   readonly items: MenuItem[] = [];
   lastMouseEvent: MouseEvent | null = null;
-  lastPosition: { x: number; y: number; width?: number } | null = null;
+  lastPosition: { x: number; y: number; width?: number; overlap?: boolean; left?: boolean } | null = null;
   useNativeMenu: boolean | null = null;
+  private hideHandlers: Array<() => unknown> = [];
+  private domEl: FakeElement | null = null;
+  private hidden = false;
 
   constructor() {
     super();
@@ -211,9 +349,86 @@ export class Menu extends Component {
     return this;
   }
 
-  showAtPosition(position: { x: number; y: number; width?: number }): this {
+  showAtPosition(
+    position: { x: number; y: number; width?: number; overlap?: boolean; left?: boolean },
+    doc?: Document,
+  ): this {
     this.lastPosition = position;
+    this.hidden = false;
+    this.renderDom(doc);
     return this;
+  }
+
+  hide(): this {
+    if (this.hidden) {
+      return this;
+    }
+
+    this.hidden = true;
+    this.domEl?.remove();
+    this.domEl = null;
+    for (const callback of this.hideHandlers) {
+      callback();
+    }
+    return this;
+  }
+
+  close(): void {
+    this.hide();
+  }
+
+  onHide(callback: () => unknown): void {
+    this.hideHandlers.push(callback);
+  }
+
+  private renderDom(doc?: Document): void {
+    const targetDocument = (doc ?? globalThis.document) as
+      | (Document & {
+          body?: FakeElement;
+          createElement?(tagName: string): FakeElement;
+        })
+      | undefined;
+
+    if (!targetDocument?.body || !targetDocument.createElement) {
+      return;
+    }
+
+    this.domEl?.remove();
+    const menuEl = targetDocument.createElement("div");
+    menuEl.addClass("menu");
+    const horizontalOffset = this.lastPosition?.overlap ? 0 : this.lastPosition?.width ?? 0;
+    const left = this.lastPosition?.left
+      ? (this.lastPosition?.x ?? 0) - horizontalOffset
+      : (this.lastPosition?.x ?? 0) + horizontalOffset;
+    menuEl.setBoundingClientRect({
+      left,
+      top: this.lastPosition?.y ?? 0,
+      width: this.lastPosition?.width ?? 160,
+      height: this.items.length * 28,
+    });
+
+    this.items.forEach((item, index) => {
+      const rowEl = targetDocument.createElement("div");
+      rowEl.addClass("menu-item");
+      rowEl.setAttribute("aria-label", item.title);
+      rowEl.setAttribute("data-section", item.section);
+      rowEl.setBoundingClientRect({
+        left,
+        top: (this.lastPosition?.y ?? 0) + index * 28,
+        width: this.lastPosition?.width ?? 160,
+        height: 28,
+      });
+      rowEl.addEventListener("click", () => {
+        void item.trigger({
+          currentTarget: rowEl,
+          target: rowEl,
+        });
+      });
+      menuEl.appendChild(rowEl);
+    });
+
+    targetDocument.body.appendChild(menuEl);
+    this.domEl = menuEl;
   }
 }
 

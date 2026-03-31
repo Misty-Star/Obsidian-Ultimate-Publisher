@@ -39716,9 +39716,73 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
     }
     return file;
   }
-  showPublisherMenu(items, position) {
+  showPublisherMenu(items, position, parentBridge) {
+    const HOVER_OPEN_DELAY = 250;
+    const HOVER_CLOSE_DELAY = 300;
+    let openTimer = null;
+    let closeTimer = null;
+    let activeSubmenu = null;
+    let activeSection = null;
     const menu = new import_obsidian16.Menu();
     menu.setUseNativeMenu(false);
+    const doc = this.getMenuDocument();
+    const existingMenus = doc ? Array.from(doc.querySelectorAll(".menu")) : [];
+    const clearOpenTimer = () => {
+      if (openTimer === null) {
+        return;
+      }
+      clearTimeout(openTimer);
+      openTimer = null;
+    };
+    const clearCloseTimer = () => {
+      if (closeTimer === null) {
+        return;
+      }
+      clearTimeout(closeTimer);
+      closeTimer = null;
+    };
+    const closeActiveSubmenu = () => {
+      if (!activeSubmenu) {
+        return;
+      }
+      const submenu = activeSubmenu;
+      activeSubmenu = null;
+      activeSection = null;
+      submenu.hide();
+    };
+    const scheduleClose = () => {
+      clearCloseTimer();
+      if (!activeSubmenu) {
+        return;
+      }
+      closeTimer = setTimeout(() => {
+        closeTimer = null;
+        closeActiveSubmenu();
+      }, HOVER_CLOSE_DELAY);
+    };
+    const openSubmenu = (item, submenuPosition) => {
+      clearOpenTimer();
+      clearCloseTimer();
+      if (!item.children?.length) {
+        return null;
+      }
+      if (activeSubmenu && activeSection === item.section) {
+        return activeSubmenu;
+      }
+      closeActiveSubmenu();
+      activeSection = item.section;
+      activeSubmenu = this.showPublisherMenu(item.children, submenuPosition, {
+        cancelClose: clearCloseTimer,
+        scheduleClose,
+        notifyHidden: (hiddenMenu) => {
+          if (activeSubmenu === hiddenMenu) {
+            activeSubmenu = null;
+            activeSection = null;
+          }
+        }
+      });
+      return activeSubmenu;
+    };
     for (const item of items) {
       menu.addItem((menuItem) => {
         menuItem.setTitle(item.title).setIcon(item.icon).setSection(item.section).setDisabled(Boolean(item.disabled));
@@ -39727,14 +39791,75 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
         }
         if (item.children?.length) {
           menuItem.onClick((event) => {
-            this.showPublisherMenu(item.children ?? [], this.getChildMenuPosition(event));
+            clearOpenTimer();
+            clearCloseTimer();
+            if (activeSubmenu && activeSection === item.section) {
+              closeActiveSubmenu();
+              return;
+            }
+            openSubmenu(item, this.getChildMenuPosition(event));
           });
           return;
         }
         menuItem.onClick(() => this.handleMenuItem(item));
       });
     }
-    menu.showAtPosition(position);
+    if (doc) {
+      menu.showAtPosition(position, doc);
+    } else {
+      menu.showAtPosition(position);
+    }
+    menu.onHide(() => {
+      clearOpenTimer();
+      clearCloseTimer();
+      closeActiveSubmenu();
+      parentBridge?.notifyHidden(menu);
+    });
+    if (doc) {
+      setTimeout(() => {
+        const menuEl = this.findLatestMenuElement(doc, existingMenus);
+        if (!menuEl) {
+          return;
+        }
+        menuEl.addEventListener("mouseenter", () => {
+          clearCloseTimer();
+          parentBridge?.cancelClose();
+        });
+        menuEl.addEventListener("mouseleave", () => {
+          if (activeSubmenu) {
+            scheduleClose();
+          }
+          parentBridge?.scheduleClose();
+        });
+        items.forEach((item) => {
+          if (!item.children?.length) {
+            return;
+          }
+          const menuItemEl = this.findMenuItemElement(menuEl, item);
+          if (!menuItemEl) {
+            return;
+          }
+          menuItemEl.addEventListener("mouseenter", () => {
+            clearCloseTimer();
+            if (activeSubmenu && activeSection === item.section) {
+              return;
+            }
+            clearOpenTimer();
+            openTimer = setTimeout(() => {
+              openTimer = null;
+              openSubmenu(item, this.getSubmenuPositionForElement(menuItemEl));
+            }, HOVER_OPEN_DELAY);
+          });
+          menuItemEl.addEventListener("mouseleave", () => {
+            clearOpenTimer();
+            if (activeSubmenu && activeSection === item.section) {
+              scheduleClose();
+            }
+          });
+        });
+      }, 0);
+    }
+    return menu;
   }
   getRootMenuPosition(anchorEl) {
     if (!anchorEl) {
@@ -39752,12 +39877,7 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
     if (!anchor) {
       return { x: 0, y: 0 };
     }
-    const rect = anchor.getBoundingClientRect();
-    return {
-      x: rect.right,
-      y: rect.top,
-      width: rect.width
-    };
+    return this.getSubmenuPositionForElement(anchor);
   }
   resolveRectAnchor(value) {
     if (!value || typeof value !== "object" || !("getBoundingClientRect" in value)) {
@@ -39765,6 +39885,54 @@ var UltimatePublisherPlugin = class extends import_obsidian16.Plugin {
     }
     const candidate = value;
     return typeof candidate.getBoundingClientRect === "function" ? candidate : null;
+  }
+  getSubmenuPositionForElement(anchor) {
+    const rect = anchor.getBoundingClientRect();
+    const parentMenu = this.findContainingMenuElement(anchor);
+    const parentMenuRect = parentMenu?.getBoundingClientRect();
+    return {
+      x: parentMenuRect?.left ?? rect.left,
+      y: rect.top,
+      width: parentMenuRect?.width ?? rect.width
+    };
+  }
+  findContainingMenuElement(value) {
+    let current = this.resolveParentElement(value);
+    while (current) {
+      if (this.elementHasClass(current, "menu")) {
+        return this.resolveRectAnchor(current);
+      }
+      current = this.resolveParentElement(current);
+    }
+    return null;
+  }
+  resolveParentElement(value) {
+    if (!value || typeof value !== "object" || !("parentElement" in value)) {
+      return null;
+    }
+    return value.parentElement ?? null;
+  }
+  elementHasClass(value, className) {
+    if (!value || typeof value !== "object" || !("className" in value)) {
+      return false;
+    }
+    const currentClassName = value.className;
+    return typeof currentClassName === "string" && currentClassName.split(/\s+/).includes(className);
+  }
+  getMenuDocument() {
+    return typeof document === "undefined" ? null : document;
+  }
+  findLatestMenuElement(doc, existingMenus) {
+    const currentMenus = Array.from(doc.querySelectorAll(".menu"));
+    return currentMenus.find((menuEl) => !existingMenus.includes(menuEl)) ?? currentMenus[currentMenus.length - 1] ?? null;
+  }
+  findMenuItemElement(menuEl, item) {
+    const escapedSection = this.escapeAttributeSelectorValue(item.section);
+    const escapedTitle = this.escapeAttributeSelectorValue(item.title);
+    return menuEl.querySelector(`[data-section="${escapedSection}"][aria-label="${escapedTitle}"]`) ?? menuEl.querySelector(`[data-section="${escapedSection}"]`) ?? menuEl.querySelector(`.menu-item[aria-label="${escapedTitle}"]`) ?? null;
+  }
+  escapeAttributeSelectorValue(value) {
+    return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
   handleMenuItem(item) {
     switch (item.key) {
