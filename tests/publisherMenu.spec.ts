@@ -250,14 +250,9 @@ describe("buildPublisherMenuModel", () => {
     await rootMenu.items[0].trigger();
     expect(openDashboard).toHaveBeenCalledTimes(1);
 
-    await rootMenu.items[1].trigger({
-      currentTarget: {
-        getBoundingClientRect: () => ({ left: 120, right: 300, top: 64, bottom: 92, width: 180 }),
-      },
-    });
-    const quickPublishMenu = Menu.instances[1];
-    expect(quickPublishMenu.useNativeMenu).toBe(false);
-    expect(quickPublishMenu.items.map((item) => ({
+    const quickPublishMenu = rootMenu.items[1].submenu;
+    expect(quickPublishMenu).toBeTruthy();
+    expect(quickPublishMenu!.items.map((item) => ({
       title: item.title,
       icon: item.icon,
       section: item.section,
@@ -273,12 +268,7 @@ describe("buildPublisherMenuModel", () => {
         section: "ultimate-publisher-quick-publish-targets",
       },
     ]);
-    expect(quickPublishMenu.lastPosition).toEqual({
-      x: 120,
-      y: 64,
-      width: 180,
-    });
-    await quickPublishMenu.items[0].trigger();
+    await quickPublishMenu!.items[0].trigger();
     expect(runQuickPublish).toHaveBeenCalledWith("wp");
 
     await rootMenu.items[2].trigger();
@@ -314,119 +304,7 @@ describe("buildPublisherMenuModel", () => {
     expect(doc.querySelector('[data-section="ultimate-publisher-quick-publish"]')).toBeTruthy();
   });
 
-  it("opens a submenu after 250ms hover and keeps it open when entering the submenu before the 300ms close delay", () => {
-    vi.useFakeTimers();
-    try {
-      const doc = createDocumentStub();
-      installDocumentStub(doc);
-      const activeFile = new TFile({
-        path: "Notes/Post.md",
-        basename: "Post",
-        extension: "md",
-        name: "Post.md",
-      });
-      const app = createApp(activeFile);
-      const plugin = new UltimatePublisherPlugin(app as never, { id: "ultimate-publisher" } as never);
-      plugin.settings = {
-        targets: [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }],
-        records: [],
-      };
-
-      plugin.openRibbonMenu({
-        getBoundingClientRect: () => ({ left: 8, bottom: 24, width: 16 }),
-      } as never);
-      vi.runOnlyPendingTimers();
-
-      const quickPublishItem = doc.querySelector('[data-section="ultimate-publisher-quick-publish"]');
-      expect(quickPublishItem).toBeTruthy();
-
-      quickPublishItem?.dispatchEvent("mouseenter", {
-        currentTarget: quickPublishItem,
-        target: quickPublishItem,
-      });
-
-      vi.advanceTimersByTime(249);
-      expect(Menu.instances).toHaveLength(1);
-      expect(doc.querySelector('[aria-label="WordPress"]')).toBeNull();
-
-      vi.advanceTimersByTime(1);
-      vi.runOnlyPendingTimers();
-      expect(Menu.instances).toHaveLength(2);
-      expect(doc.querySelector('[aria-label="WordPress"]')).toBeTruthy();
-
-      quickPublishItem?.dispatchEvent("mouseleave", {
-        currentTarget: quickPublishItem,
-        target: quickPublishItem,
-      });
-
-      vi.advanceTimersByTime(299);
-      expect(doc.querySelectorAll(".menu")).toHaveLength(2);
-
-      const submenuEl = doc.querySelectorAll(".menu")[1] ?? null;
-      expect(submenuEl).toBeTruthy();
-      submenuEl?.dispatchEvent("mouseenter", {
-        currentTarget: submenuEl,
-        target: submenuEl,
-      });
-
-      vi.advanceTimersByTime(1);
-      expect(doc.querySelectorAll(".menu")).toHaveLength(2);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("closes the hovered submenu after the full 300ms leave delay when the pointer does not enter the submenu", () => {
-    vi.useFakeTimers();
-    try {
-      const doc = createDocumentStub();
-      installDocumentStub(doc);
-      const activeFile = new TFile({
-        path: "Notes/Post.md",
-        basename: "Post",
-        extension: "md",
-        name: "Post.md",
-      });
-      const app = createApp(activeFile);
-      const plugin = new UltimatePublisherPlugin(app as never, { id: "ultimate-publisher" } as never);
-      plugin.settings = {
-        targets: [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }],
-        records: [],
-      };
-
-      plugin.openRibbonMenu({
-        getBoundingClientRect: () => ({ left: 8, bottom: 24, width: 16 }),
-      } as never);
-      vi.runOnlyPendingTimers();
-
-      const quickPublishItem = doc.querySelector('[data-section="ultimate-publisher-quick-publish"]');
-      quickPublishItem?.dispatchEvent("mouseenter", {
-        currentTarget: quickPublishItem,
-        target: quickPublishItem,
-      });
-
-      vi.advanceTimersByTime(250);
-      vi.runOnlyPendingTimers();
-      expect(doc.querySelector('[aria-label="WordPress"]')).toBeTruthy();
-
-      quickPublishItem?.dispatchEvent("mouseleave", {
-        currentTarget: quickPublishItem,
-        target: quickPublishItem,
-      });
-
-      vi.advanceTimersByTime(299);
-      expect(doc.querySelector('[aria-label="WordPress"]')).toBeTruthy();
-
-      vi.advanceTimersByTime(1);
-      expect(doc.querySelector('[aria-label="WordPress"]')).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("clicks a parent item to toggle its submenu immediately", async () => {
-    const doc = createDocumentStub();
-    installDocumentStub(doc);
+  it("creates a submenu via setSubmenu for quick publish items", () => {
     const activeFile = new TFile({
       path: "Notes/Post.md",
       basename: "Post",
@@ -440,134 +318,70 @@ describe("buildPublisherMenuModel", () => {
       records: [],
     };
 
+    plugin.openRibbonMenu({
+      getBoundingClientRect: () => ({ left: 8, bottom: 24, width: 16 }),
+    } as never);
+
+    const rootMenu = Menu.instances[0];
+    const quickPublishItem = rootMenu.items.find(
+      (item) => item.section === "ultimate-publisher-quick-publish",
+    );
+    expect(quickPublishItem).toBeTruthy();
+    expect(quickPublishItem!.submenu).toBeTruthy();
+    expect(quickPublishItem!.submenu!.items).toHaveLength(1);
+    expect(quickPublishItem!.submenu!.items[0].title).toBe("WordPress");
+  });
+
+  it("routes submenu target click to runQuickPublishForTarget", async () => {
+    const activeFile = new TFile({
+      path: "Notes/Post.md",
+      basename: "Post",
+      extension: "md",
+      name: "Post.md",
+    });
+    const app = createApp(activeFile);
+    const plugin = new UltimatePublisherPlugin(app as never, { id: "ultimate-publisher" } as never);
+    plugin.settings = {
+      targets: [
+        { ...createWordpressTarget(), id: "wp", name: "WordPress" },
+        { ...createZhihuTarget(), id: "zh", name: "Zhihu" },
+      ],
+      records: [],
+    };
+
     const runQuickPublish = vi.spyOn(plugin, "runQuickPublishForTarget").mockResolvedValue();
 
     plugin.openRibbonMenu({
       getBoundingClientRect: () => ({ left: 8, bottom: 24, width: 16 }),
     } as never);
 
-    const quickPublishItem = doc.querySelector('[data-section="ultimate-publisher-quick-publish"]');
+    const rootMenu = Menu.instances[0];
+    const quickPublishItem = rootMenu.items.find(
+      (item) => item.section === "ultimate-publisher-quick-publish",
+    );
+    const submenu = quickPublishItem!.submenu!;
+
+    await submenu.items[1].trigger();
+    expect(runQuickPublish).toHaveBeenCalledWith("zh");
+  });
+
+  it("does not create submenu when quick publish parent is disabled", () => {
+    const app = createApp(null);
+    const plugin = new UltimatePublisherPlugin(app as never, { id: "ultimate-publisher" } as never);
+    plugin.settings = {
+      targets: [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }],
+      records: [],
+    };
+
+    plugin.openRibbonMenu(null as never);
+
+    const rootMenu = Menu.instances[0];
+    const quickPublishItem = rootMenu.items.find(
+      (item) => item.section === "ultimate-publisher-quick-publish",
+    );
     expect(quickPublishItem).toBeTruthy();
-
-    quickPublishItem?.dispatchEvent("click", {
-      currentTarget: quickPublishItem,
-      target: quickPublishItem,
-    });
-
-    expect(doc.querySelector('[aria-label="WordPress"]')).toBeTruthy();
-    expect(runQuickPublish).not.toHaveBeenCalled();
-
-    quickPublishItem?.dispatchEvent("click", {
-      currentTarget: quickPublishItem,
-      target: quickPublishItem,
-    });
-
-    expect(doc.querySelector('[aria-label="WordPress"]')).toBeNull();
-    expect(runQuickPublish).not.toHaveBeenCalled();
-  });
-
-  it("anchors the quick publish submenu to the parent menu edge even when the hovered row is visually narrower", () => {
-    vi.useFakeTimers();
-    try {
-      const doc = createDocumentStub();
-      installDocumentStub(doc);
-      const activeFile = new TFile({
-        path: "Notes/Post.md",
-        basename: "Post",
-        extension: "md",
-        name: "Post.md",
-      });
-      const app = createApp(activeFile);
-      const plugin = new UltimatePublisherPlugin(app as never, { id: "ultimate-publisher" } as never);
-      plugin.settings = {
-        targets: [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }],
-        records: [],
-      };
-
-      plugin.openRibbonMenu({
-        getBoundingClientRect: () => ({ left: 8, bottom: 24, width: 16 }),
-      } as never);
-      vi.runOnlyPendingTimers();
-
-      const rootMenuEl = doc.querySelector(".menu");
-      const quickPublishItem = doc.querySelector('[data-section="ultimate-publisher-quick-publish"]');
-      expect(rootMenuEl).toBeTruthy();
-      expect(quickPublishItem).toBeTruthy();
-
-      rootMenuEl?.setBoundingClientRect({
-        left: 8,
-        right: 188,
-        top: 24,
-        bottom: 164,
-        width: 180,
-        height: 140,
-      });
-      quickPublishItem?.setBoundingClientRect({
-        left: 24,
-        right: 140,
-        top: 52,
-        bottom: 80,
-        width: 116,
-        height: 28,
-      });
-
-      quickPublishItem?.dispatchEvent("mouseenter", {
-        currentTarget: quickPublishItem,
-        target: quickPublishItem,
-      });
-
-      vi.advanceTimersByTime(250);
-      vi.runOnlyPendingTimers();
-
-      expect(Menu.instances[1]?.lastPosition).toEqual({
-        x: 8,
-        y: 52,
-        width: 180,
-      });
-      expect(doc.querySelectorAll(".menu")[1]?.getBoundingClientRect().left).toBe(188);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("clears pending hover timers when the root menu hides", () => {
-    vi.useFakeTimers();
-    try {
-      const doc = createDocumentStub();
-      installDocumentStub(doc);
-      const activeFile = new TFile({
-        path: "Notes/Post.md",
-        basename: "Post",
-        extension: "md",
-        name: "Post.md",
-      });
-      const app = createApp(activeFile);
-      const plugin = new UltimatePublisherPlugin(app as never, { id: "ultimate-publisher" } as never);
-      plugin.settings = {
-        targets: [{ ...createWordpressTarget(), id: "wp", name: "WordPress" }],
-        records: [],
-      };
-
-      plugin.openRibbonMenu({
-        getBoundingClientRect: () => ({ left: 8, bottom: 24, width: 16 }),
-      } as never);
-      vi.runOnlyPendingTimers();
-
-      const quickPublishItem = doc.querySelector('[data-section="ultimate-publisher-quick-publish"]');
-      quickPublishItem?.dispatchEvent("mouseenter", {
-        currentTarget: quickPublishItem,
-        target: quickPublishItem,
-      });
-
-      Menu.instances[0]?.hide();
-      vi.runOnlyPendingTimers();
-      vi.advanceTimersByTime(250);
-
-      expect(Menu.instances).toHaveLength(1);
-      expect(doc.querySelector('[aria-label="WordPress"]')).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(quickPublishItem!.disabled).toBe(true);
+    expect(quickPublishItem!.submenu).toBeNull();
   });
 
   it("adds a single-child quick publish target style hook so a lone submenu row aligns vertically with its parent row", () => {

@@ -440,6 +440,7 @@ export class MenuItem {
   warning = false;
   isLabel = false;
   section = "";
+  submenu: Menu | null = null;
   private clickHandler: EventHandler | null = null;
 
   setTitle(title: string | FakeElement): this {
@@ -480,6 +481,11 @@ export class MenuItem {
   setSection(section: string): this {
     this.section = section;
     return this;
+  }
+
+  setSubmenu(): Menu {
+    this.submenu = new Menu();
+    return this.submenu;
   }
 
   trigger(event?: unknown): unknown {
