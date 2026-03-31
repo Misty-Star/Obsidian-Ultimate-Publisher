@@ -76,6 +76,18 @@ describe("CsdnProvider", () => {
     );
   });
 
+  it("rejects csdn validation when the user info payload has no username", async () => {
+    vi.mocked(requestUrl).mockResolvedValue({
+      status: 200,
+      json: { data: {} },
+      text: JSON.stringify({ data: {} }),
+    } as never);
+
+    const provider = new CsdnProvider(createApp());
+
+    await expect(provider.validateConfig(createTarget())).rejects.toThrow("CSDN validation failed");
+  });
+
   it("publishes markdown and html content to the mdeditor endpoint", async () => {
     vi.mocked(requestUrl).mockResolvedValue({
       status: 200,

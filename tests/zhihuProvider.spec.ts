@@ -70,6 +70,18 @@ describe("ZhihuProvider", () => {
     );
   });
 
+  it("rejects zhihu validation when the current-user payload has no uid", async () => {
+    vi.mocked(requestUrl).mockResolvedValue({
+      status: 200,
+      json: { name: "visitor" },
+      text: JSON.stringify({ name: "visitor" }),
+    } as never);
+
+    const provider = new ZhihuProvider(createApp());
+
+    await expect(provider.validateConfig(createTarget())).rejects.toThrow("Zhihu validation failed");
+  });
+
   it("publishes and returns the zhihu article id and preview url", async () => {
     vi.mocked(requestUrl)
       .mockResolvedValueOnce({

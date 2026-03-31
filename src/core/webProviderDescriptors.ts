@@ -5,6 +5,7 @@ export interface WebProviderDescriptor {
   displayName: string;
   loginUrl: string;
   cookieDomain: string;
+  authCookieNames: string[];
 }
 
 const WEB_PROVIDER_DESCRIPTORS: Record<WebAuthProviderId, WebProviderDescriptor> = {
@@ -13,18 +14,21 @@ const WEB_PROVIDER_DESCRIPTORS: Record<WebAuthProviderId, WebProviderDescriptor>
     displayName: "Zhihu",
     loginUrl: "https://www.zhihu.com/signin",
     cookieDomain: "zhihu.com",
+    authCookieNames: ["z_c0"],
   },
   csdn: {
     provider: "csdn",
     displayName: "CSDN",
     loginUrl: "https://passport.csdn.net/login",
     cookieDomain: "csdn.net",
+    authCookieNames: ["UserName"],
   },
   juejin: {
     provider: "juejin",
     displayName: "Juejin",
     loginUrl: "https://juejin.cn/login",
     cookieDomain: "juejin.cn",
+    authCookieNames: ["sessionid", "sessionid_ss"],
   },
 };
 

@@ -77,6 +77,35 @@ describe("desktop web auth service", () => {
     expect(closeCalls).toHaveLength(1);
   });
 
+  it("waits for provider auth cookies instead of closing on anonymous login-page cookies", async () => {
+    const closeCalls: Array<unknown> = [];
+    let readCount = 0;
+    const service = new DesktopWebAuthService({
+      isSupported: () => true,
+      openBrowserWindow: async (url) => ({ url }),
+      waitForWindowClose: async () => new Promise<void>(() => undefined),
+      closeWindow: async (windowHandle) => {
+        closeCalls.push(windowHandle);
+      },
+      readCookies: async () => {
+        readCount += 1;
+        return readCount === 1
+          ? [{ name: "ttwid", value: "anonymous", domain: ".juejin.cn" }]
+          : [
+              { name: "ttwid", value: "anonymous", domain: ".juejin.cn" },
+              { name: "sessionid", value: "logged-in", domain: ".juejin.cn" },
+            ];
+      },
+    }, { pollIntervalMs: 0, maxWaitMs: 50 });
+
+    await expect(service.authorize("juejin")).resolves.toMatchObject({
+      provider: "juejin",
+      cookie: "ttwid=anonymous; sessionid=logged-in",
+    });
+    expect(readCount).toBe(2);
+    expect(closeCalls).toHaveLength(1);
+  });
+
   it("surfaces a friendly close error instead of destroyed when the window is manually closed first", async () => {
     let closed = false;
     const service = new DesktopWebAuthService({

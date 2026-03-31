@@ -35816,6 +35816,9 @@ var CsdnProvider = class {
   }
   async getAccountSummary(target) {
     const response = await requestCsdn(target, "https://bizapi.csdn.net/blog-console-api/v1/user/info");
+    if (!response.data?.username) {
+      throw new Error("CSDN validation failed: not logged in or cookie expired.");
+    }
     return {
       accountId: response.data?.username,
       accountName: response.data?.username,
@@ -36171,6 +36174,9 @@ var ZhihuProvider = class {
       target,
       "https://www.zhihu.com/api/v4/me?include=account_status%2Cis_bind_phone%2Cis_force_renamed%2Cemail%2Crenamed_fullname"
     );
+    if (!account.uid) {
+      throw new Error("Zhihu validation failed: not logged in or cookie expired.");
+    }
     return {
       accountId: account.uid ? String(account.uid) : void 0,
       accountName: account.name,
@@ -36338,19 +36344,22 @@ var WEB_PROVIDER_DESCRIPTORS = {
     provider: "zhihu",
     displayName: "Zhihu",
     loginUrl: "https://www.zhihu.com/signin",
-    cookieDomain: "zhihu.com"
+    cookieDomain: "zhihu.com",
+    authCookieNames: ["z_c0"]
   },
   csdn: {
     provider: "csdn",
     displayName: "CSDN",
     loginUrl: "https://passport.csdn.net/login",
-    cookieDomain: "csdn.net"
+    cookieDomain: "csdn.net",
+    authCookieNames: ["UserName"]
   },
   juejin: {
     provider: "juejin",
     displayName: "Juejin",
     loginUrl: "https://juejin.cn/login",
-    cookieDomain: "juejin.cn"
+    cookieDomain: "juejin.cn",
+    authCookieNames: ["sessionid", "sessionid_ss"]
   }
 };
 function getWebProviderDescriptor(provider) {
@@ -36366,6 +36375,15 @@ function filterCookiesForDomain(cookies, targetDomain) {
 }
 function buildCookieHeader(cookies) {
   return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+}
+function hasNamedAuthCookie(cookies, authCookieNames) {
+  if (authCookieNames.length === 0) {
+    return cookies.length > 0;
+  }
+  const cookieNames = new Set(
+    cookies.map((cookie) => cookie.name.trim()).filter(Boolean)
+  );
+  return authCookieNames.some((name) => cookieNames.has(name));
 }
 function getElectronRemote() {
   if (typeof window === "undefined") {
@@ -36461,8 +36479,9 @@ var DesktopWebAuthService = class {
         throw error;
       }
       const filteredCookies = filterCookiesForDomain(cookies, descriptor.cookieDomain);
+      const hasAuthCookie = hasNamedAuthCookie(filteredCookies, descriptor.authCookieNames);
       const cookie = buildCookieHeader(filteredCookies);
-      if (cookie) {
+      if (cookie && hasAuthCookie) {
         await this.runtime.closeWindow(authWindow);
         return {
           provider,

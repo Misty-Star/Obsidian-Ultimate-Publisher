@@ -244,6 +244,10 @@ export class CsdnProvider implements PublisherProvider<CsdnTargetConfig> {
   }> {
     const response = await requestCsdn<CsdnUserResponse>(target, "https://bizapi.csdn.net/blog-console-api/v1/user/info");
 
+    if (!response.data?.username) {
+      throw new Error("CSDN validation failed: not logged in or cookie expired.");
+    }
+
     return {
       accountId: response.data?.username,
       accountName: response.data?.username,

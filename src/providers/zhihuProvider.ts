@@ -115,6 +115,10 @@ export class ZhihuProvider implements PublisherProvider<ZhihuTargetConfig> {
       "https://www.zhihu.com/api/v4/me?include=account_status%2Cis_bind_phone%2Cis_force_renamed%2Cemail%2Crenamed_fullname"
     );
 
+    if (!account.uid) {
+      throw new Error("Zhihu validation failed: not logged in or cookie expired.");
+    }
+
     return {
       accountId: account.uid ? String(account.uid) : undefined,
       accountName: account.name,

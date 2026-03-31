@@ -45,6 +45,20 @@ export function buildCookieHeader(cookies: DesktopAuthCookie[]): string {
   return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
 }
 
+function hasNamedAuthCookie(cookies: DesktopAuthCookie[], authCookieNames: string[]): boolean {
+  if (authCookieNames.length === 0) {
+    return cookies.length > 0;
+  }
+
+  const cookieNames = new Set(
+    cookies
+      .map((cookie) => cookie.name.trim())
+      .filter(Boolean)
+  );
+
+  return authCookieNames.some((name) => cookieNames.has(name));
+}
+
 type ElectronBrowserWindow = {
   loadURL(url: string): Promise<void> | void;
   once(event: string, listener: () => void): void;
@@ -175,8 +189,9 @@ export class DesktopWebAuthService<TWindow = unknown> {
       }
 
       const filteredCookies = filterCookiesForDomain(cookies, descriptor.cookieDomain);
+      const hasAuthCookie = hasNamedAuthCookie(filteredCookies, descriptor.authCookieNames);
       const cookie = buildCookieHeader(filteredCookies);
-      if (cookie) {
+      if (cookie && hasAuthCookie) {
         await this.runtime.closeWindow(authWindow);
         return {
           provider,
