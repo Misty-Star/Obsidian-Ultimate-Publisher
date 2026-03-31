@@ -214,7 +214,7 @@ describe("NormalPublishModal", () => {
     setObsidianTestLanguage("en");
 
     const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
-    const zhihu = { ...createZhihuTarget(), id: "zhihu", name: "Zhihu", defaultColumnId: "column-1" };
+    const zhihu = { ...createZhihuTarget(), id: "zhihu", name: "Zhihu", defaultColumnId: "" };
     const settings = { targets: [wordpress, zhihu], records: [] };
     const plugin = {
       app: createApp(),
@@ -260,9 +260,7 @@ describe("NormalPublishModal", () => {
     titleInput.value = "Custom Title";
     titleInput.dispatchEvent("input", { target: titleInput });
 
-    const columnInput = findInputByName(modal.contentEl as never, "normal-publish-zhihu-columnId");
-    columnInput.value = "column-2";
-    columnInput.dispatchEvent("input", { target: columnInput });
+    expect(() => findInputByName(modal.contentEl as never, "normal-publish-zhihu-columnId")).toThrow(/Input not found/);
 
     findButtonByText(modal.contentEl as never, "Publish").click();
     await Promise.resolve();
@@ -275,7 +273,6 @@ describe("NormalPublishModal", () => {
         common: { title: "Custom Title" },
         provider: expect.objectContaining({
           provider: "zhihu",
-          columnId: "column-2",
         }),
       })
     );
@@ -350,7 +347,7 @@ describe("NormalPublishModal", () => {
     );
   });
 
-  it("shows remote fallback copy when option loading fails", async () => {
+  it("does not try to load zhihu remote options when normal publish has no zhihu-specific field", async () => {
     setObsidianTestLanguage("en");
 
     const zhihu = { ...createZhihuTarget(), id: "zhihu", name: "Zhihu", defaultColumnId: "" };
@@ -388,7 +385,8 @@ describe("NormalPublishModal", () => {
     );
     await modal.onOpen();
 
-    expect(textTree(modal.contentEl as never)).toContain("Remote options failed to load. Switched to manual input.");
+    expect(textTree(modal.contentEl as never)).not.toContain("Remote options failed to load. Switched to manual input.");
+    expect(() => findInputByName(modal.contentEl as never, "normal-publish-zhihu-columnId")).toThrow(/Input not found/);
   });
 
   it("uses past-tense success notice wording in english", async () => {

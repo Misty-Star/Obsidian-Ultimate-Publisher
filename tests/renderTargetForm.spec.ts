@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { FakeElement } from "obsidian";
-import { ProviderRemoteOptionsState, WordpressPublishDraft } from "../src/core/normalPublish/types";
+import {
+  JuejinPublishDraft,
+  ProviderRemoteOptionsState,
+  WordpressPublishDraft,
+  ZhihuPublishDraft,
+} from "../src/core/normalPublish/types";
 import { createI18n } from "../src/i18n";
 import { renderTargetForm } from "../src/ui/normalPublish/renderTargetForm";
 
@@ -12,6 +17,14 @@ function findInputByName(root: FakeElement, name: string): FakeElement {
   const found = walk(root).find((element) => element.tagName === "input" && element.name === name);
   if (!found) {
     throw new Error(`Input not found: ${name}`);
+  }
+  return found;
+}
+
+function findSelectByName(root: FakeElement, name: string): FakeElement {
+  const found = walk(root).find((element) => element.tagName === "select" && element.name === name);
+  if (!found) {
+    throw new Error(`Select not found: ${name}`);
   }
   return found;
 }
@@ -34,6 +47,12 @@ function listInputNames(root: FakeElement): string[] {
     .filter((element) => relevantTags.has(element.tagName))
     .map((element) => element.name)
     .filter((name): name is string => typeof name === "string" && name.length > 0);
+}
+
+function textTree(root: FakeElement): string {
+  return walk(root)
+    .map((element) => element.textContent)
+    .join(" ");
 }
 
 describe("renderTargetForm", () => {
@@ -198,6 +217,148 @@ describe("renderTargetForm", () => {
     expect(alias.textContent).toBe("ai");
     expect(inlineText.children.map((child) => child.textContent)).toEqual(["人工智能", "ai"]);
     expect(helperLines).toHaveLength(0);
+  });
+
+  it("opens the juejin tagId dropdown from the input and syncs checked remote tag ids", () => {
+    const container = new FakeElement("div");
+    const draft: JuejinPublishDraft = {
+      provider: "juejin",
+      categoryId: "category-1",
+      categoryName: "Backend",
+      tagIds: [],
+      tagNames: [],
+      briefContent: "Brief content",
+    };
+    const remoteOptions: ProviderRemoteOptionsState = {
+      status: "loaded",
+      data: {
+        juejinTags: [
+          {
+            id: "tag-1",
+            label: "Obsidian",
+          },
+        ],
+      },
+      manualFallbackFields: [],
+    };
+    let latestDraft: JuejinPublishDraft | null = null;
+    let currentDraft = draft;
+
+    renderTargetForm({
+      container,
+      draft,
+      remoteOptions,
+      i18n: createI18n("en"),
+      onChange: (updateDraft) => {
+        currentDraft = updateDraft(currentDraft) as JuejinPublishDraft;
+        latestDraft = currentDraft;
+      },
+    });
+
+    const tagInput = findInputByName(container, "normal-publish-juejin-tagIds");
+    const tagDropdown = findByClass(container, "ultimate-publisher-normal-dropdown");
+    const tagOption = findInputByName(container, "normal-publish-juejin-tagIds-option-tag-1");
+
+    expect(tagInput.type).toBe("text");
+    expect(tagDropdown.style.display).toBe("none");
+
+    tagInput.click();
+
+    expect(tagDropdown.style.display).toBe("block");
+    expect(tagOption.type).toBe("checkbox");
+
+    tagOption.checked = true;
+    tagOption.dispatchEvent("change", { currentTarget: tagOption, target: tagOption });
+
+    expect(latestDraft).toMatchObject({
+      tagIds: ["tag-1"],
+    });
+  });
+
+  it("shows juejin category and tag choices by name without exposing raw ids in the UI", () => {
+    const container = new FakeElement("div");
+    const draft: JuejinPublishDraft = {
+      provider: "juejin",
+      categoryId: "category-1",
+      categoryName: "Backend",
+      tagIds: [],
+      tagNames: [],
+      briefContent: "Brief content",
+    };
+    const remoteOptions: ProviderRemoteOptionsState = {
+      status: "loaded",
+      data: {
+        juejinCategories: [
+          {
+            id: "category-1",
+            label: "Backend",
+          },
+        ],
+        juejinTags: [
+          {
+            id: "tag-1",
+            label: "Obsidian",
+          },
+        ],
+      },
+      manualFallbackFields: [],
+    };
+
+    renderTargetForm({
+      container,
+      draft,
+      remoteOptions,
+      i18n: createI18n("zh-CN"),
+      onChange: () => {},
+    });
+
+    expect(textTree(container)).toContain("分类");
+    expect(textTree(container)).toContain("标签");
+    expect(textTree(container)).not.toContain("分类 ID");
+    expect(textTree(container)).not.toContain("标签 ID");
+
+    const categorySelect = findSelectByName(container, "normal-publish-juejin-categoryId");
+    expect(categorySelect.children.map((option) => option.textContent)).toEqual(["Backend"]);
+
+    const tagInput = findInputByName(container, "normal-publish-juejin-tagIds");
+    tagInput.click();
+
+    const tagDropdown = findByClass(container, "ultimate-publisher-normal-dropdown");
+    expect(textTree(tagDropdown)).toContain("Obsidian");
+    expect(textTree(tagDropdown)).not.toContain("tag-1");
+    expect(findAllByClass(tagDropdown, "ultimate-publisher-normal-alias")).toHaveLength(0);
+  });
+
+  it("does not render the zhihu column field in normal publish", () => {
+    const container = new FakeElement("div");
+    const draft: ZhihuPublishDraft = {
+      provider: "zhihu",
+      columnId: "",
+      columnTitle: "",
+    };
+    const remoteOptions: ProviderRemoteOptionsState = {
+      status: "loaded",
+      data: {
+        zhihuColumns: [
+          {
+            id: "column-1",
+            label: "Demo Column",
+          },
+        ],
+      },
+      manualFallbackFields: [],
+    };
+
+    renderTargetForm({
+      container,
+      draft,
+      remoteOptions,
+      i18n: createI18n("zh-CN"),
+      onChange: () => {},
+    });
+
+    expect(listInputNames(container)).not.toContain("normal-publish-zhihu-columnId");
+    expect(textTree(container)).not.toContain("专栏 ID");
   });
 
   it("hides shared fields and prefixes input names for batch cards", () => {

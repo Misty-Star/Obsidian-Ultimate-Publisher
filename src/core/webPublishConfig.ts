@@ -3,7 +3,7 @@ import { CsdnTargetConfig, JuejinTargetConfig, ZhihuTargetConfig } from "../type
 import { CsdnPublishDraft, JuejinPublishDraft, ZhihuPublishDraft } from "./normalPublish/types";
 
 interface ZhihuPublishInput {
-  columnId: string;
+  columnId?: string;
 }
 
 interface CsdnPublishInput {
@@ -76,11 +76,9 @@ export function resolveZhihuPublishInput(
     readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "zhihu", "columnId"])) ||
     target.defaultColumnId;
 
-  if (!columnId) {
-    throw new Error("Zhihu publish requires a columnId.");
-  }
-
-  return { columnId };
+  return {
+    columnId: columnId || undefined,
+  };
 }
 
 export function resolveCsdnPublishInput(

@@ -167,15 +167,17 @@ export class ZhihuProvider implements PublisherProvider<ZhihuTargetConfig> {
         commercial_zhitask_bind_info: null,
       }
     );
-    await requestZhihu(
-      target,
-      `https://www.zhihu.com/api/v4/columns/${encodeURIComponent(columnId)}/items`,
-      "POST",
-      {
-        type: "article",
-        id: articleId,
-      }
-    );
+    if (columnId) {
+      await requestZhihu(
+        target,
+        `https://www.zhihu.com/api/v4/columns/${encodeURIComponent(columnId)}/items`,
+        "POST",
+        {
+          type: "article",
+          id: articleId,
+        }
+      );
+    }
 
     return {
       remoteId: articleId,

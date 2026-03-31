@@ -28,6 +28,18 @@ function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
 }
 
 describe("web publish input", () => {
+  it("allows zhihu publish without columnId when no override or default exists", () => {
+    const input = resolveZhihuPublishInput(
+      createNote(),
+      {
+        ...createZhihuTarget(),
+        defaultColumnId: "",
+      }
+    );
+
+    expect(input.columnId).toBeUndefined();
+  });
+
   it("prefers zhihu frontmatter columnId over target defaults", () => {
     const input = resolveZhihuPublishInput(
       createNote({

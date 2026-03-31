@@ -35069,8 +35069,8 @@ var messages = {
     "publish.normal.field.password": "Password",
     "publish.normal.field.publicLevel": "Visibility",
     "publish.normal.field.columnId": "Column ID",
-    "publish.normal.field.categoryId": "Category ID",
-    "publish.normal.field.tagIds": "Tag IDs",
+    "publish.normal.field.categoryId": "Category",
+    "publish.normal.field.tagIds": "Tags",
     "publish.normal.field.briefContent": "Brief Content",
     "publish.normal.remote.loading": "Loading remote options...",
     "publish.normal.remote.fallback": "Remote options failed to load. Switched to manual input.",
@@ -35210,8 +35210,8 @@ var messages = {
     "publish.normal.field.password": "\u5BC6\u7801\u4FDD\u62A4",
     "publish.normal.field.publicLevel": "\u53EF\u89C1\u7EA7\u522B",
     "publish.normal.field.columnId": "\u4E13\u680F ID",
-    "publish.normal.field.categoryId": "\u5206\u7C7B ID",
-    "publish.normal.field.tagIds": "\u6807\u7B7E ID",
+    "publish.normal.field.categoryId": "\u5206\u7C7B",
+    "publish.normal.field.tagIds": "\u6807\u7B7E",
     "publish.normal.field.briefContent": "\u6458\u8981\u5185\u5BB9",
     "publish.normal.remote.loading": "\u6B63\u5728\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879...",
     "publish.normal.remote.fallback": "\u8FDC\u7AEF\u9009\u9879\u62C9\u53D6\u5931\u8D25\uFF0C\u5DF2\u5207\u6362\u4E3A\u624B\u52A8\u8F93\u5165\u3002",
@@ -35635,10 +35635,9 @@ function pickFirstNonEmptyArray(...values) {
 }
 function resolveZhihuPublishInput(note, target, overrides) {
   const columnId = readString(overrides?.columnId) || readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "zhihu", "columnId"])) || target.defaultColumnId;
-  if (!columnId) {
-    throw new Error("Zhihu publish requires a columnId.");
-  }
-  return { columnId };
+  return {
+    columnId: columnId || void 0
+  };
 }
 function resolveCsdnPublishInput(note, target, overrides) {
   const categories = pickFirstNonEmptyArray(
@@ -36218,15 +36217,17 @@ var ZhihuProvider = class {
         commercial_zhitask_bind_info: null
       }
     );
-    await requestZhihu(
-      target,
-      `https://www.zhihu.com/api/v4/columns/${encodeURIComponent(columnId)}/items`,
-      "POST",
-      {
-        type: "article",
-        id: articleId
-      }
-    );
+    if (columnId) {
+      await requestZhihu(
+        target,
+        `https://www.zhihu.com/api/v4/columns/${encodeURIComponent(columnId)}/items`,
+        "POST",
+        {
+          type: "article",
+          id: articleId
+        }
+      );
+    }
     return {
       remoteId: articleId,
       remoteUrl: buildPreviewUrl3(articleId)
@@ -36645,10 +36646,6 @@ var YUQUE_FIELDS = [
     ]
   }
 ];
-var ZHIHU_FIELDS = [
-  { key: "defaultColumnId", label: "Default column ID", type: "text" },
-  { key: "defaultColumnTitle", label: "Default column title", type: "text" }
-];
 var CSDN_FIELDS = [
   { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
   { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" }
@@ -36747,7 +36744,7 @@ function getModalFieldDefinitions(target, i18n = DEFAULT_I18N2) {
     return [...COMMON_FIELDS, ...YUQUE_FIELDS].map((field) => localizeField(field, i18n));
   }
   if (target.provider === "zhihu") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS].map(
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS].map(
       (field) => localizeField(field, i18n)
     );
   }
@@ -37702,8 +37699,6 @@ function buildBatchPublishExecutionContext(state, targetId) {
 // src/core/normalPublish/validation.ts
 function validateTargetDraft(draft) {
   switch (draft.provider) {
-    case "zhihu":
-      return draft.columnId.trim() ? null : "Zhihu publish requires a columnId.";
     case "juejin":
       if (!draft.categoryId.trim()) {
         return "Juejin publish requires a categoryId.";
@@ -37722,8 +37717,6 @@ function getManualFallbackFields(target) {
   switch (target.provider) {
     case "wordpress":
       return ["categories", "tags"];
-    case "zhihu":
-      return ["columnId"];
     case "csdn":
       return ["categories", "tags"];
     case "juejin":
@@ -37744,6 +37737,15 @@ async function ensureRemoteOptionsLoaded(state, target, registry) {
   const currentState = state.remoteOptions[target.id];
   if (currentState?.status === "loaded") {
     return state;
+  }
+  if (target.provider === "zhihu") {
+    return {
+      ...state,
+      remoteOptions: {
+        ...state.remoteOptions,
+        [target.id]: buildRemoteOptionsState("loaded", {})
+      }
+    };
   }
   const provider = registry.get(target);
   if (!provider.loadNormalPublishOptions) {
@@ -37993,6 +37995,11 @@ function renderTargetForm(options) {
     label: item.label,
     description: item.description
   }));
+  const toSelectableIdChoices = (items) => items.map((item) => ({
+    id: item.id,
+    value: item.id,
+    label: item.label
+  }));
   const applyDraftUpdate = (provider, update) => {
     onChange((currentDraft) => currentDraft.provider === provider ? update(currentDraft) : currentDraft);
   };
@@ -38106,41 +38113,6 @@ function renderTargetForm(options) {
       }
       return;
     case "zhihu":
-      const columns = readOptionItems("zhihuColumns");
-      if (!hiddenFields.has("columnId")) {
-        if (columns.length > 0 && !remoteOptions?.manualFallbackFields.includes("columnId")) {
-          renderSelectInput(container, {
-            label: i18n.t("publish.normal.field.columnId"),
-            name: fieldName("zhihu-columnId"),
-            value: draft.columnId,
-            choices: columns.map((column) => ({
-              value: column.id,
-              label: `${column.label} (${column.id})`
-            })),
-            description: i18n.t("publish.normal.remote.selectHint"),
-            onChange: (value) => {
-              const selected = findOption(columns, value);
-              applyDraftUpdate("zhihu", (currentDraft) => ({
-                ...currentDraft,
-                columnId: value,
-                columnTitle: selected?.label ?? currentDraft.columnTitle
-              }));
-            }
-          });
-          const selectedColumn = findOption(columns, draft.columnId);
-          if (selectedColumn?.description) {
-            renderHelperText(container, selectedColumn.description);
-          }
-        } else {
-          renderTextInput(container, {
-            label: i18n.t("publish.normal.field.columnId"),
-            name: fieldName("zhihu-columnId"),
-            value: draft.columnId,
-            description: i18n.t("publish.normal.remote.manualFallbackHint"),
-            onInput: (value) => applyDraftUpdate("zhihu", (currentDraft) => ({ ...currentDraft, columnId: value }))
-          });
-        }
-      }
       return;
     case "csdn":
       if (!hiddenFields.has("excerpt")) {
@@ -38172,6 +38144,7 @@ function renderTargetForm(options) {
       return;
     case "juejin":
       const categories = readOptionItems("juejinCategories");
+      const juejinTags = readOptionItems("juejinTags");
       if (!hiddenFields.has("categoryId")) {
         if (categories.length > 0 && !remoteOptions?.manualFallbackFields.includes("categoryId")) {
           renderSelectInput(container, {
@@ -38180,7 +38153,7 @@ function renderTargetForm(options) {
             value: draft.categoryId,
             choices: categories.map((category) => ({
               value: category.id,
-              label: `${category.label} (${category.id})`
+              label: category.label
             })),
             description: i18n.t("publish.normal.remote.selectHint"),
             onChange: (value) => {
@@ -38203,13 +38176,28 @@ function renderTargetForm(options) {
         }
       }
       if (!hiddenFields.has("tagIds")) {
-        renderStringListInput(container, {
-          label: i18n.t("publish.normal.field.tagIds"),
-          name: fieldName("juejin-tagIds"),
-          value: draft.tagIds,
-          description: readOptionItems("juejinTags").length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
-          onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, tagIds: value }))
-        });
+        if (juejinTags.length > 0 && !remoteOptions?.manualFallbackFields.includes("tagIds")) {
+          renderDropdownSelectableStringListInput(container, {
+            label: i18n.t("publish.normal.field.tagIds"),
+            name: fieldName("juejin-tagIds"),
+            value: draft.tagIds,
+            choices: toSelectableIdChoices(juejinTags),
+            description: i18n.t("publish.normal.remote.manualHint"),
+            onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({
+              ...currentDraft,
+              tagIds: value,
+              tagNames: value.map((tagId) => findOption(juejinTags, tagId)?.label).filter((tagName) => Boolean(tagName))
+            }))
+          });
+        } else {
+          renderStringListInput(container, {
+            label: i18n.t("publish.normal.field.tagIds"),
+            name: fieldName("juejin-tagIds"),
+            value: draft.tagIds,
+            description: juejinTags.length > 0 ? i18n.t("publish.normal.remote.manualHint") : void 0,
+            onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, tagIds: value }))
+          });
+        }
       }
       if (!hiddenFields.has("briefContent")) {
         renderTextArea(container, {

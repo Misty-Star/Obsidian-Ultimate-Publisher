@@ -126,6 +126,34 @@ describe("ZhihuProvider", () => {
     );
   });
 
+  it("publishes without adding the article to a column when no columnId is configured", async () => {
+    vi.mocked(requestUrl)
+      .mockResolvedValueOnce({
+        status: 200,
+        json: { id: 123 },
+        text: JSON.stringify({ id: 123 }),
+      } as never)
+      .mockResolvedValueOnce({
+        status: 200,
+        json: { success: true },
+        text: JSON.stringify({ success: true }),
+      } as never);
+
+    const provider = new ZhihuProvider(createApp());
+
+    const result = await provider.publish(createNote(), {
+      ...createTarget(),
+      defaultColumnId: "",
+    });
+
+    expect(result).toEqual({
+      remoteId: "123",
+      remoteUrl: "https://zhuanlan.zhihu.com/p/123",
+    });
+    expect(requestUrl).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(requestUrl).mock.calls.some(([request]) => request.url.includes("/api/v4/columns/"))).toBe(false);
+  });
+
   it("loads zhihu column options for detailed publish", async () => {
     vi.mocked(requestUrl).mockResolvedValue({
       status: 200,

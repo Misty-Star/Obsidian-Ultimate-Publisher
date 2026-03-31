@@ -96,11 +96,6 @@ const YUQUE_FIELDS: ModalFieldDefinition[] = [
   },
 ];
 
-const ZHIHU_FIELDS: ModalFieldDefinition[] = [
-  { key: "defaultColumnId", label: "Default column ID", type: "text" },
-  { key: "defaultColumnTitle", label: "Default column title", type: "text" },
-];
-
 const CSDN_FIELDS: ModalFieldDefinition[] = [
   { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
   { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" },
@@ -225,7 +220,7 @@ export function getModalFieldDefinitions(
   }
 
   if (target.provider === "zhihu") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...ZHIHU_FIELDS].map((field) =>
+    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS].map((field) =>
       localizeField(field, i18n)
     );
   }

@@ -380,12 +380,28 @@ describe("BatchPublishModal", () => {
     expect(Notice.instances.at(-1)?.message).toContain("成功 1 个");
   });
 
-  it("keeps step 2 visible and shows a notice when a selected target draft is invalid", async () => {
+  it("does not block batch publish when a selected zhihu target has no column id", async () => {
     setObsidianTestLanguage("zh-CN");
     const { modal, workflow, plugin, targets } = createModalFixtures();
     plugin.settings.targets = [
       { ...targets.disabledZhihu, enabled: true, defaultColumnId: "" },
     ];
+    workflow.runBatch.mockResolvedValue({
+      results: [
+        {
+          targetId: "zhihu",
+          targetName: "Zhihu",
+          action: "publish" as const,
+          status: "success" as const,
+          durationMs: 12,
+          remoteUrl: "https://zhuanlan.zhihu.com/p/123",
+        },
+      ],
+      totalCount: 1,
+      successCount: 1,
+      failureCount: 0,
+      settings: plugin.settings,
+    });
 
     await modal.onOpen();
 
@@ -395,8 +411,8 @@ describe("BatchPublishModal", () => {
     findButtonByText(modal.contentEl as never, "开始发布").click();
     await flushPromises();
 
-    expect(workflow.runBatch).not.toHaveBeenCalled();
-    expect(textTree(modal.contentEl as never)).toContain("编辑字段");
-    expect(Notice.instances.at(-1)?.message).toContain("草稿");
+    expect(workflow.runBatch).toHaveBeenCalledTimes(1);
+    expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+    expect(Notice.instances.at(-1)?.message).toContain("成功 1 个");
   });
 });

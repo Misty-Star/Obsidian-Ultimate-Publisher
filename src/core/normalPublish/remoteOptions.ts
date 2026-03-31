@@ -7,8 +7,6 @@ function getManualFallbackFields(target: PublishTargetConfig): string[] {
   switch (target.provider) {
     case "wordpress":
       return ["categories", "tags"];
-    case "zhihu":
-      return ["columnId"];
     case "csdn":
       return ["categories", "tags"];
     case "juejin":
@@ -40,6 +38,16 @@ export async function ensureRemoteOptionsLoaded(
   const currentState = state.remoteOptions[target.id];
   if (currentState?.status === "loaded") {
     return state;
+  }
+
+  if (target.provider === "zhihu") {
+    return {
+      ...state,
+      remoteOptions: {
+        ...state.remoteOptions,
+        [target.id]: buildRemoteOptionsState("loaded", {}),
+      },
+    };
   }
 
   const provider = registry.get(target);

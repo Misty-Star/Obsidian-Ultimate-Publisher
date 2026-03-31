@@ -73,7 +73,7 @@ describe("modalForm", () => {
     expect(wordpressTarget.contentFormat).toBe("markdown");
   });
 
-  it("returns zhihu-specific fields for zhihu targets", () => {
+  it("keeps zhihu target settings focused on shared web auth fields", () => {
     const fields = getModalFieldDefinitions({
       id: "zhihu-target",
       name: "Zhihu",
@@ -88,8 +88,6 @@ describe("modalForm", () => {
       "enabled",
       "name",
       "cookie",
-      "defaultColumnId",
-      "defaultColumnTitle",
     ]);
   });
 
