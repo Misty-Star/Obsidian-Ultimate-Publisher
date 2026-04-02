@@ -39468,16 +39468,25 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
     }
     return this.sessionState.targetDrafts[this.selectedTargetId] ?? null;
   }
-  buildAiKey(field) {
-    return this.selectedTargetId ? `${this.selectedTargetId}:${field}` : `common:${field}`;
+  getDraftByTargetId(targetId) {
+    if (!this.sessionState) {
+      return null;
+    }
+    return this.sessionState.targetDrafts[targetId] ?? null;
   }
-  getAiFieldState(field) {
-    return this.aiFieldState[this.buildAiKey(field)] ?? { status: "idle" };
+  buildAiKey(field, targetId = this.selectedTargetId) {
+    if (field === "title") {
+      return "common:title";
+    }
+    return targetId ? `${targetId}:${field}` : `common:${field}`;
   }
-  setAiFieldState(field, next) {
+  getAiFieldState(field, targetId = this.selectedTargetId) {
+    return this.aiFieldState[this.buildAiKey(field, targetId)] ?? { status: "idle" };
+  }
+  setAiFieldState(field, next, targetId = this.selectedTargetId) {
     this.aiFieldState = {
       ...this.aiFieldState,
-      [this.buildAiKey(field)]: next
+      [this.buildAiKey(field, targetId)]: next
     };
   }
   buildExecutionContext() {
@@ -39502,7 +39511,13 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
     if (!this.sessionState || !this.selectedTargetId) {
       return;
     }
-    const currentDraft = this.sessionState.targetDrafts[this.selectedTargetId];
+    this.updateTargetDraftById(this.selectedTargetId, update);
+  }
+  updateTargetDraftById(targetId, update) {
+    if (!this.sessionState) {
+      return;
+    }
+    const currentDraft = this.sessionState.targetDrafts[targetId];
     if (!currentDraft) {
       return;
     }
@@ -39510,7 +39525,7 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
       ...this.sessionState,
       targetDrafts: {
         ...this.sessionState.targetDrafts,
-        [this.selectedTargetId]: update(currentDraft)
+        [targetId]: update(currentDraft)
       }
     };
   }
@@ -39591,11 +39606,12 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
     await this.render();
   }
   async handleAiGenerate(field) {
-    if (!this.note || !this.sessionState || !this.selectedTargetId) {
+    const initiatingTargetId = this.selectedTargetId;
+    if (!this.note || !this.sessionState || !initiatingTargetId) {
       return;
     }
-    const target = this.getTargetById(this.selectedTargetId);
-    const draft = this.getSelectedDraft();
+    const target = this.getTargetById(initiatingTargetId);
+    const draft = this.getDraftByTargetId(initiatingTargetId);
     if (!target || !draft) {
       return;
     }
@@ -39604,11 +39620,11 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
       this.setAiFieldState(field, {
         status: "error",
         errorMessage: createI18nFromObsidianLanguage().t("publish.normal.ai.notConfigured")
-      });
+      }, initiatingTargetId);
       void this.render();
       return;
     }
-    this.setAiFieldState(field, { status: "loading" });
+    this.setAiFieldState(field, { status: "loading" }, initiatingTargetId);
     void this.render();
     try {
       const input = buildNormalPublishAiTaskInput({
@@ -39633,20 +39649,22 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
           }
         };
       } else if (field === "excerpt") {
-        this.updateSelectedDraft(
+        this.updateTargetDraftById(
+          initiatingTargetId,
           (current) => current.provider === "wordpress" || current.provider === "csdn" ? { ...current, excerpt: text } : current
         );
       } else if (field === "briefContent") {
-        this.updateSelectedDraft(
+        this.updateTargetDraftById(
+          initiatingTargetId,
           (current) => current.provider === "juejin" ? { ...current, briefContent: text } : current
         );
       }
-      this.setAiFieldState(field, { status: "idle" });
+      this.setAiFieldState(field, { status: "idle" }, initiatingTargetId);
     } catch (error) {
       this.setAiFieldState(field, {
         status: "error",
         errorMessage: error instanceof Error ? error.message : String(error)
-      });
+      }, initiatingTargetId);
     }
     void this.render();
   }
@@ -39775,7 +39793,7 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
     const commonPanel = main.createDiv({ cls: "ultimate-publisher-normal-panel" });
     commonPanel.createEl("h3", { text: i18n.t("publish.normal.section.common") });
     if (this.sessionState) {
-      const titleAiState = this.getAiFieldState("title");
+      const titleAiState = this.getAiFieldState("title", null);
       renderTextInput(commonPanel, {
         label: i18n.t("publish.normal.field.title"),
         name: "normal-publish-title",
@@ -39822,8 +39840,8 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
     const selectedDraft = this.getSelectedDraft();
     if (selectedDraft && this.sessionState && this.selectedTargetId) {
       const supportedAiFields = new Set(getSupportedAiFields(selectedDraft));
-      const excerptAiState = this.getAiFieldState("excerpt");
-      const briefContentAiState = this.getAiFieldState("briefContent");
+      const excerptAiState = this.getAiFieldState("excerpt", this.selectedTargetId);
+      const briefContentAiState = this.getAiFieldState("briefContent", this.selectedTargetId);
       renderTargetForm({
         container: detailBody,
         draft: selectedDraft,

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FakeElement, Notice, TFile, resetObsidianTestState, setObsidianTestLanguage } from "obsidian";
 import { PublishableNote } from "../src/core/note";
-import { createWordpressTarget, createZhihuTarget } from "../src/settings";
+import { createCsdnTarget, createWordpressTarget, createZhihuTarget } from "../src/settings";
 import { NormalPublishModal } from "../src/ui/modals/NormalPublishModal";
 
 function createApp() {
@@ -11,6 +11,16 @@ function createApp() {
       openTabById: vi.fn(),
     },
   };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+  return { promise, resolve, reject };
 }
 
 function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
@@ -49,6 +59,16 @@ function findInputByName(root: FakeElement, name: string): FakeElement {
   const found = walk(root).find((element) => element.tagName === "input" && element.name === name);
   if (!found) {
     throw new Error(`Input not found: ${name}`);
+  }
+  return found;
+}
+
+function findTextEntryByName(root: FakeElement, name: string): FakeElement {
+  const found = walk(root).find(
+    (element) => (element.tagName === "input" || element.tagName === "textarea") && element.name === name
+  );
+  if (!found) {
+    throw new Error(`Text entry not found: ${name}`);
   }
   return found;
 }
@@ -481,6 +501,131 @@ describe("NormalPublishModal", () => {
 
     expect(textTree(modal.contentEl as never)).toContain("LLM request was rate-limited. Please retry later.");
     expect(findButtonByText(modal.contentEl as never, "Publish").disabled).toBe(false);
+  });
+
+  it("applies excerpt ai results to the initiating target after switching targets mid-flight", async () => {
+    setObsidianTestLanguage("en");
+
+    const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
+    const csdn = { ...createCsdnTarget(), id: "csdn", name: "CSDN" };
+    const settings = {
+      targets: [wordpress, csdn],
+      records: [],
+      llm: {
+        enabled: true,
+        vendor: "openai" as const,
+        apiKey: "secret",
+        model: "gpt-5-mini",
+        endpointOverride: "",
+        temperature: 0.3,
+        timeoutMs: 30000,
+        maxInputChars: 12000,
+      },
+    };
+    const deferred = createDeferred<{ text: string; vendor: string; model: string }>();
+    const llmService = {
+      generate: vi.fn().mockReturnValue(deferred.promise),
+    };
+
+    const modal = new NormalPublishModal(
+      {
+        app: createApp(),
+        manifest: { id: "ultimate-publisher" },
+        settings,
+        saveSettings: vi.fn(async () => {}),
+      } as never,
+      new TFile({ path: "Notes/Post.md", basename: "Post", extension: "md", name: "Post.md" }),
+      { runSingle: vi.fn() } as never,
+      { get: vi.fn(() => ({})) } as never,
+      async () => createNote(),
+      llmService as never
+    );
+
+    await modal.onOpen();
+
+    findButtonByText(modal.contentEl as never, "Generate").click();
+    await Promise.resolve();
+
+    expect(textTree(modal.contentEl as never)).toContain("Generating...");
+
+    findButtonByText(modal.contentEl as never, "CSDN").click();
+    await Promise.resolve();
+
+    deferred.resolve({
+      text: "WordPress excerpt from AI",
+      vendor: "openai",
+      model: "gpt-5-mini",
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(findTextEntryByName(modal.contentEl as never, "normal-publish-csdn-excerpt").value).toBe("Excerpt");
+
+    findButtonByText(modal.contentEl as never, "WordPress").click();
+    await Promise.resolve();
+
+    expect(findTextEntryByName(modal.contentEl as never, "normal-publish-wordpress-excerpt").value).toBe("WordPress excerpt from AI");
+    expect(textTree(modal.contentEl as never)).not.toContain("Generating...");
+  });
+
+  it("keeps title ai busy state under a common key across target switches", async () => {
+    setObsidianTestLanguage("en");
+
+    const wordpress = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
+    const zhihu = { ...createZhihuTarget(), id: "zhihu", name: "Zhihu", defaultColumnId: "" };
+    const settings = {
+      targets: [wordpress, zhihu],
+      records: [],
+      llm: {
+        enabled: true,
+        vendor: "openai" as const,
+        apiKey: "secret",
+        model: "gpt-5-mini",
+        endpointOverride: "",
+        temperature: 0.3,
+        timeoutMs: 30000,
+        maxInputChars: 12000,
+      },
+    };
+    const deferred = createDeferred<{ text: string; vendor: string; model: string }>();
+    const llmService = {
+      generate: vi.fn().mockReturnValue(deferred.promise),
+    };
+
+    const modal = new NormalPublishModal(
+      {
+        app: createApp(),
+        manifest: { id: "ultimate-publisher" },
+        settings,
+        saveSettings: vi.fn(async () => {}),
+      } as never,
+      new TFile({ path: "Notes/Post.md", basename: "Post", extension: "md", name: "Post.md" }),
+      { runSingle: vi.fn() } as never,
+      { get: vi.fn(() => ({})) } as never,
+      async () => createNote(),
+      llmService as never
+    );
+
+    await modal.onOpen();
+
+    findButtonByText(modal.contentEl as never, "Optimize Title").click();
+    await Promise.resolve();
+
+    findButtonByText(modal.contentEl as never, "Zhihu").click();
+    await Promise.resolve();
+
+    expect(textTree(modal.contentEl as never)).toContain("Generating...");
+
+    deferred.resolve({
+      text: "Shared AI Title",
+      vendor: "openai",
+      model: "gpt-5-mini",
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(findInputByName(modal.contentEl as never, "normal-publish-title").value).toBe("Shared AI Title");
+    expect(textTree(modal.contentEl as never)).not.toContain("Generating...");
   });
 
   it("uses past-tense success notice wording in english", async () => {

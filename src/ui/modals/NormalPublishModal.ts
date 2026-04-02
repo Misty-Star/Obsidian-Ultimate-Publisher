@@ -109,18 +109,28 @@ export class NormalPublishModal extends Modal {
     return this.sessionState.targetDrafts[this.selectedTargetId] ?? null;
   }
 
-  private buildAiKey(field: NormalPublishAiField): string {
-    return this.selectedTargetId ? `${this.selectedTargetId}:${field}` : `common:${field}`;
+  private getDraftByTargetId(targetId: string): ProviderPublishDraft | null {
+    if (!this.sessionState) {
+      return null;
+    }
+    return this.sessionState.targetDrafts[targetId] ?? null;
   }
 
-  private getAiFieldState(field: NormalPublishAiField): NormalPublishAiFieldState {
-    return this.aiFieldState[this.buildAiKey(field)] ?? { status: "idle" };
+  private buildAiKey(field: NormalPublishAiField, targetId: string | null = this.selectedTargetId): string {
+    if (field === "title") {
+      return "common:title";
+    }
+    return targetId ? `${targetId}:${field}` : `common:${field}`;
   }
 
-  private setAiFieldState(field: NormalPublishAiField, next: NormalPublishAiFieldState): void {
+  private getAiFieldState(field: NormalPublishAiField, targetId: string | null = this.selectedTargetId): NormalPublishAiFieldState {
+    return this.aiFieldState[this.buildAiKey(field, targetId)] ?? { status: "idle" };
+  }
+
+  private setAiFieldState(field: NormalPublishAiField, next: NormalPublishAiFieldState, targetId: string | null = this.selectedTargetId): void {
     this.aiFieldState = {
       ...this.aiFieldState,
-      [this.buildAiKey(field)]: next,
+      [this.buildAiKey(field, targetId)]: next,
     };
   }
 
@@ -148,7 +158,17 @@ export class NormalPublishModal extends Modal {
     if (!this.sessionState || !this.selectedTargetId) {
       return;
     }
-    const currentDraft = this.sessionState.targetDrafts[this.selectedTargetId];
+    this.updateTargetDraftById(this.selectedTargetId, update);
+  }
+
+  private updateTargetDraftById(
+    targetId: string,
+    update: (draft: ProviderPublishDraft) => ProviderPublishDraft
+  ): void {
+    if (!this.sessionState) {
+      return;
+    }
+    const currentDraft = this.sessionState.targetDrafts[targetId];
     if (!currentDraft) {
       return;
     }
@@ -156,7 +176,7 @@ export class NormalPublishModal extends Modal {
       ...this.sessionState,
       targetDrafts: {
         ...this.sessionState.targetDrafts,
-        [this.selectedTargetId]: update(currentDraft),
+        [targetId]: update(currentDraft),
       },
     };
   }
@@ -243,11 +263,12 @@ export class NormalPublishModal extends Modal {
   }
 
   private async handleAiGenerate(field: NormalPublishAiField): Promise<void> {
-    if (!this.note || !this.sessionState || !this.selectedTargetId) {
+    const initiatingTargetId = this.selectedTargetId;
+    if (!this.note || !this.sessionState || !initiatingTargetId) {
       return;
     }
-    const target = this.getTargetById(this.selectedTargetId);
-    const draft = this.getSelectedDraft();
+    const target = this.getTargetById(initiatingTargetId);
+    const draft = this.getDraftByTargetId(initiatingTargetId);
     if (!target || !draft) {
       return;
     }
@@ -257,12 +278,12 @@ export class NormalPublishModal extends Modal {
       this.setAiFieldState(field, {
         status: "error",
         errorMessage: createI18nFromObsidianLanguage().t("publish.normal.ai.notConfigured"),
-      });
+      }, initiatingTargetId);
       void this.render();
       return;
     }
 
-    this.setAiFieldState(field, { status: "loading" });
+    this.setAiFieldState(field, { status: "loading" }, initiatingTargetId);
     void this.render();
 
     try {
@@ -289,25 +310,25 @@ export class NormalPublishModal extends Modal {
           },
         };
       } else if (field === "excerpt") {
-        this.updateSelectedDraft((current) =>
+        this.updateTargetDraftById(initiatingTargetId, (current) =>
           current.provider === "wordpress" || current.provider === "csdn"
             ? { ...current, excerpt: text }
             : current
         );
       } else if (field === "briefContent") {
-        this.updateSelectedDraft((current) =>
+        this.updateTargetDraftById(initiatingTargetId, (current) =>
           current.provider === "juejin"
             ? { ...current, briefContent: text }
             : current
         );
       }
 
-      this.setAiFieldState(field, { status: "idle" });
+      this.setAiFieldState(field, { status: "idle" }, initiatingTargetId);
     } catch (error) {
       this.setAiFieldState(field, {
         status: "error",
         errorMessage: error instanceof Error ? error.message : String(error),
-      });
+      }, initiatingTargetId);
     }
 
     void this.render();
@@ -463,7 +484,7 @@ export class NormalPublishModal extends Modal {
     commonPanel.createEl("h3", { text: i18n.t("publish.normal.section.common") });
 
     if (this.sessionState) {
-      const titleAiState = this.getAiFieldState("title");
+      const titleAiState = this.getAiFieldState("title", null);
       renderTextInput(commonPanel, {
         label: i18n.t("publish.normal.field.title"),
         name: "normal-publish-title",
@@ -514,8 +535,8 @@ export class NormalPublishModal extends Modal {
     const selectedDraft = this.getSelectedDraft();
     if (selectedDraft && this.sessionState && this.selectedTargetId) {
       const supportedAiFields = new Set(getSupportedAiFields(selectedDraft));
-      const excerptAiState = this.getAiFieldState("excerpt");
-      const briefContentAiState = this.getAiFieldState("briefContent");
+      const excerptAiState = this.getAiFieldState("excerpt", this.selectedTargetId);
+      const briefContentAiState = this.getAiFieldState("briefContent", this.selectedTargetId);
       renderTargetForm({
         container: detailBody,
         draft: selectedDraft,
