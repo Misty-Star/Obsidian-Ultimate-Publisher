@@ -444,6 +444,19 @@
   gap: 6px;
 }
 
+.ultimate-publisher-normal-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ultimate-publisher-normal-field-action {
+  border-radius: 999px;
+  font-size: var(--font-ui-smaller);
+  padding: 4px 10px;
+}
+
 .ultimate-publisher-normal-field label {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);

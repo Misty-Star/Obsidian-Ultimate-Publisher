@@ -1,6 +1,7 @@
 import { NormalPublishOptionItem } from "../../core/providers";
 import { Translator } from "../../i18n";
 import {
+  FieldActionOptions,
   renderDropdownSelectableStringListInput,
   renderHelperText,
   renderSelectableStringListInput,
@@ -23,6 +24,7 @@ interface RenderTargetFormOptions {
   onChange: (update: (draft: ProviderPublishDraft) => ProviderPublishDraft) => void;
   hiddenFields?: NormalPublishFieldKey[];
   fieldNamePrefix?: string;
+  fieldActions?: Partial<Record<"excerpt" | "briefContent", FieldActionOptions>>;
 }
 
 export function renderTargetForm(options: RenderTargetFormOptions): void {
@@ -93,6 +95,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           label: i18n.t("publish.normal.field.excerpt"),
           name: fieldName("wordpress-excerpt"),
           value: draft.excerpt,
+          action: options.fieldActions?.excerpt,
           onInput: (value) => applyDraftUpdate("wordpress", (currentDraft) => ({ ...currentDraft, excerpt: value })),
         });
       }
@@ -190,6 +193,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           label: i18n.t("publish.normal.field.excerpt"),
           name: fieldName("csdn-excerpt"),
           value: draft.excerpt,
+          action: options.fieldActions?.excerpt,
           onInput: (value) => applyDraftUpdate("csdn", (currentDraft) => ({ ...currentDraft, excerpt: value })),
         });
       }
@@ -283,6 +287,7 @@ export function renderTargetForm(options: RenderTargetFormOptions): void {
           label: i18n.t("publish.normal.field.briefContent"),
           name: fieldName("juejin-briefContent"),
           value: draft.briefContent,
+          action: options.fieldActions?.briefContent,
           onInput: (value) => applyDraftUpdate("juejin", (currentDraft) => ({ ...currentDraft, briefContent: value })),
         });
       }

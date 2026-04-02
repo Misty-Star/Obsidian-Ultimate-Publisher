@@ -10,15 +10,47 @@ export interface StringListChoice {
   description?: string;
 }
 
-function createFieldContainer(container: HTMLElement, label: string, description?: string): HTMLElement {
+export interface FieldActionOptions {
+  label: string;
+  busyLabel?: string;
+  disabled?: boolean;
+  busy?: boolean;
+  errorMessage?: string;
+  onClick: () => void;
+}
+
+function createFieldContainer(
+  container: HTMLElement,
+  label: string,
+  description?: string,
+  action?: FieldActionOptions
+): HTMLElement {
   const field = container.createDiv({ cls: "ultimate-publisher-normal-field" });
-  field.createEl("label", { text: label });
+  const header = field.createDiv({ cls: "ultimate-publisher-normal-field-header" });
+  header.createEl("label", { text: label });
+
+  if (action) {
+    const button = header.createEl("button", {
+      text: action.busy ? action.busyLabel ?? action.label : action.label,
+    });
+    button.addClass("ultimate-publisher-normal-field-action");
+    button.disabled = Boolean(action.disabled);
+    button.addEventListener("click", () => {
+      action.onClick();
+    });
+  }
+
   if (description) {
     field.createEl("p", {
       cls: "ultimate-publisher-normal-helper",
       text: description,
     });
   }
+
+  if (action?.errorMessage) {
+    renderHelperText(field, action.errorMessage, "warning");
+  }
+
   return field;
 }
 
@@ -29,10 +61,11 @@ export function renderTextInput(
     name: string;
     value: string;
     description?: string;
+    action?: FieldActionOptions;
     onInput: (value: string) => void;
   }
 ): HTMLElement {
-  const field = createFieldContainer(container, options.label, options.description);
+  const field = createFieldContainer(container, options.label, options.description, options.action);
   const input = field.createEl("input", { type: "text" });
   input.name = options.name;
   input.value = options.value;
@@ -49,10 +82,11 @@ export function renderTextArea(
     name: string;
     value: string;
     description?: string;
+    action?: FieldActionOptions;
     onInput: (value: string) => void;
   }
 ): HTMLElement {
-  const field = createFieldContainer(container, options.label, options.description);
+  const field = createFieldContainer(container, options.label, options.description, options.action);
   const input = field.createEl("textarea");
   input.name = options.name;
   input.value = options.value;

@@ -41,6 +41,14 @@ function findAllByClass(root: FakeElement, className: string): FakeElement[] {
   return walk(root).filter((element) => element.className.split(/\s+/).includes(className));
 }
 
+function findButtonByText(root: FakeElement, text: string): FakeElement {
+  const found = walk(root).find((element) => element.tagName === "button" && element.textContent.includes(text));
+  if (!found) {
+    throw new Error(`Button not found: ${text}`);
+  }
+  return found;
+}
+
 function listInputNames(root: FakeElement): string[] {
   const relevantTags = new Set(["input", "textarea", "select"]);
   return walk(root)
@@ -327,6 +335,69 @@ describe("renderTargetForm", () => {
     expect(textTree(tagDropdown)).toContain("Obsidian");
     expect(textTree(tagDropdown)).not.toContain("tag-1");
     expect(findAllByClass(tagDropdown, "ultimate-publisher-normal-alias")).toHaveLength(0);
+  });
+
+  it("renders an ai action button for wordpress excerpt", () => {
+    const container = new FakeElement("div");
+    let clicked = false;
+
+    renderTargetForm({
+      container,
+      draft: {
+        provider: "wordpress",
+        slug: "post",
+        excerpt: "Excerpt",
+        tags: [],
+        categories: [],
+        status: "draft",
+        password: "",
+      },
+      remoteOptions: undefined,
+      i18n: createI18n("en"),
+      onChange: () => {},
+      fieldActions: {
+        excerpt: {
+          label: "Generate",
+          disabled: false,
+          onClick: () => {
+            clicked = true;
+          },
+        },
+      },
+    });
+
+    findButtonByText(container, "Generate").click();
+    expect(clicked).toBe(true);
+  });
+
+  it("renders juejin brief-content ai action in loading state", () => {
+    const container = new FakeElement("div");
+
+    renderTargetForm({
+      container,
+      draft: {
+        provider: "juejin",
+        categoryId: "cat-1",
+        categoryName: "Backend",
+        tagIds: [],
+        tagNames: [],
+        briefContent: "",
+      },
+      remoteOptions: undefined,
+      i18n: createI18n("en"),
+      onChange: () => {},
+      fieldActions: {
+        briefContent: {
+          label: "Generate",
+          busyLabel: "Generating...",
+          disabled: true,
+          busy: true,
+          onClick: () => {},
+        },
+      },
+    });
+
+    expect(textTree(container)).toContain("Generating...");
   });
 
   it("does not render the zhihu column field in normal publish", () => {
