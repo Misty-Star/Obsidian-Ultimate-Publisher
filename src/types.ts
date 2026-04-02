@@ -83,7 +83,21 @@ export type PublishTargetConfig =
   | CsdnTargetConfig
   | JuejinTargetConfig;
 
+export type LlmVendor = "openai" | "anthropic" | "gemini";
+
+export interface LlmSettings {
+  enabled: boolean;
+  vendor: LlmVendor;
+  apiKey: string;
+  model: string;
+  endpointOverride?: string;
+  temperature: number;
+  timeoutMs: number;
+  maxInputChars: number;
+}
+
 export interface UltimatePublisherSettings {
   targets: PublishTargetConfig[];
   records: PublishRecord[];
+  llm?: LlmSettings;
 }

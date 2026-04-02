@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   CsdnTargetConfig,
   JuejinTargetConfig,
+  LlmSettings,
   PublishContentFormat,
   PublishRecord,
   PublishTargetConfig,
@@ -11,9 +12,46 @@ import {
   ZhihuTargetConfig,
 } from "./types";
 
+export const DEFAULT_LLM_SETTINGS: LlmSettings = {
+  enabled: false,
+  vendor: "openai",
+  apiKey: "",
+  model: "",
+  endpointOverride: "",
+  temperature: 0.3,
+  timeoutMs: 30000,
+  maxInputChars: 12000,
+};
+
+export function normalizeLlmSettings(value: Partial<LlmSettings> | null | undefined): LlmSettings {
+  return {
+    enabled: Boolean(value?.enabled),
+    vendor:
+      value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai"
+        ? value.vendor
+        : DEFAULT_LLM_SETTINGS.vendor,
+    apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
+    model: typeof value?.model === "string" ? value.model : "",
+    endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
+    temperature:
+      typeof value?.temperature === "number" && Number.isFinite(value.temperature)
+        ? value.temperature
+        : DEFAULT_LLM_SETTINGS.temperature,
+    timeoutMs:
+      typeof value?.timeoutMs === "number" && value.timeoutMs > 0
+        ? value.timeoutMs
+        : DEFAULT_LLM_SETTINGS.timeoutMs,
+    maxInputChars:
+      typeof value?.maxInputChars === "number" && value.maxInputChars > 0
+        ? value.maxInputChars
+        : DEFAULT_LLM_SETTINGS.maxInputChars,
+  };
+}
+
 export const DEFAULT_SETTINGS: UltimatePublisherSettings = {
   targets: [],
   records: [],
+  llm: DEFAULT_LLM_SETTINGS,
 };
 
 export function createWordpressTarget(): WordpressTargetConfig {

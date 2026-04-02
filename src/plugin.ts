@@ -3,8 +3,9 @@ import { PublishService } from "./core/publishService";
 import { PublishWorkflow } from "./core/publishWorkflow";
 import { createI18nFromObsidianLanguage, Translator } from "./i18n";
 import { ProviderRegistry } from "./providers/registry";
-import { cloneTarget, DEFAULT_SETTINGS, normalizeTarget } from "./settings";
+import { cloneTarget, DEFAULT_SETTINGS, normalizeLlmSettings, normalizeTarget } from "./settings";
 import {
+  LlmSettings,
   isProviderId,
   PublishRecord,
   PublishTargetConfig,
@@ -135,13 +136,15 @@ export default class UltimatePublisherPlugin extends Plugin {
       ...loaded,
       targets,
       records,
+      llm: normalizeLlmSettings(loaded?.llm),
     };
 
     this.settings = nextSettings;
 
     const targetCountChanged = rawTargets.length !== targets.length;
     const recordCountChanged = rawRecords.length !== records.length;
-    if (loaded && (targetCountChanged || recordCountChanged)) {
+    const llmChanged = JSON.stringify(loaded?.llm ?? null) !== JSON.stringify(nextSettings.llm);
+    if (loaded && (targetCountChanged || recordCountChanged || llmChanged)) {
       await this.saveSettings();
     }
   }
@@ -178,6 +181,16 @@ export default class UltimatePublisherPlugin extends Plugin {
       ...this.settings,
       targets: this.settings.targets.filter((target) => target.id !== targetId),
       records: this.settings.records.filter((record) => record.targetId !== targetId),
+    };
+    await this.saveSettings();
+  }
+
+  async updateLlmSettings(updater: (settings: LlmSettings) => void): Promise<void> {
+    const draft = normalizeLlmSettings(this.settings.llm);
+    updater(draft);
+    this.settings = {
+      ...this.settings,
+      llm: normalizeLlmSettings(draft),
     };
     await this.saveSettings();
   }
