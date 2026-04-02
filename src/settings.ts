@@ -51,7 +51,7 @@ export function normalizeLlmSettings(value: Partial<LlmSettings> | null | undefi
 export const DEFAULT_SETTINGS: UltimatePublisherSettings = {
   targets: [],
   records: [],
-  llm: DEFAULT_LLM_SETTINGS,
+  llm: { ...DEFAULT_LLM_SETTINGS },
 };
 
 export function createWordpressTarget(): WordpressTargetConfig {

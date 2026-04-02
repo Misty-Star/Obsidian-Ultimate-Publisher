@@ -11,6 +11,11 @@ function createApp() {
 }
 
 describe("plugin settings loading", () => {
+  it("keeps default llm settings object independent from DEFAULT_SETTINGS", () => {
+    expect(DEFAULT_SETTINGS.llm).toEqual(DEFAULT_LLM_SETTINGS);
+    expect(DEFAULT_SETTINGS.llm).not.toBe(DEFAULT_LLM_SETTINGS);
+  });
+
   it("drops legacy local-export targets and their records while loading saved settings", async () => {
     const plugin = new UltimatePublisherPlugin(createApp() as never, { id: "ultimate-publisher" } as never);
     vi.spyOn(plugin, "loadData").mockResolvedValue({
