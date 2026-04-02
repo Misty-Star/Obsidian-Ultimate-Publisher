@@ -34395,7 +34395,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian20 = require("obsidian");
+var import_obsidian21 = require("obsidian");
 
 // src/core/note.ts
 var import_obsidian = require("obsidian");
@@ -34701,7 +34701,7 @@ var DEFAULT_LLM_SETTINGS = {
 function normalizeLlmSettings(value) {
   return {
     enabled: Boolean(value?.enabled),
-    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
+    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
     apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
     model: typeof value?.model === "string" ? value.model : "",
     endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
@@ -35202,16 +35202,16 @@ var messages = {
     "settings.modal.action.cancel": "\u53D6\u6D88",
     "settings.modal.action.save": "\u4FDD\u5B58",
     "settings.tab.llm": "AI",
-    "settings.llm.title": "AI Settings",
-    "settings.llm.description": "Configure the shared LLM provider used for title and summary generation.",
-    "settings.llm.enabled": "Enable AI assistance",
-    "settings.llm.vendor": "Vendor",
-    "settings.llm.model": "Model",
+    "settings.llm.title": "AI \u8BBE\u7F6E",
+    "settings.llm.description": "\u914D\u7F6E\u7528\u4E8E\u6807\u9898\u548C\u6458\u8981\u751F\u6210\u7684\u5171\u4EAB LLM Provider\u3002",
+    "settings.llm.enabled": "\u542F\u7528 AI \u8F85\u52A9",
+    "settings.llm.vendor": "\u63D0\u4F9B\u5546",
+    "settings.llm.model": "\u6A21\u578B",
     "settings.llm.apiKey": "API Key",
-    "settings.llm.endpointOverride": "Endpoint Override",
-    "settings.llm.temperature": "Temperature",
-    "settings.llm.timeoutMs": "Timeout (ms)",
-    "settings.llm.maxInputChars": "Max Input Characters",
+    "settings.llm.endpointOverride": "\u81EA\u5B9A\u4E49 Endpoint",
+    "settings.llm.temperature": "\u6E29\u5EA6",
+    "settings.llm.timeoutMs": "\u8D85\u65F6\uFF08\u6BEB\u79D2\uFF09",
+    "settings.llm.maxInputChars": "\u6700\u5927\u8F93\u5165\u5B57\u7B26\u6570",
     "dashboard.card.configuredTargets.label": "\u5DF2\u914D\u7F6E\u76EE\u6807",
     "dashboard.card.configuredTargets.help": "\u6240\u6709\u5DF2\u4FDD\u5B58\u7684\u53D1\u5E03\u76EE\u6807",
     "dashboard.card.enabledTargets.label": "\u542F\u7528\u76EE\u6807",
@@ -37256,7 +37256,14 @@ function ConfiguredTargetsTab({
 
 // src/ui/settings/LlmSettingsTab.tsx
 var import_jsx_runtime3 = __toESM(require_jsx_runtime());
+var DEFAULT_ENDPOINT_PLACEHOLDERS = {
+  openai: "https://api.openai.com/v1",
+  "openai-compatible": "https://api.openai.com/v1/chat/completions",
+  anthropic: "https://api.anthropic.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta"
+};
 function LlmSettingsTab({ i18n, settings, onChange }) {
+  const endpointPlaceholder = DEFAULT_ENDPOINT_PLACEHOLDERS[settings.vendor];
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "ultimate-publisher-llm-tab", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("header", { className: "ultimate-publisher-llm-header", children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h3", { children: i18n.t("settings.llm.title") }),
@@ -37281,6 +37288,7 @@ function LlmSettingsTab({ i18n, settings, onChange }) {
         draft.vendor = event.currentTarget.value;
       }), children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "openai", children: "OpenAI" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "openai-compatible", children: "OpenAI Compatible" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "anthropic", children: "Anthropic" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "gemini", children: "Gemini" })
       ] })
@@ -37299,9 +37307,17 @@ function LlmSettingsTab({ i18n, settings, onChange }) {
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.endpointOverride") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { type: "text", value: settings.endpointOverride ?? "", onChange: (event) => onChange((draft) => {
-        draft.endpointOverride = event.currentTarget.value;
-      }) })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "input",
+        {
+          type: "text",
+          value: settings.endpointOverride ?? "",
+          placeholder: endpointPlaceholder,
+          onChange: (event) => onChange((draft) => {
+            draft.endpointOverride = event.currentTarget.value;
+          })
+        }
+      )
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.temperature") }),
@@ -39030,10 +39046,10 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
 };
 
 // src/ui/modals/NormalPublishModal.ts
-var import_obsidian18 = require("obsidian");
+var import_obsidian19 = require("obsidian");
 
 // src/core/llm/service.ts
-var import_obsidian17 = require("obsidian");
+var import_obsidian18 = require("obsidian");
 
 // src/core/llm/providers/anthropicProvider.ts
 var import_obsidian14 = require("obsidian");
@@ -39132,6 +39148,13 @@ function resolveBaseUrl(endpointOverride) {
   const base = (endpointOverride || "https://api.openai.com/v1").replace(/\/+$/, "");
   return `${base}/responses`;
 }
+function extractResponsesText(payload) {
+  const responsePayload = payload;
+  if (typeof responsePayload.output_text === "string" && responsePayload.output_text.trim()) {
+    return responsePayload.output_text.trim();
+  }
+  return responsePayload.output?.flatMap((item) => item.content ?? []).filter((item) => item.type === "output_text" && typeof item.text === "string").map((item) => item.text ?? "").join("").trim() ?? "";
+}
 var OpenAiLlmProvider = class {
   constructor(request = import_obsidian16.requestUrl) {
     this.request = request;
@@ -39165,8 +39188,69 @@ var OpenAiLlmProvider = class {
     if (response.status >= 400) {
       throw new LlmHttpError(response.text ?? "OpenAI request failed", response.status);
     }
-    const payload = response.json ?? {};
-    const text = typeof payload.output_text === "string" ? payload.output_text.trim() : "";
+    const text = extractResponsesText(response.json ?? {});
+    if (!text) {
+      throw new Error("LLM returned no text.");
+    }
+    return {
+      text,
+      vendor: this.vendor,
+      model: settings.model
+    };
+  }
+};
+
+// src/core/llm/providers/openaiCompatibleProvider.ts
+var import_obsidian17 = require("obsidian");
+function resolveChatCompletionsUrl(endpointOverride) {
+  const base = (endpointOverride || "https://api.openai.com/v1/chat/completions").replace(/\/+$/, "");
+  return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
+}
+function extractChatCompletionText(payload) {
+  const chatPayload = payload;
+  const content = chatPayload.choices?.[0]?.message?.content;
+  if (typeof content === "string" && content.trim()) {
+    return content.trim();
+  }
+  if (Array.isArray(content)) {
+    return content.map((part) => typeof part?.text === "string" ? part.text : "").join("").trim();
+  }
+  const reasoningContent = chatPayload.choices?.[0]?.message?.reasoning_content;
+  if (typeof reasoningContent === "string" && reasoningContent.trim()) {
+    throw new Error("LLM returned reasoning content only. Disable thinking for this model or switch to a non-reasoning model.");
+  }
+  return "";
+}
+var OpenAiCompatibleLlmProvider = class {
+  constructor(request = import_obsidian17.requestUrl) {
+    this.request = request;
+    this.vendor = "openai-compatible";
+  }
+  async generate(settings, input) {
+    const response = await this.request({
+      url: resolveChatCompletionsUrl(settings.endpointOverride),
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${settings.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        messages: [
+          {
+            role: "user",
+            content: JSON.stringify(input)
+          }
+        ],
+        temperature: settings.temperature,
+        enable_thinking: false
+      }),
+      throw: false
+    });
+    if (response.status >= 400) {
+      throw new LlmHttpError(response.text ?? "OpenAI-compatible request failed", response.status);
+    }
+    const text = extractChatCompletionText(response.json ?? {});
     if (!text) {
       throw new Error("LLM returned no text.");
     }
@@ -39230,8 +39314,9 @@ function mapLlmError(error) {
   return error instanceof Error ? error : new Error(String(error));
 }
 var LlmService = class {
-  constructor(request = import_obsidian17.requestUrl) {
+  constructor(request = import_obsidian18.requestUrl) {
     this.openai = new OpenAiLlmProvider(request);
+    this.openaiCompatible = new OpenAiCompatibleLlmProvider(request);
     this.anthropic = new AnthropicLlmProvider(request);
     this.gemini = new GeminiLlmProvider(request);
   }
@@ -39239,6 +39324,8 @@ var LlmService = class {
     const preparedInput = clampInputMarkdown(input, settings.maxInputChars);
     try {
       switch (settings.vendor) {
+        case "openai-compatible":
+          return await withTimeout(this.openaiCompatible.generate(settings, preparedInput), settings.timeoutMs);
         case "anthropic":
           return await withTimeout(this.anthropic.generate(settings, preparedInput), settings.timeoutMs);
         case "gemini":
@@ -39403,7 +39490,7 @@ function deriveNoteTargetSummaries(settings, notePath) {
 // src/ui/modals/NormalPublishModal.ts
 var NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
 var NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
-var NormalPublishModal = class extends import_obsidian18.Modal {
+var NormalPublishModal = class extends import_obsidian19.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote, llmService = new LlmService()) {
     super(plugin.app);
     this.plugin = plugin;
@@ -39675,7 +39762,7 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
       const validationError = validateTargetDraft(draft);
       if (validationError) {
         this.setSelectedTargetError(validationError);
-        new import_obsidian18.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
+        new import_obsidian19.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
         await this.render();
         return;
       }
@@ -39693,7 +39780,7 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
       const actionLabel = result.action === "update" ? i18n.t("notice.publish.action.updated") : i18n.t("notice.publish.action.published");
-      new import_obsidian18.Notice(
+      new import_obsidian19.Notice(
         i18n.t("notice.publish.succeeded", {
           target: target.name,
           action: actionLabel
@@ -39703,7 +39790,7 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.setSelectedTargetError(message);
-      new import_obsidian18.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian19.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -39898,7 +39985,7 @@ var NormalPublishModal = class extends import_obsidian18.Modal {
       if (!target || !target.enabled) {
         const message = i18n.t("publish.shared.error.targetUnavailable");
         this.setSelectedTargetError(message);
-        new import_obsidian18.Notice(message, 6e3);
+        new import_obsidian19.Notice(message, 6e3);
         void this.render();
         return;
       }
@@ -40010,7 +40097,7 @@ function buildQuickPublishChildren(enabledTargets, i18n) {
 }
 
 // src/ui/views/PublisherDashboardView.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
 function formatTimestamp(timestamp, i18n) {
   if (!timestamp) {
@@ -40022,7 +40109,7 @@ function formatTimestamp(timestamp, i18n) {
   }
   return parsed.toLocaleString();
 }
-var PublisherDashboardView = class extends import_obsidian19.ItemView {
+var PublisherDashboardView = class extends import_obsidian20.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -40179,7 +40266,7 @@ function normalizeLoadedRecord(record, targetIds) {
     contentHash: record.contentHash
   };
 }
-var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
+var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -40284,7 +40371,7 @@ var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new import_obsidian20.Notice(this.i18n.t("notice.dashboard.openFailed"));
+      new import_obsidian21.Notice(this.i18n.t("notice.dashboard.openFailed"));
       return;
     }
     await leaf.setViewState({
@@ -40299,7 +40386,7 @@ var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
   openNormalPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian20.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new NormalPublishModal(this, file, this.publishWorkflow).open();
@@ -40307,7 +40394,7 @@ var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
   openBatchPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian20.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new BatchPublishModal(this, file, this.publishWorkflow).open();
@@ -40315,12 +40402,12 @@ var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
   async runQuickPublishForTarget(targetId) {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian20.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new import_obsidian20.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
+      new import_obsidian21.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
       return;
     }
     await this.publishToTarget(file, target);
@@ -40333,12 +40420,12 @@ var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian20.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian20.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
+      new import_obsidian21.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
       return;
     }
     if (targets.length === 1) {
@@ -40353,15 +40440,15 @@ var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
     return this.settings.targets.filter((target) => target.enabled);
   }
   getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian20.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian21.MarkdownView);
     const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian20.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian21.TFile) || file.extension !== "md") {
       return null;
     }
     return file;
   }
   showPublisherMenu(items, position) {
-    const menu = new import_obsidian20.Menu();
+    const menu = new import_obsidian21.Menu();
     menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -40439,16 +40526,16 @@ var UltimatePublisherPlugin = class extends import_obsidian20.Plugin {
     }
   }
   async publishToTarget(file, target) {
-    new import_obsidian20.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
+    new import_obsidian21.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
     try {
       const result = await this.publishWorkflow.runSingle(file, target, this.settings);
       this.settings = result.settings;
       await this.saveSettings();
       const actionLabel = result.action === "update" ? this.i18n.t("notice.publish.action.updated") : this.i18n.t("notice.publish.action.published");
-      new import_obsidian20.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
+      new import_obsidian21.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian20.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian21.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
   }

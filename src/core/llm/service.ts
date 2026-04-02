@@ -3,6 +3,7 @@ import { LlmSettings } from "../../types";
 import { AnthropicLlmProvider } from "./providers/anthropicProvider";
 import { GeminiLlmProvider } from "./providers/geminiProvider";
 import { OpenAiLlmProvider } from "./providers/openaiProvider";
+import { OpenAiCompatibleLlmProvider } from "./providers/openaiCompatibleProvider";
 import { LlmHttpError, LlmTaskInput, LlmTaskResult } from "./types";
 
 type RequestFn = (request: RequestUrlParam) => Promise<{ status: number; json?: unknown; text?: string }>;
@@ -67,11 +68,13 @@ function mapLlmError(error: unknown): Error {
 
 export class LlmService {
   private readonly openai: OpenAiLlmProvider;
+  private readonly openaiCompatible: OpenAiCompatibleLlmProvider;
   private readonly anthropic: AnthropicLlmProvider;
   private readonly gemini: GeminiLlmProvider;
 
   constructor(request: RequestFn = requestUrl as never) {
     this.openai = new OpenAiLlmProvider(request);
+    this.openaiCompatible = new OpenAiCompatibleLlmProvider(request);
     this.anthropic = new AnthropicLlmProvider(request);
     this.gemini = new GeminiLlmProvider(request);
   }
@@ -81,6 +84,8 @@ export class LlmService {
 
     try {
       switch (settings.vendor) {
+        case "openai-compatible":
+          return await withTimeout(this.openaiCompatible.generate(settings, preparedInput), settings.timeoutMs);
         case "anthropic":
           return await withTimeout(this.anthropic.generate(settings, preparedInput), settings.timeoutMs);
         case "gemini":

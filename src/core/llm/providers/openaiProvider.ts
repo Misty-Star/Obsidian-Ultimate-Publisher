@@ -9,6 +9,32 @@ function resolveBaseUrl(endpointOverride?: string): string {
   return `${base}/responses`;
 }
 
+function extractResponsesText(payload: unknown): string {
+  const responsePayload = payload as {
+    output_text?: string;
+    output?: Array<{
+      type?: string;
+      content?: Array<{
+        type?: string;
+        text?: string;
+      }>;
+    }>;
+  };
+
+  if (typeof responsePayload.output_text === "string" && responsePayload.output_text.trim()) {
+    return responsePayload.output_text.trim();
+  }
+
+  return (
+    responsePayload.output
+      ?.flatMap((item) => item.content ?? [])
+      .filter((item) => item.type === "output_text" && typeof item.text === "string")
+      .map((item) => item.text ?? "")
+      .join("")
+      .trim() ?? ""
+  );
+}
+
 export class OpenAiLlmProvider implements LlmProviderAdapter {
   readonly vendor = "openai" as const;
 
@@ -44,8 +70,7 @@ export class OpenAiLlmProvider implements LlmProviderAdapter {
       throw new LlmHttpError(response.text ?? "OpenAI request failed", response.status);
     }
 
-    const payload = (response.json ?? {}) as { output_text?: string };
-    const text = typeof payload.output_text === "string" ? payload.output_text.trim() : "";
+    const text = extractResponsesText(response.json ?? {});
     if (!text) {
       throw new Error("LLM returned no text.");
     }

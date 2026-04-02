@@ -138,4 +138,122 @@ describe("SettingsView", () => {
     expect(markup).toContain("Model");
     expect(markup).toContain("claude-sonnet-4-5");
   });
+
+  it("renders localized llm settings copy in zh-CN", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          llm: {
+            ...DEFAULT_SETTINGS.llm,
+            enabled: true,
+            vendor: "openai",
+            model: "gpt-5-mini",
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("zh-CN"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("AI 设置");
+    expect(markup).toContain("配置用于标题和摘要生成的共享 LLM Provider。");
+    expect(markup).toContain("启用 AI 辅助");
+    expect(markup).toContain("超时（毫秒）");
+    expect(markup).toContain("最大输入字符数");
+  });
+
+  it("shows the vendor default endpoint as placeholder when endpoint override is empty", () => {
+    const anthropicMarkup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          llm: {
+            ...DEFAULT_SETTINGS.llm,
+            vendor: "anthropic",
+            endpointOverride: "",
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+    const geminiMarkup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          llm: {
+            ...DEFAULT_SETTINGS.llm,
+            vendor: "gemini",
+            endpointOverride: "",
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+
+    expect(anthropicMarkup).toContain('placeholder="https://api.anthropic.com/v1"');
+    expect(geminiMarkup).toContain('placeholder="https://generativelanguage.googleapis.com/v1beta"');
+  });
+
+  it("renders the dedicated openai-compatible vendor option and its chat completions placeholder", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          llm: {
+            ...DEFAULT_SETTINGS.llm,
+            vendor: "openai-compatible" as never,
+            endpointOverride: "",
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain('<option value="openai-compatible" selected="">OpenAI Compatible</option>');
+    expect(markup).toContain('placeholder="https://api.openai.com/v1/chat/completions"');
+  });
+
+  it("keeps the custom endpoint override value when one is configured", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          llm: {
+            ...DEFAULT_SETTINGS.llm,
+            vendor: "openai",
+            endpointOverride: "https://proxy.example.com/v1",
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain('value="https://proxy.example.com/v1"');
+    expect(markup).toContain('placeholder="https://api.openai.com/v1"');
+  });
 });

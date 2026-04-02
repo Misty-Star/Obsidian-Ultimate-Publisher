@@ -8,7 +8,16 @@ interface LlmSettingsTabProps {
   onChange: (updater: (draft: LlmSettings) => void) => void;
 }
 
+const DEFAULT_ENDPOINT_PLACEHOLDERS: Record<LlmSettings["vendor"], string> = {
+  openai: "https://api.openai.com/v1",
+  "openai-compatible": "https://api.openai.com/v1/chat/completions",
+  anthropic: "https://api.anthropic.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta",
+};
+
 export function LlmSettingsTab({ i18n, settings, onChange }: LlmSettingsTabProps): React.JSX.Element {
+  const endpointPlaceholder = DEFAULT_ENDPOINT_PLACEHOLDERS[settings.vendor];
+
   return (
     <section className="ultimate-publisher-llm-tab">
       <header className="ultimate-publisher-llm-header">
@@ -27,6 +36,7 @@ export function LlmSettingsTab({ i18n, settings, onChange }: LlmSettingsTabProps
         <span>{i18n.t("settings.llm.vendor")}</span>
         <select value={settings.vendor} onChange={(event) => onChange((draft) => { draft.vendor = event.currentTarget.value as LlmSettings["vendor"]; })}>
           <option value="openai">OpenAI</option>
+          <option value="openai-compatible">OpenAI Compatible</option>
           <option value="anthropic">Anthropic</option>
           <option value="gemini">Gemini</option>
         </select>
@@ -41,7 +51,12 @@ export function LlmSettingsTab({ i18n, settings, onChange }: LlmSettingsTabProps
       </label>
       <label className="ultimate-publisher-llm-field">
         <span>{i18n.t("settings.llm.endpointOverride")}</span>
-        <input type="text" value={settings.endpointOverride ?? ""} onChange={(event) => onChange((draft) => { draft.endpointOverride = event.currentTarget.value; })} />
+        <input
+          type="text"
+          value={settings.endpointOverride ?? ""}
+          placeholder={endpointPlaceholder}
+          onChange={(event) => onChange((draft) => { draft.endpointOverride = event.currentTarget.value; })}
+        />
       </label>
       <label className="ultimate-publisher-llm-field">
         <span>{i18n.t("settings.llm.temperature")}</span>

@@ -83,7 +83,7 @@ export type PublishTargetConfig =
   | CsdnTargetConfig
   | JuejinTargetConfig;
 
-export type LlmVendor = "openai" | "anthropic" | "gemini";
+export type LlmVendor = "openai" | "openai-compatible" | "anthropic" | "gemini";
 
 export interface LlmSettings {
   enabled: boolean;

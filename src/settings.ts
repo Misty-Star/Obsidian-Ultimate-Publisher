@@ -27,7 +27,7 @@ export function normalizeLlmSettings(value: Partial<LlmSettings> | null | undefi
   return {
     enabled: Boolean(value?.enabled),
     vendor:
-      value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai"
+      value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible"
         ? value.vendor
         : DEFAULT_LLM_SETTINGS.vendor,
     apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
