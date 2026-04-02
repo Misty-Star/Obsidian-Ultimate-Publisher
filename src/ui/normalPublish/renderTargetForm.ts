@@ -24,7 +24,7 @@ interface RenderTargetFormOptions {
   onChange: (update: (draft: ProviderPublishDraft) => ProviderPublishDraft) => void;
   hiddenFields?: NormalPublishFieldKey[];
   fieldNamePrefix?: string;
-  fieldActions?: Partial<Record<"excerpt" | "briefContent", FieldActionOptions>>;
+  fieldActions?: Partial<Record<Extract<NormalPublishFieldKey, "excerpt" | "briefContent">, FieldActionOptions>>;
 }
 
 export function renderTargetForm(options: RenderTargetFormOptions): void {

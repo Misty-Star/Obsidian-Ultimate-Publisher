@@ -33,9 +33,13 @@ function createFieldContainer(
     const button = header.createEl("button", {
       text: action.busy ? action.busyLabel ?? action.label : action.label,
     });
+    button.type = "button";
     button.addClass("ultimate-publisher-normal-field-action");
-    button.disabled = Boolean(action.disabled);
+    button.disabled = Boolean(action.disabled || action.busy);
     button.addEventListener("click", () => {
+      if (action.disabled || action.busy) {
+        return;
+      }
       action.onClick();
     });
   }

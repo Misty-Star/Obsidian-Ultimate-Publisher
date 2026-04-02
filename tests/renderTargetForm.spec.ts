@@ -372,6 +372,7 @@ describe("renderTargetForm", () => {
 
   it("renders juejin brief-content ai action in loading state", () => {
     const container = new FakeElement("div");
+    let clicked = false;
 
     renderTargetForm({
       container,
@@ -392,12 +393,18 @@ describe("renderTargetForm", () => {
           busyLabel: "Generating...",
           disabled: true,
           busy: true,
-          onClick: () => {},
+          onClick: () => {
+            clicked = true;
+          },
         },
       },
     });
 
     expect(textTree(container)).toContain("Generating...");
+    const button = findButtonByText(container, "Generating...");
+    expect(button.disabled).toBe(true);
+    button.click();
+    expect(clicked).toBe(false);
   });
 
   it("does not render the zhihu column field in normal publish", () => {
