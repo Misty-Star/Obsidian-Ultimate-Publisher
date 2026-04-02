@@ -15,13 +15,19 @@ export function getSupportedAiFields(draft: ProviderPublishDraft): NormalPublish
     case "yuque":
     case "zhihu":
       return ["title"];
-    default:
-      return ["title"];
   }
+
+  const exhaustiveCheck: never = draft;
+  throw new Error(`Unhandled provider draft: ${String(exhaustiveCheck)}`);
 }
 
 function clipMarkdown(markdown: string, maxInputChars: number): string {
-  return markdown.length <= maxInputChars ? markdown : markdown.slice(0, maxInputChars).trimEnd();
+  if (!Number.isFinite(maxInputChars) || maxInputChars <= 0) {
+    return markdown;
+  }
+
+  const limit = Math.floor(maxInputChars);
+  return markdown.length <= limit ? markdown : markdown.slice(0, limit);
 }
 
 export function buildNormalPublishAiTaskInput(options: {
@@ -32,6 +38,10 @@ export function buildNormalPublishAiTaskInput(options: {
   draft: ProviderPublishDraft;
   llmSettings: LlmSettings;
 }): LlmTaskInput {
+  if (options.target.provider !== options.draft.provider) {
+    throw new Error("Target provider and draft provider must match.");
+  }
+
   const clippedMarkdown = clipMarkdown(options.note.markdown, options.llmSettings.maxInputChars);
 
   switch (options.field) {
