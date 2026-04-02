@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { createI18n, Translator } from "../../i18n";
 import { messages } from "../../i18n/messages";
-import { ProviderId, UltimatePublisherSettings } from "../../types";
+import { DEFAULT_LLM_SETTINGS } from "../../settings";
+import { LlmSettings, ProviderId, UltimatePublisherSettings } from "../../types";
 import { getProviderCatalog } from "./providerCatalog";
 import { buildConfiguredTargetCards, buildMarketplaceCards } from "./settingsViewModel";
 import { ConfiguredTargetsTab } from "./ConfiguredTargetsTab";
+import { LlmSettingsTab } from "./LlmSettingsTab";
 import { MarketplaceTab } from "./MarketplaceTab";
 import { SettingsTabId, TabBar } from "./TabBar";
 
@@ -15,6 +17,7 @@ interface SettingsViewProps {
   onAddProvider: (providerId: ProviderId) => void;
   onEditTarget: (targetId: string) => void;
   onDeleteTarget: (targetId: string) => void;
+  onUpdateLlmSettings: (updater: (draft: LlmSettings) => void) => void | Promise<void>;
 }
 
 const DEFAULT_I18N = createI18n("en");
@@ -37,6 +40,7 @@ export function SettingsView({
   onAddProvider,
   onEditTarget,
   onDeleteTarget,
+  onUpdateLlmSettings,
 }: SettingsViewProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const providerCatalog = useMemo(() => getProviderCatalog(i18n), [i18n]);
@@ -72,8 +76,14 @@ export function SettingsView({
             onEditTarget={onEditTarget}
             onDeleteTarget={onDeleteTarget}
           />
-        ) : (
+        ) : activeTab === "marketplace" ? (
           <MarketplaceTab i18n={i18n} providers={marketplaceProviders} onAddProvider={onAddProvider} />
+        ) : (
+          <LlmSettingsTab
+            i18n={i18n}
+            settings={settings.llm ?? DEFAULT_LLM_SETTINGS}
+            onChange={onUpdateLlmSettings}
+          />
         )}
       </div>
     </section>

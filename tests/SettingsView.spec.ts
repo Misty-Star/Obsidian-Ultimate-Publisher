@@ -2,7 +2,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { createI18n } from "../src/i18n";
-import { createWordpressTarget } from "../src/settings";
+import { DEFAULT_SETTINGS, createWordpressTarget } from "../src/settings";
 import { SettingsView } from "../src/ui/settings/SettingsView";
 import { UltimatePublisherSettings } from "../src/types";
 
@@ -84,5 +84,58 @@ describe("SettingsView", () => {
     expect(markup).toContain("Configured Targets");
     expect(markup).toContain("Marketplace");
     expect(markup).toContain("Configured");
+  });
+
+  it("renders the AI tab label in both locales", () => {
+    const enMarkup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: DEFAULT_SETTINGS,
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+    const zhMarkup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: DEFAULT_SETTINGS,
+        i18n: createI18n("zh-CN"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+
+    expect(enMarkup).toContain("AI");
+    expect(zhMarkup).toContain("AI");
+  });
+
+  it("renders the llm settings panel when the ai tab is selected", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          llm: {
+            ...DEFAULT_SETTINGS.llm,
+            enabled: true,
+            vendor: "anthropic",
+            model: "claude-sonnet-4-5",
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("AI Settings");
+    expect(markup).toContain("Vendor");
+    expect(markup).toContain("Model");
+    expect(markup).toContain("claude-sonnet-4-5");
   });
 });

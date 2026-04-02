@@ -76,6 +76,23 @@
   padding: 16px;
 }
 
+.ultimate-publisher-llm-tab,
+.ultimate-publisher-llm-header {
+  display: grid;
+  gap: 12px;
+}
+
+.ultimate-publisher-llm-field {
+  display: grid;
+  gap: 6px;
+}
+
+.ultimate-publisher-llm-field span {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: 600;
+}
+
 .ultimate-publisher-settings-empty-state {
   display: grid;
   gap: 6px;

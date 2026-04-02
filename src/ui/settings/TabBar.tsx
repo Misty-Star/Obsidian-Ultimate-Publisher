@@ -2,7 +2,7 @@ import React from "react";
 import { Translator } from "../../i18n";
 import { messages } from "../../i18n/messages";
 
-export type SettingsTabId = "configured" | "marketplace";
+export type SettingsTabId = "configured" | "marketplace" | "llm";
 
 interface TabBarProps {
   i18n: Translator;
@@ -35,6 +35,13 @@ export function TabBar({ i18n, activeTab, onSelectTab }: TabBarProps): React.JSX
       label: resolveTranslation(i18n, "settings.tab.marketplace", {
         en: "Marketplace",
         "zh-CN": "市场",
+      }),
+    },
+    {
+      id: "llm",
+      label: resolveTranslation(i18n, "settings.tab.llm", {
+        en: "AI",
+        "zh-CN": "AI",
       }),
     },
   ];
