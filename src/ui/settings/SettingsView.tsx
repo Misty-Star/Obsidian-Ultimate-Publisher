@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createI18n, Translator } from "../../i18n";
 import { messages } from "../../i18n/messages";
 import { DEFAULT_LLM_SETTINGS } from "../../settings";
@@ -43,6 +43,11 @@ export function SettingsView({
   onUpdateLlmSettings,
 }: SettingsViewProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
+  const [llmSettings, setLlmSettings] = useState<LlmSettings>(() => ({
+    ...(settings.llm ?? DEFAULT_LLM_SETTINGS),
+  }));
+  const llmSettingsRef = useRef<LlmSettings>(llmSettings);
+  const llmPersistVersionRef = useRef(0);
   const providerCatalog = useMemo(() => getProviderCatalog(i18n), [i18n]);
   const configuredTargets = useMemo(
     () => buildConfiguredTargetCards(settings, providerCatalog),
@@ -60,6 +65,33 @@ export function SettingsView({
       "zh-CN": "先配置一个或多个目标，再通过命令面板或功能区菜单发布当前笔记。",
     }
   );
+
+  useEffect(() => {
+    const nextLlmSettings = { ...(settings.llm ?? DEFAULT_LLM_SETTINGS) };
+    llmSettingsRef.current = nextLlmSettings;
+    setLlmSettings(nextLlmSettings);
+  }, [settings.llm]);
+
+  const handleUpdateLlmSettings = (updater: (draft: LlmSettings) => void): void => {
+    const previous = llmSettingsRef.current;
+    const next = { ...previous };
+    updater(next);
+    llmSettingsRef.current = next;
+    setLlmSettings(next);
+
+    const persistVersion = ++llmPersistVersionRef.current;
+    void Promise.resolve(
+      onUpdateLlmSettings((draft) => {
+        Object.assign(draft, next);
+      })
+    ).catch(() => {
+      if (llmPersistVersionRef.current !== persistVersion) {
+        return;
+      }
+      llmSettingsRef.current = previous;
+      setLlmSettings(previous);
+    });
+  };
 
   return (
     <section className="ultimate-publisher-settings-page">
@@ -81,8 +113,8 @@ export function SettingsView({
         ) : (
           <LlmSettingsTab
             i18n={i18n}
-            settings={settings.llm ?? DEFAULT_LLM_SETTINGS}
-            onChange={onUpdateLlmSettings}
+            settings={llmSettings}
+            onChange={handleUpdateLlmSettings}
           />
         )}
       </div>

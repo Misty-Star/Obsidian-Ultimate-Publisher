@@ -132,7 +132,6 @@ export function mountSettingsView(containerEl: HTMLElement, options: MountSettin
 
   const handleUpdateLlmSettings = async (updater: (draft: LlmSettings) => void): Promise<void> => {
     await options.plugin.updateLlmSettings(updater);
-    options.requestRefresh();
   };
 
   render(root, {
