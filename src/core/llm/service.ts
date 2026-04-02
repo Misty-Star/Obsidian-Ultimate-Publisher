@@ -7,6 +7,48 @@ import { LlmHttpError, LlmTaskInput, LlmTaskResult } from "./types";
 
 type RequestFn = (request: RequestUrlParam) => Promise<{ status: number; json?: unknown; text?: string }>;
 
+function clampInputMarkdown(input: LlmTaskInput, maxInputChars: number): LlmTaskInput {
+  if (!Number.isFinite(maxInputChars) || maxInputChars <= 0) {
+    return input;
+  }
+
+  const limit = Math.floor(maxInputChars);
+  if (input.note.markdown.length <= limit) {
+    return input;
+  }
+
+  return {
+    ...input,
+    note: {
+      ...input.note,
+      markdown: input.note.markdown.slice(0, limit),
+    },
+  };
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return promise;
+  }
+
+  return await new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("LLM request timed out."));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 function mapLlmError(error: unknown): Error {
   if (error instanceof LlmHttpError) {
     if (error.status === 401 || error.status === 403) {
@@ -35,15 +77,17 @@ export class LlmService {
   }
 
   async generate(settings: LlmSettings, input: LlmTaskInput): Promise<LlmTaskResult> {
+    const preparedInput = clampInputMarkdown(input, settings.maxInputChars);
+
     try {
       switch (settings.vendor) {
         case "anthropic":
-          return await this.anthropic.generate(settings, input);
+          return await withTimeout(this.anthropic.generate(settings, preparedInput), settings.timeoutMs);
         case "gemini":
-          return await this.gemini.generate(settings, input);
+          return await withTimeout(this.gemini.generate(settings, preparedInput), settings.timeoutMs);
         case "openai":
         default:
-          return await this.openai.generate(settings, input);
+          return await withTimeout(this.openai.generate(settings, preparedInput), settings.timeoutMs);
       }
     } catch (error) {
       throw mapLlmError(error);

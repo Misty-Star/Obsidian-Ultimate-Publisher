@@ -97,3 +97,70 @@ it("maps Gemini HTTP errors to user-facing messages", async () => {
     )
   ).rejects.toThrow("LLM request was rate-limited. Please retry later.");
 });
+
+it("clips note markdown by maxInputChars before dispatch", async () => {
+  const request = vi.fn().mockResolvedValue({
+    status: 200,
+    json: {
+      output_text: "Trimmed ok",
+    },
+  });
+  const service = new LlmService(request as never);
+
+  await service.generate(
+    {
+      ...DEFAULT_LLM_SETTINGS,
+      enabled: true,
+      vendor: "openai",
+      model: "gpt-5-mini",
+      apiKey: "secret",
+      maxInputChars: 5,
+    },
+    {
+      ...baseInput,
+      note: {
+        ...baseInput.note,
+        markdown: "1234567890",
+      },
+    }
+  );
+
+  const firstCall = request.mock.calls[0]?.[0] as { body?: string };
+  const body = JSON.parse(String(firstCall.body)) as {
+    input?: Array<{ content?: Array<{ text?: string }> }>;
+  };
+  const serializedInput = body.input?.[0]?.content?.[0]?.text ?? "";
+  const llmInput = JSON.parse(serializedInput) as { note?: { markdown?: string } };
+  expect(llmInput.note?.markdown).toBe("12345");
+});
+
+it("enforces timeoutMs for long-running LLM requests", async () => {
+  const request = vi.fn(
+    () =>
+      new Promise<{ status: number; json?: unknown; text?: string }>((resolve) => {
+        setTimeout(() => {
+          resolve({
+            status: 200,
+            json: {
+              output_text: "Late response",
+            },
+          });
+        }, 50);
+      })
+  );
+  const service = new LlmService(request as never);
+
+  await expect(
+    service.generate(
+      {
+        ...DEFAULT_LLM_SETTINGS,
+        enabled: true,
+        vendor: "openai",
+        model: "gpt-5-mini",
+        apiKey: "secret",
+        timeoutMs: 10,
+      },
+      baseInput
+    )
+  ).rejects.toThrow("LLM request timed out.");
+});
