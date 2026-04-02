@@ -389,6 +389,100 @@ describe("NormalPublishModal", () => {
     expect(() => findInputByName(modal.contentEl as never, "normal-publish-zhihu-columnId")).toThrow(/Input not found/);
   });
 
+  it("uses llm generation to update the common title draft", async () => {
+    setObsidianTestLanguage("en");
+
+    const target = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
+    const settings = {
+      targets: [target],
+      records: [],
+      llm: {
+        enabled: true,
+        vendor: "openai" as const,
+        apiKey: "secret",
+        model: "gpt-5-mini",
+        endpointOverride: "",
+        temperature: 0.3,
+        timeoutMs: 30000,
+        maxInputChars: 12000,
+      },
+    };
+    const llmService = {
+      generate: vi.fn().mockResolvedValue({
+        text: "Sharper Title",
+        vendor: "openai",
+        model: "gpt-5-mini",
+      }),
+    };
+
+    const modal = new NormalPublishModal(
+      {
+        app: createApp(),
+        manifest: { id: "ultimate-publisher" },
+        settings,
+        saveSettings: vi.fn(async () => {}),
+      } as never,
+      new TFile({ path: "Notes/Post.md", basename: "Post", extension: "md", name: "Post.md" }),
+      { runSingle: vi.fn() } as never,
+      { get: vi.fn(() => ({})) } as never,
+      async () => createNote(),
+      llmService as never
+    );
+
+    await modal.onOpen();
+
+    findButtonByText(modal.contentEl as never, "Optimize Title").click();
+    await Promise.resolve();
+
+    expect(findInputByName(modal.contentEl as never, "normal-publish-title").value).toBe("Sharper Title");
+    expect(llmService.generate).toHaveBeenCalled();
+  });
+
+  it("shows a field-level ai error without blocking publish actions", async () => {
+    setObsidianTestLanguage("en");
+
+    const target = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
+    const settings = {
+      targets: [target],
+      records: [],
+      llm: {
+        enabled: true,
+        vendor: "openai" as const,
+        apiKey: "secret",
+        model: "gpt-5-mini",
+        endpointOverride: "",
+        temperature: 0.3,
+        timeoutMs: 30000,
+        maxInputChars: 12000,
+      },
+    };
+    const llmService = {
+      generate: vi.fn().mockRejectedValue(new Error("LLM request was rate-limited. Please retry later.")),
+    };
+
+    const modal = new NormalPublishModal(
+      {
+        app: createApp(),
+        manifest: { id: "ultimate-publisher" },
+        settings,
+        saveSettings: vi.fn(async () => {}),
+      } as never,
+      new TFile({ path: "Notes/Post.md", basename: "Post", extension: "md", name: "Post.md" }),
+      { runSingle: vi.fn() } as never,
+      { get: vi.fn(() => ({})) } as never,
+      async () => createNote(),
+      llmService as never
+    );
+
+    await modal.onOpen();
+
+    findButtonByText(modal.contentEl as never, "Generate").click();
+    await Promise.resolve();
+
+    expect(textTree(modal.contentEl as never)).toContain("LLM request was rate-limited. Please retry later.");
+    expect(findButtonByText(modal.contentEl as never, "Publish").disabled).toBe(false);
+  });
+
   it("uses past-tense success notice wording in english", async () => {
     setObsidianTestLanguage("en");
 

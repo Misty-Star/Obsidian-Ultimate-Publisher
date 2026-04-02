@@ -1,4 +1,6 @@
 import { Modal, Notice, TFile } from "obsidian";
+import { LlmService } from "../../core/llm/service";
+import { buildNormalPublishAiTaskInput, getSupportedAiFields, NormalPublishAiField } from "../../core/normalPublish/ai";
 import { buildNormalPublishSessionState } from "../../core/normalPublish/drafts";
 import { ensureRemoteOptionsLoaded } from "../../core/normalPublish/remoteOptions";
 import { NormalPublishExecutionContext, NormalPublishSessionState, ProviderPublishDraft } from "../../core/normalPublish/types";
@@ -8,6 +10,7 @@ import { PublishWorkflow } from "../../core/publishWorkflow";
 import { ProviderRegistry } from "../../providers/registry";
 import { createI18nFromObsidianLanguage } from "../../i18n";
 import UltimatePublisherPlugin from "../../plugin";
+import { DEFAULT_LLM_SETTINGS } from "../../settings";
 import { PublishTargetConfig } from "../../types";
 import { deriveNoteTargetSummaries, NoteTargetSummary } from "../publishSummary";
 import { renderTargetForm } from "../normalPublish/renderTargetForm";
@@ -24,6 +27,11 @@ interface AppWithSettings {
 
 type NoteLoader = (app: typeof Modal.prototype.app, file: TFile) => Promise<PublishableNote>;
 
+interface NormalPublishAiFieldState {
+  status: "idle" | "loading" | "error";
+  errorMessage?: string;
+}
+
 const NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
 const NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
 
@@ -34,13 +42,15 @@ export class NormalPublishModal extends Modal {
   private errorMessage: string | null = null;
   private sessionState: NormalPublishSessionState | null = null;
   private note: PublishableNote | null = null;
+  private aiFieldState: Record<string, NormalPublishAiFieldState> = {};
 
   constructor(
     private readonly plugin: UltimatePublisherPlugin,
     private readonly file: TFile,
     private readonly workflow: PublishWorkflow,
     private readonly providerRegistry: ProviderRegistry = new ProviderRegistry(plugin.app),
-    private readonly noteLoader: NoteLoader = extractPublishableNote
+    private readonly noteLoader: NoteLoader = extractPublishableNote,
+    private readonly llmService: Pick<LlmService, "generate"> = new LlmService()
   ) {
     super(plugin.app);
   }
@@ -97,6 +107,21 @@ export class NormalPublishModal extends Modal {
       return null;
     }
     return this.sessionState.targetDrafts[this.selectedTargetId] ?? null;
+  }
+
+  private buildAiKey(field: NormalPublishAiField): string {
+    return this.selectedTargetId ? `${this.selectedTargetId}:${field}` : `common:${field}`;
+  }
+
+  private getAiFieldState(field: NormalPublishAiField): NormalPublishAiFieldState {
+    return this.aiFieldState[this.buildAiKey(field)] ?? { status: "idle" };
+  }
+
+  private setAiFieldState(field: NormalPublishAiField, next: NormalPublishAiFieldState): void {
+    this.aiFieldState = {
+      ...this.aiFieldState,
+      [this.buildAiKey(field)]: next,
+    };
   }
 
   private buildExecutionContext(): NormalPublishExecutionContext | null {
@@ -215,6 +240,77 @@ export class NormalPublishModal extends Modal {
       await this.loadRemoteOptionsForSelectedTarget();
     }
     await this.render();
+  }
+
+  private async handleAiGenerate(field: NormalPublishAiField): Promise<void> {
+    if (!this.note || !this.sessionState || !this.selectedTargetId) {
+      return;
+    }
+    const target = this.getTargetById(this.selectedTargetId);
+    const draft = this.getSelectedDraft();
+    if (!target || !draft) {
+      return;
+    }
+
+    const llmSettings = this.plugin.settings.llm ?? DEFAULT_LLM_SETTINGS;
+    if (!llmSettings.enabled || !llmSettings.apiKey || !llmSettings.model) {
+      this.setAiFieldState(field, {
+        status: "error",
+        errorMessage: createI18nFromObsidianLanguage().t("publish.normal.ai.notConfigured"),
+      });
+      void this.render();
+      return;
+    }
+
+    this.setAiFieldState(field, { status: "loading" });
+    void this.render();
+
+    try {
+      const input = buildNormalPublishAiTaskInput({
+        field,
+        note: this.note,
+        target,
+        commonTitle: this.sessionState.commonDraft.title,
+        draft,
+        llmSettings,
+      });
+      const result = await this.llmService.generate(llmSettings, input);
+      const text = result.text.trim();
+      if (!text) {
+        throw new Error("LLM returned no text.");
+      }
+
+      if (field === "title") {
+        this.sessionState = {
+          ...this.sessionState,
+          commonDraft: {
+            ...this.sessionState.commonDraft,
+            title: text,
+          },
+        };
+      } else if (field === "excerpt") {
+        this.updateSelectedDraft((current) =>
+          current.provider === "wordpress" || current.provider === "csdn"
+            ? { ...current, excerpt: text }
+            : current
+        );
+      } else if (field === "briefContent") {
+        this.updateSelectedDraft((current) =>
+          current.provider === "juejin"
+            ? { ...current, briefContent: text }
+            : current
+        );
+      }
+
+      this.setAiFieldState(field, { status: "idle" });
+    } catch (error) {
+      this.setAiFieldState(field, {
+        status: "error",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    void this.render();
   }
 
   private async handlePublish(target: PublishTargetConfig): Promise<void> {
@@ -367,10 +463,23 @@ export class NormalPublishModal extends Modal {
     commonPanel.createEl("h3", { text: i18n.t("publish.normal.section.common") });
 
     if (this.sessionState) {
+      const titleAiState = this.getAiFieldState("title");
       renderTextInput(commonPanel, {
         label: i18n.t("publish.normal.field.title"),
         name: "normal-publish-title",
         value: this.sessionState.commonDraft.title,
+        action: selectedSummary
+          ? {
+              label: i18n.t("publish.normal.ai.optimizeTitle"),
+              busyLabel: i18n.t("publish.normal.ai.generating"),
+              busy: titleAiState.status === "loading",
+              disabled: this.isPublishing || !this.note || !this.selectedTargetId,
+              errorMessage: titleAiState.status === "error" ? titleAiState.errorMessage : undefined,
+              onClick: () => {
+                void this.handleAiGenerate("title");
+              },
+            }
+          : undefined,
         onInput: (value) => {
           if (!this.sessionState) {
             return;
@@ -404,11 +513,40 @@ export class NormalPublishModal extends Modal {
     const detailBody = detailPanel.createDiv({ cls: "ultimate-publisher-normal-detail-body" });
     const selectedDraft = this.getSelectedDraft();
     if (selectedDraft && this.sessionState && this.selectedTargetId) {
+      const supportedAiFields = new Set(getSupportedAiFields(selectedDraft));
+      const excerptAiState = this.getAiFieldState("excerpt");
+      const briefContentAiState = this.getAiFieldState("briefContent");
       renderTargetForm({
         container: detailBody,
         draft: selectedDraft,
         remoteOptions: this.sessionState.remoteOptions[this.selectedTargetId],
         i18n,
+        fieldActions: {
+          excerpt: supportedAiFields.has("excerpt")
+            ? {
+                label: i18n.t("publish.normal.ai.generate"),
+                busyLabel: i18n.t("publish.normal.ai.generating"),
+                busy: excerptAiState.status === "loading",
+                disabled: this.isPublishing || !this.note || !this.selectedTargetId,
+                errorMessage: excerptAiState.status === "error" ? excerptAiState.errorMessage : undefined,
+                onClick: () => {
+                  void this.handleAiGenerate("excerpt");
+                },
+              }
+            : undefined,
+          briefContent: supportedAiFields.has("briefContent")
+            ? {
+                label: i18n.t("publish.normal.ai.generate"),
+                busyLabel: i18n.t("publish.normal.ai.generating"),
+                busy: briefContentAiState.status === "loading",
+                disabled: this.isPublishing || !this.note || !this.selectedTargetId,
+                errorMessage: briefContentAiState.status === "error" ? briefContentAiState.errorMessage : undefined,
+                onClick: () => {
+                  void this.handleAiGenerate("briefContent");
+                },
+              }
+            : undefined,
+        },
         onChange: (update) => {
           this.updateSelectedDraft(update);
         },

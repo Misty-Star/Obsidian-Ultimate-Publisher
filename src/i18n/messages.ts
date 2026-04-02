@@ -266,7 +266,7 @@ export const messages: Record<SupportedLocale, Record<string, string>> = {
     "publish.normal.ai.regenerate": "重新生成",
     "publish.normal.ai.optimizeTitle": "优化标题",
     "publish.normal.ai.generating": "生成中...",
-    "publish.normal.ai.notConfigured": "使用生成功能前，请先在设置中配置 AI。",
+    "publish.normal.ai.notConfigured": "使用生成功能前，请先在设置里完成 AI 配置。",
     "publish.normal.remote.loading": "正在加载远端选项...",
     "publish.normal.remote.fallback": "远端选项拉取失败，已切换为手动输入。",
     "publish.normal.remote.selectHint": "该字段已加载远端选项，可直接选择。",

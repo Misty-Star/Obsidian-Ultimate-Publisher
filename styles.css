@@ -449,12 +449,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .ultimate-publisher-normal-field-action {
   border-radius: 999px;
   font-size: var(--font-ui-smaller);
   padding: 4px 10px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .ultimate-publisher-normal-field label {
