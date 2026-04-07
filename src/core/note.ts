@@ -78,7 +78,12 @@ function normalizeTitleLine(value: string): string {
   return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
 }
 
-function pickTitle(markdown: string, fallback: string): string {
+function pickTitle(markdown: string, frontmatter: Record<string, unknown>, fallback: string): string {
+  const frontmatterTitle = typeof frontmatter.title === "string" ? frontmatter.title.trim() : "";
+  if (frontmatterTitle) {
+    return frontmatterTitle;
+  }
+
   const lines = markdown.split(/\r?\n/);
 
   for (const rawLine of lines) {
@@ -88,13 +93,6 @@ function pickTitle(markdown: string, fallback: string): string {
     }
 
     const title = normalizeTitleLine(line);
-    if (title) {
-      return title;
-    }
-  }
-
-  for (const rawLine of lines) {
-    const title = normalizeTitleLine(rawLine);
     if (title) {
       return title;
     }
@@ -169,7 +167,7 @@ export async function extractPublishableNote(app: App, file: TFile): Promise<Pub
     }
   }
 
-  const title = pickTitle(markdown, file.basename);
+  const title = pickTitle(markdown, frontmatter, file.basename);
   const slug =
     (typeof frontmatter.slug === "string" && frontmatter.slug) ||
     (typeof frontmatter.permalink === "string" && frontmatter.permalink) ||

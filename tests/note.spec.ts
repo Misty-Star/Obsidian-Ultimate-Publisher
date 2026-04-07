@@ -61,8 +61,17 @@ describe("stripFrontmatter", () => {
 });
 
 describe("extractPublishableNote", () => {
-  it("uses the first level-one heading as the publish title even when frontmatter has a title", async () => {
+  it("prefers frontmatter title over the first level-one heading", async () => {
     const app = createApp("Intro line\n\n# Actual Title\n\nBody", {}, { title: "Frontmatter Title" });
+    const file = createFile("Notes/Post.md");
+
+    const note = await extractPublishableNote(app, file);
+
+    expect(note.title).toBe("Frontmatter Title");
+  });
+
+  it("uses the first level-one heading when frontmatter title is absent", async () => {
+    const app = createApp("Intro line\n\n# Actual Title\n\nBody");
     const file = createFile("Notes/Post.md");
 
     const note = await extractPublishableNote(app, file);
@@ -70,13 +79,13 @@ describe("extractPublishableNote", () => {
     expect(note.title).toBe("Actual Title");
   });
 
-  it("falls back to the first non-empty line when no level-one heading exists", async () => {
+  it("falls back to the file basename when frontmatter title and level-one heading are both absent", async () => {
     const app = createApp("\n\nFirst line title\n\n## Section\n\nBody");
-    const file = createFile("Notes/Post.md");
+    const file = createFile("Notes/Fallback Name.md");
 
     const note = await extractPublishableNote(app, file);
 
-    expect(note.title).toBe("First line title");
+    expect(note.title).toBe("Fallback Name");
   });
 
   it("falls back to the file basename when the note has no usable title text", async () => {
