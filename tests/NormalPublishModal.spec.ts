@@ -298,6 +298,73 @@ describe("NormalPublishModal", () => {
     );
   });
 
+  it("persists failure settings when publish fails after refreshing provider option cache", async () => {
+    setObsidianTestLanguage("en");
+
+    const target = { ...createWordpressTarget(), id: "wp", name: "WordPress" };
+    const failedSettings = {
+      targets: [target],
+      records: [],
+      providerOptionCache: {
+        juejinByTargetId: {
+          "juejin-target": {
+            fetchedAt: "2026-04-09T00:00:00.000Z",
+            categories: [{ id: "category-1", label: "后端" }],
+            tags: [{ id: "tag-1", label: "Obsidian" }],
+          },
+        },
+      },
+    };
+    const plugin = {
+      app: createApp(),
+      manifest: { id: "ultimate-publisher" },
+      settings: { targets: [target], records: [] },
+      saveSettings: vi.fn(async () => {}),
+      persistPublishFailureState: vi.fn(async function (this: { settings: typeof failedSettings }, error: unknown) {
+        const nextSettings = (error as { settings?: typeof failedSettings }).settings;
+        if (!nextSettings) {
+          return false;
+        }
+        this.settings = nextSettings;
+        await plugin.saveSettings();
+        return true;
+      }),
+    };
+    const workflow = {
+      runSingle: vi.fn(async () => {
+        throw Object.assign(new Error("publish failed"), { settings: failedSettings });
+      }),
+    };
+    const file = new TFile({
+      path: "Notes/Post.md",
+      basename: "Post",
+      extension: "md",
+      name: "Post.md",
+    });
+    const providerRegistry = {
+      get: vi.fn(() => ({
+        loadNormalPublishOptions: vi.fn().mockResolvedValue({}),
+      })),
+    };
+
+    const modal = new NormalPublishModal(
+      plugin as never,
+      file,
+      workflow as never,
+      providerRegistry as never,
+      async () => createNote()
+    );
+    await modal.onOpen();
+
+    findButtonByText(modal.contentEl as never, "Publish").click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(plugin.persistPublishFailureState).toHaveBeenCalledTimes(1);
+    expect(plugin.settings).toEqual(failedSettings);
+    expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+  });
+
   it("preserves selected wordpress categories when another detailed field changes before publish", async () => {
     setObsidianTestLanguage("en");
 

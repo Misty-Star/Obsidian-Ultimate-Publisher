@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import {
+  CachedProviderOption,
   CsdnTargetConfig,
+  FrontmatterAutomationSettings,
   JuejinTargetConfig,
+  JuejinProviderOptionCacheEntry,
   LlmSettings,
+  ProviderOptionCache,
   PublishContentFormat,
   PublishRecord,
   PublishTargetConfig,
@@ -21,6 +25,15 @@ export const DEFAULT_LLM_SETTINGS: LlmSettings = {
   temperature: 0.3,
   timeoutMs: 30000,
   maxInputChars: 12000,
+};
+
+export const DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS: FrontmatterAutomationSettings = {
+  enabled: false,
+  includeOptionComments: true,
+};
+
+export const EMPTY_PROVIDER_OPTION_CACHE: ProviderOptionCache = {
+  juejinByTargetId: {},
 };
 
 export function normalizeLlmSettings(value: Partial<LlmSettings> | null | undefined): LlmSettings {
@@ -48,9 +61,91 @@ export function normalizeLlmSettings(value: Partial<LlmSettings> | null | undefi
   };
 }
 
+function normalizeCachedProviderOption(value: unknown): CachedProviderOption | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.id !== "string" || typeof raw.label !== "string") {
+    return null;
+  }
+
+  return {
+    id: raw.id,
+    label: raw.label,
+    description: typeof raw.description === "string" ? raw.description : undefined,
+  };
+}
+
+function normalizeCachedProviderOptionList(value: unknown): CachedProviderOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => normalizeCachedProviderOption(item))
+    .filter((item): item is CachedProviderOption => item !== null);
+}
+
+function normalizeJuejinProviderOptionCacheEntry(value: unknown): JuejinProviderOptionCacheEntry | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.fetchedAt !== "string") {
+    return null;
+  }
+
+  return {
+    fetchedAt: raw.fetchedAt,
+    categories: normalizeCachedProviderOptionList(raw.categories),
+    tags: normalizeCachedProviderOptionList(raw.tags),
+  };
+}
+
+export function normalizeFrontmatterAutomationSettings(
+  value: Partial<FrontmatterAutomationSettings> | null | undefined
+): FrontmatterAutomationSettings {
+  return {
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.enabled,
+    includeOptionComments:
+      typeof value?.includeOptionComments === "boolean"
+        ? value.includeOptionComments
+        : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.includeOptionComments,
+  };
+}
+
+export function normalizeProviderOptionCache(value: unknown): ProviderOptionCache {
+  const rawValue = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+  const rawJuejinByTargetId = rawValue?.juejinByTargetId;
+  if (typeof rawJuejinByTargetId !== "object" || rawJuejinByTargetId === null) {
+    return {
+      juejinByTargetId: {},
+    };
+  }
+
+  const juejinByTargetId: Record<string, JuejinProviderOptionCacheEntry> = {};
+  for (const [targetId, entry] of Object.entries(rawJuejinByTargetId)) {
+    const normalizedEntry = normalizeJuejinProviderOptionCacheEntry(entry);
+    if (normalizedEntry) {
+      juejinByTargetId[targetId] = normalizedEntry;
+    }
+  }
+
+  return {
+    juejinByTargetId,
+  };
+}
+
 export const DEFAULT_SETTINGS: UltimatePublisherSettings = {
   targets: [],
   records: [],
+  frontmatterAutomation: { ...DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS },
+  providerOptionCache: {
+    juejinByTargetId: {},
+  },
   llm: { ...DEFAULT_LLM_SETTINGS },
 };
 

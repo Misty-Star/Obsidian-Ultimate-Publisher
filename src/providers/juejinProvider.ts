@@ -1,6 +1,14 @@
 import { requestUrl } from "obsidian";
 import { NormalPublishExecutionContext } from "../core/normalPublish/types";
-import { assertRemoteAssetsSupported, MediaSupport, PublisherProvider, PublishResult } from "../core/providers";
+import {
+  assertRemoteAssetsSupported,
+  getPublishFailureProviderOptionCache,
+  MediaSupport,
+  ProviderRuntimeOptions,
+  PublisherProvider,
+  PublishResult,
+  withPublishFailureDetails,
+} from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { resolveJuejinPublishInput } from "../core/webPublishConfig";
 import { JuejinTargetConfig } from "../types";
@@ -115,7 +123,7 @@ export class JuejinProvider implements PublisherProvider<JuejinTargetConfig> {
       {
         cursor: "0",
         key_word: "",
-        limit: 10,
+        limit: 500,
         sort_type: 1,
       }
     );
@@ -169,116 +177,134 @@ export class JuejinProvider implements PublisherProvider<JuejinTargetConfig> {
   async publish(
     note: PublishableNote,
     target: JuejinTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    runtime?: ProviderRuntimeOptions<JuejinTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(
+    const resolved = await resolveJuejinPublishInput(
       note,
       target,
-      context?.provider.provider === "juejin" ? context.provider : undefined
+      context?.provider.provider === "juejin" ? context.provider : undefined,
+      runtime
     );
-    const draftResponse = await requestJuejin<JuejinDraftPayload>(
-      target,
-      "https://api.juejin.cn/content_api/v1/article_draft/create",
-      "POST",
-      {
-        category_id: input.categoryId,
-        tag_ids: input.tagIds,
-        link_url: "",
-        cover_image: "",
-        title: note.title,
-        brief_content: input.briefContent,
-        edit_type: 10,
-        html_content: "deprecated",
-        mark_content: note.markdown,
-        theme_ids: [],
+    const input = resolved.input;
+    try {
+      const draftResponse = await requestJuejin<JuejinDraftPayload>(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/create",
+        "POST",
+        {
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: [],
+        }
+      );
+
+      const draftId = String(draftResponse.data?.id ?? "");
+      if (draftResponse.err_no !== 0 || !draftId) {
+        throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
       }
-    );
 
-    const draftId = String(draftResponse.data?.id ?? "");
-    if (draftResponse.err_no !== 0 || !draftId) {
-      throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
-    }
+      const publishResponse = await requestJuejin<JuejinPublishPayload>(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: [],
+        }
+      );
 
-    const publishResponse = await requestJuejin<JuejinPublishPayload>(
-      target,
-      "https://api.juejin.cn/content_api/v1/article/publish",
-      "POST",
-      {
-        draft_id: draftId,
-        sync_to_org: false,
-        column_ids: [],
-        theme_ids: [],
+      const articleId = String(publishResponse.data?.article_id ?? "");
+      if (publishResponse.err_no !== 0 || !articleId) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
       }
-    );
 
-    const articleId = String(publishResponse.data?.article_id ?? "");
-    if (publishResponse.err_no !== 0 || !articleId) {
-      throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl(articleId),
+        providerOptionCache: resolved.providerOptionCache,
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
     }
-
-    return {
-      remoteId: encodeRemoteId(articleId, draftId),
-      remoteUrl: buildPreviewUrl(articleId),
-    };
   }
 
   async update(
     remoteId: string,
     note: PublishableNote,
     target: JuejinTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    runtime?: ProviderRuntimeOptions<JuejinTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(
+    const resolved = await resolveJuejinPublishInput(
       note,
       target,
-      context?.provider.provider === "juejin" ? context.provider : undefined
+      context?.provider.provider === "juejin" ? context.provider : undefined,
+      runtime
     );
+    const input = resolved.input;
     const { articleId, draftId } = decodeRemoteId(remoteId);
-    const draftResponse = await requestJuejin<JuejinDraftPayload>(
-      target,
-      "https://api.juejin.cn/content_api/v1/article_draft/update",
-      "POST",
-      {
-        id: draftId,
-        category_id: input.categoryId,
-        tag_ids: input.tagIds,
-        link_url: "",
-        cover_image: "",
-        title: note.title,
-        brief_content: input.briefContent,
-        edit_type: 10,
-        html_content: "deprecated",
-        mark_content: note.markdown,
-        theme_ids: [],
+    try {
+      const draftResponse = await requestJuejin<JuejinDraftPayload>(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/update",
+        "POST",
+        {
+          id: draftId,
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: [],
+        }
+      );
+
+      if (draftResponse.err_no !== 0) {
+        throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
       }
-    );
 
-    if (draftResponse.err_no !== 0) {
-      throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
-    }
+      const publishResponse = await requestJuejin<JuejinPublishPayload>(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: [],
+        }
+      );
 
-    const publishResponse = await requestJuejin<JuejinPublishPayload>(
-      target,
-      "https://api.juejin.cn/content_api/v1/article/publish",
-      "POST",
-      {
-        draft_id: draftId,
-        sync_to_org: false,
-        column_ids: [],
-        theme_ids: [],
+      if (publishResponse.err_no !== 0) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
       }
-    );
 
-    if (publishResponse.err_no !== 0) {
-      throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl(articleId),
+        providerOptionCache: resolved.providerOptionCache,
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
     }
-
-    return {
-      remoteId: encodeRemoteId(articleId, draftId),
-      remoteUrl: buildPreviewUrl(articleId),
-    };
   }
 
   async delete(remoteId: string, target: JuejinTargetConfig): Promise<void> {

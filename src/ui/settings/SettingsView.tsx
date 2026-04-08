@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createI18n, Translator } from "../../i18n";
 import { messages } from "../../i18n/messages";
-import { DEFAULT_LLM_SETTINGS } from "../../settings";
-import { LlmSettings, ProviderId, UltimatePublisherSettings } from "../../types";
+import { DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS, DEFAULT_LLM_SETTINGS } from "../../settings";
+import { FrontmatterAutomationSettings, LlmSettings, ProviderId, UltimatePublisherSettings } from "../../types";
 import { getProviderCatalog } from "./providerCatalog";
 import { buildConfiguredTargetCards, buildMarketplaceCards } from "./settingsViewModel";
 import { ConfiguredTargetsTab } from "./ConfiguredTargetsTab";
+import { FrontmatterAutomationPanel } from "./FrontmatterAutomationPanel";
 import { LlmSettingsTab } from "./LlmSettingsTab";
 import { MarketplaceTab } from "./MarketplaceTab";
 import { SettingsTabId, TabBar } from "./TabBar";
@@ -18,6 +19,7 @@ interface SettingsViewProps {
   onEditTarget: (targetId: string) => void;
   onDeleteTarget: (targetId: string) => void;
   onUpdateLlmSettings: (updater: (draft: LlmSettings) => void) => void | Promise<void>;
+  onUpdateFrontmatterAutomationSettings: (updater: (draft: FrontmatterAutomationSettings) => void) => void | Promise<void>;
 }
 
 const DEFAULT_I18N = createI18n("en");
@@ -41,13 +43,19 @@ export function SettingsView({
   onEditTarget,
   onDeleteTarget,
   onUpdateLlmSettings,
+  onUpdateFrontmatterAutomationSettings,
 }: SettingsViewProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [llmSettings, setLlmSettings] = useState<LlmSettings>(() => ({
     ...(settings.llm ?? DEFAULT_LLM_SETTINGS),
   }));
+  const [frontmatterAutomationSettings, setFrontmatterAutomationSettings] = useState<FrontmatterAutomationSettings>(() => ({
+    ...(settings.frontmatterAutomation ?? DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS),
+  }));
   const llmSettingsRef = useRef<LlmSettings>(llmSettings);
   const llmPersistVersionRef = useRef(0);
+  const frontmatterAutomationSettingsRef = useRef<FrontmatterAutomationSettings>(frontmatterAutomationSettings);
+  const frontmatterPersistVersionRef = useRef(0);
   const providerCatalog = useMemo(() => getProviderCatalog(i18n), [i18n]);
   const configuredTargets = useMemo(
     () => buildConfiguredTargetCards(settings, providerCatalog),
@@ -72,6 +80,14 @@ export function SettingsView({
     setLlmSettings(nextLlmSettings);
   }, [settings.llm]);
 
+  useEffect(() => {
+    const nextFrontmatterAutomationSettings = {
+      ...(settings.frontmatterAutomation ?? DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS),
+    };
+    frontmatterAutomationSettingsRef.current = nextFrontmatterAutomationSettings;
+    setFrontmatterAutomationSettings(nextFrontmatterAutomationSettings);
+  }, [settings.frontmatterAutomation]);
+
   const handleUpdateLlmSettings = (updater: (draft: LlmSettings) => void): void => {
     const previous = llmSettingsRef.current;
     const next = { ...previous };
@@ -93,6 +109,29 @@ export function SettingsView({
     });
   };
 
+  const handleUpdateFrontmatterAutomationSettings = (
+    updater: (draft: FrontmatterAutomationSettings) => void
+  ): void => {
+    const previous = frontmatterAutomationSettingsRef.current;
+    const next = { ...previous };
+    updater(next);
+    frontmatterAutomationSettingsRef.current = next;
+    setFrontmatterAutomationSettings(next);
+
+    const persistVersion = ++frontmatterPersistVersionRef.current;
+    void Promise.resolve(
+      onUpdateFrontmatterAutomationSettings((draft) => {
+        Object.assign(draft, next);
+      })
+    ).catch(() => {
+      if (frontmatterPersistVersionRef.current !== persistVersion) {
+        return;
+      }
+      frontmatterAutomationSettingsRef.current = previous;
+      setFrontmatterAutomationSettings(previous);
+    });
+  };
+
   return (
     <section className="ultimate-publisher-settings-page">
       <header className="ultimate-publisher-settings-header">
@@ -111,11 +150,18 @@ export function SettingsView({
         ) : activeTab === "marketplace" ? (
           <MarketplaceTab i18n={i18n} providers={marketplaceProviders} onAddProvider={onAddProvider} />
         ) : (
-          <LlmSettingsTab
-            i18n={i18n}
-            settings={llmSettings}
-            onChange={handleUpdateLlmSettings}
-          />
+          <>
+            <LlmSettingsTab
+              i18n={i18n}
+              settings={llmSettings}
+              onChange={handleUpdateLlmSettings}
+            />
+            <FrontmatterAutomationPanel
+              i18n={i18n}
+              settings={frontmatterAutomationSettings}
+              onChange={handleUpdateFrontmatterAutomationSettings}
+            />
+          </>
         )}
       </div>
     </section>

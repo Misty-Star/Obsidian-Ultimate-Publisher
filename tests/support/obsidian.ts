@@ -263,6 +263,8 @@ function matchesSelector(element: FakeElement, selector: string): boolean {
 export interface App {
   vault: {
     cachedRead(path: unknown): Promise<string>;
+    modify?(file: TFile, data: string): Promise<void>;
+    on?(type: string, callback: (file: TFile) => unknown): unknown;
     adapter?: {
       readBinary(path: string): Promise<ArrayBuffer | Uint8Array | Buffer>;
     };
@@ -690,6 +692,8 @@ export class Plugin extends Component {
   addCommand(_command: Record<string, unknown>): void {}
 
   addSettingTab(_tab: PluginSettingTab): void {}
+
+  registerEvent(_eventRef: unknown): void {}
 
   registerView(type: string, creator: (leaf: WorkspaceLeaf) => unknown): void {
     this.app.workspace.viewCreators ??= {};

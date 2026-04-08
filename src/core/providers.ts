@@ -1,11 +1,12 @@
 import { Notice } from "obsidian";
-import { PublishRecord, PublishTargetConfig } from "../types";
+import { ProviderOptionCache, PublishRecord, PublishTargetConfig, UltimatePublisherSettings } from "../types";
 import { PublishableNote, ResolvedAsset } from "./note";
 import { NormalPublishExecutionContext } from "./normalPublish/types";
 
 export interface PublishResult {
   remoteId: string;
   remoteUrl?: string;
+  providerOptionCache?: ProviderOptionCache;
 }
 
 export type MediaSupportMode = "unsupported" | "local-copy" | "native-upload";
@@ -34,6 +35,17 @@ export interface ProviderRemoteOptions {
   juejinTags?: NormalPublishOptionItem[];
 }
 
+export interface ProviderRuntimeOptions<TConfig extends PublishTargetConfig = PublishTargetConfig> {
+  providerOptionCache?: ProviderOptionCache;
+  loadNormalPublishOptions?: (target: TConfig) => Promise<ProviderRemoteOptions>;
+  nowMs?: number;
+}
+
+export interface PublishFailureDetails {
+  providerOptionCache?: ProviderOptionCache;
+  settings?: UltimatePublisherSettings;
+}
+
 export interface PublisherProvider<TConfig extends PublishTargetConfig = PublishTargetConfig> {
   readonly provider: TConfig["provider"];
   getMediaSupport(target: TConfig): MediaSupport;
@@ -41,8 +53,19 @@ export interface PublisherProvider<TConfig extends PublishTargetConfig = Publish
   copyAsset?(asset: ResolvedAsset, note: PublishableNote, target: TConfig): Promise<MediaUploadResult>;
   loadNormalPublishOptions?(target: TConfig): Promise<ProviderRemoteOptions>;
   validateConfig(target: TConfig): Promise<void>;
-  publish(note: PublishableNote, target: TConfig, context?: NormalPublishExecutionContext): Promise<PublishResult>;
-  update(remoteId: string, note: PublishableNote, target: TConfig, context?: NormalPublishExecutionContext): Promise<PublishResult>;
+  publish(
+    note: PublishableNote,
+    target: TConfig,
+    context?: NormalPublishExecutionContext,
+    runtime?: ProviderRuntimeOptions<TConfig>
+  ): Promise<PublishResult>;
+  update(
+    remoteId: string,
+    note: PublishableNote,
+    target: TConfig,
+    context?: NormalPublishExecutionContext,
+    runtime?: ProviderRuntimeOptions<TConfig>
+  ): Promise<PublishResult>;
   delete(remoteId: string, target: TConfig): Promise<void>;
   getPreviewUrl(remoteId: string, target: TConfig): Promise<string | undefined>;
 }
@@ -62,4 +85,35 @@ export function assertRemoteAssetsSupported(note: PublishableNote, targetName: s
 
 export function showPublishNotice(message: string): Notice {
   return new Notice(message, 5000);
+}
+
+export function withPublishFailureDetails(error: unknown, details: PublishFailureDetails): Error & PublishFailureDetails {
+  const normalizedError = error instanceof Error ? error : new Error(String(error));
+  if (details.providerOptionCache) {
+    Object.assign(normalizedError, {
+      providerOptionCache: details.providerOptionCache,
+    });
+  }
+  if (details.settings) {
+    Object.assign(normalizedError, {
+      settings: details.settings,
+    });
+  }
+  return normalizedError as Error & PublishFailureDetails;
+}
+
+export function getPublishFailureProviderOptionCache(error: unknown): ProviderOptionCache | undefined {
+  if (!error || typeof error !== "object") {
+    return undefined;
+  }
+  const candidate = error as { providerOptionCache?: ProviderOptionCache };
+  return candidate.providerOptionCache;
+}
+
+export function getPublishFailureSettings(error: unknown): UltimatePublisherSettings | undefined {
+  if (!error || typeof error !== "object") {
+    return undefined;
+  }
+  const candidate = error as { settings?: UltimatePublisherSettings };
+  return candidate.settings;
 }

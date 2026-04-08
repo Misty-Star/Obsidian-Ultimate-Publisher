@@ -1,6 +1,12 @@
 import { requestUrl } from "obsidian";
 import { NormalPublishExecutionContext } from "../core/normalPublish/types";
-import { MediaSupport, PublisherProvider, PublishResult, assertRemoteAssetsSupported } from "../core/providers";
+import {
+  MediaSupport,
+  ProviderRuntimeOptions,
+  PublisherProvider,
+  PublishResult,
+  assertRemoteAssetsSupported,
+} from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { YuqueTargetConfig } from "../types";
 
@@ -82,7 +88,8 @@ export class YuqueProvider implements PublisherProvider<YuqueTargetConfig> {
   async publish(
     note: PublishableNote,
     target: YuqueTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<YuqueTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
     const doc = await requestYuque<YuqueDoc>(
@@ -102,7 +109,8 @@ export class YuqueProvider implements PublisherProvider<YuqueTargetConfig> {
     remoteId: string,
     note: PublishableNote,
     target: YuqueTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<YuqueTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
     const doc = await requestYuque<YuqueDoc>(

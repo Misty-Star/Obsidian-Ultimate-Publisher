@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PublishableNote } from "../src/core/note";
 import { NormalPublishExecutionContext } from "../src/core/normalPublish/types";
 import { PublishService } from "../src/core/publishService";
-import { UltimatePublisherSettings, WordpressTargetConfig } from "../src/types";
+import { ProviderOptionCache, UltimatePublisherSettings, WordpressTargetConfig } from "../src/types";
 
 const { extractPublishableNoteMock } = vi.hoisted(() => ({
   extractPublishableNoteMock: vi.fn<() => Promise<PublishableNote>>(),
@@ -54,6 +54,9 @@ function createSettings(): UltimatePublisherSettings {
   return {
     targets: [],
     records: [],
+    providerOptionCache: {
+      juejinByTargetId: {},
+    },
   };
 }
 
@@ -86,6 +89,7 @@ describe("PublishService", () => {
       provider: "wordpress" as const,
       validateConfig: vi.fn().mockResolvedValue(undefined),
       getMediaSupport: vi.fn().mockReturnValue({ mode: "native-upload" as const }),
+      loadNormalPublishOptions: vi.fn().mockResolvedValue({}),
       publish: vi.fn().mockResolvedValue({ remoteId: "7", remoteUrl: "https://wp.example/post" }),
       update: vi.fn(),
       delete: vi.fn(),
@@ -135,10 +139,62 @@ describe("PublishService", () => {
         title: "Override",
       }),
       createTarget(),
-      normalPublishContext
+      normalPublishContext,
+      expect.objectContaining({
+        providerOptionCache: {
+          juejinByTargetId: {},
+        },
+        loadNormalPublishOptions: expect.any(Function),
+      })
     );
     expect(result.created).toBe(true);
     expect(provider.validateConfig.mock.invocationCallOrder[0]).toBeLessThan(mediaPipeline.prepare.mock.invocationCallOrder[0]);
     expect(mediaPipeline.prepare.mock.invocationCallOrder[0]).toBeLessThan(provider.publish.mock.invocationCallOrder[0]);
+  });
+
+  it("merges provider option cache returned by provider into updated settings", () => {
+    const originalCache: ProviderOptionCache = {
+      juejinByTargetId: {
+        existing: {
+          fetchedAt: "2026-04-08T00:00:00.000Z",
+          categories: [{ id: "existing-category", label: "已有分类" }],
+          tags: [{ id: "existing-tag", label: "已有标签" }],
+        },
+      },
+    };
+    const returnedCache: ProviderOptionCache = {
+      juejinByTargetId: {
+        existing: {
+          fetchedAt: "2026-04-09T00:00:00.000Z",
+          categories: [{ id: "fresh-category", label: "最新分类" }],
+          tags: [{ id: "fresh-tag", label: "最新标签" }],
+        },
+        another: {
+          fetchedAt: "2026-04-09T01:00:00.000Z",
+          categories: [{ id: "another-category", label: "新增分类" }],
+          tags: [{ id: "another-tag", label: "新增标签" }],
+        },
+      },
+    };
+    const service = new PublishService({} as never, { get: vi.fn() } as never);
+
+    const nextSettings = service.updateSettings(
+      {
+        ...createSettings(),
+        providerOptionCache: originalCache,
+      },
+      {
+        notePath: "Notes/Post.md",
+        provider: "wordpress",
+        targetId: "wordpress-target",
+        remoteId: "7",
+        remoteUrl: "https://wp.example/post",
+        lastPublishedAt: "2026-04-09T02:00:00.000Z",
+        contentHash: "hash",
+      },
+      returnedCache
+    );
+
+    expect(nextSettings.providerOptionCache).toEqual(returnedCache);
   });
 });

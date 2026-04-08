@@ -371,6 +371,10 @@ export class NormalPublishModal extends Modal {
       );
       this.setSelectedTargetError(null);
     } catch (error) {
+      const pluginWithFailurePersistence = this.plugin as typeof this.plugin & {
+        persistPublishFailureState?: (error: unknown) => Promise<boolean>;
+      };
+      await pluginWithFailurePersistence.persistPublishFailureState?.(error);
       const message = error instanceof Error ? error.message : String(error);
       this.setSelectedTargetError(message);
       new Notice(i18n.t("notice.publish.failed", { error: message }), 8000);

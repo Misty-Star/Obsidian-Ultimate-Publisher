@@ -167,6 +167,58 @@ describe("SettingsView", () => {
     expect(markup).toContain("最大输入字符数");
   });
 
+  it("renders frontmatter automation panel copy in English", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          frontmatterAutomation: {
+            enabled: true,
+            includeOptionComments: false,
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+        onUpdateFrontmatterAutomationSettings: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("Frontmatter Automation");
+    expect(markup).toContain("Automatically insert publish frontmatter when creating Markdown notes.");
+    expect(markup).toContain("Enable frontmatter automation");
+    expect(markup).toContain("Include option comments");
+  });
+
+  it("renders frontmatter automation panel copy in zh-CN", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: {
+          ...DEFAULT_SETTINGS,
+          frontmatterAutomation: {
+            enabled: true,
+            includeOptionComments: true,
+          },
+        },
+        initialTab: "llm",
+        i18n: createI18n("zh-CN"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+        onUpdateFrontmatterAutomationSettings: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("Frontmatter 自动化");
+    expect(markup).toContain("创建 Markdown 笔记时自动插入发布 frontmatter 模板。");
+    expect(markup).toContain("启用 frontmatter 自动化");
+    expect(markup).toContain("包含可选项注释");
+  });
+
   it("shows the vendor default endpoint as placeholder when endpoint override is empty", () => {
     const anthropicMarkup = renderToStaticMarkup(
       React.createElement(SettingsView, {

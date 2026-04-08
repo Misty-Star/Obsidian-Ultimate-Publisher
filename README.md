@@ -74,6 +74,46 @@ Publish your Obsidian notes to multiple platforms with one click.
 
 Different platforms require different authentication methods. Please refer to each platform's API documentation.
 
+### Frontmatter Metadata
+
+Use note frontmatter to prefill publish metadata:
+
+- Common fields: `title`, `slug`, `tags`, `categories`, `description`
+- WordPress field: `status`
+- CSDN fields: `ultimatePublisher.csdn.categories`, `ultimatePublisher.csdn.tags`
+- Zhihu no longer uses a dedicated frontmatter field
+- Juejin fields (name-based):
+  - `ultimatePublisher.juejin.category`
+  - `ultimatePublisher.juejin.tags`
+  - `ultimatePublisher.juejin.briefContent`
+
+For Juejin, `category` and `tags` should be names. They are resolved to IDs automatically at publish time.
+
+Frontmatter option hints prioritize cached Juejin options. If cache is missing or older than one day, the plugin refreshes options automatically and writes them back to cache.
+
+You can enable automatic template insertion in the settings panel, and you can also run the command `Insert publish frontmatter template` manually for the current note.
+
+Title precedence when publishing: `frontmatter.title` -> first level-one heading -> file name.
+
+```yaml
+---
+title: Build Once, Publish Everywhere
+slug: build-once-publish-everywhere
+tags: [obsidian, publishing]
+categories: [productivity]
+description: Reuse one note for multiple publishing platforms.
+status: draft
+ultimatePublisher:
+  csdn:
+    categories: [Obsidian]
+    tags: [Plugin]
+  juejin:
+    category: Backend
+    tags: [Obsidian, Efficiency]
+    briefContent: A quick guide to cross-platform publishing from Obsidian.
+---
+```
+
 ## 📝 Use Cases
 
 - **Tech Bloggers** - Write once, publish to multiple platforms

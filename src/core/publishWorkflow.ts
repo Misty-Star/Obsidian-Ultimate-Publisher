@@ -1,7 +1,12 @@
 import { TFile } from "obsidian";
 import { getRecord } from "../settings";
 import { NormalPublishExecutionContext } from "./normalPublish/types";
-import { PublishService, PublishServiceResult } from "./publishService";
+import { mergeProviderOptionCacheIntoSettings, PublishService, PublishServiceResult } from "./publishService";
+import {
+  getPublishFailureProviderOptionCache,
+  getPublishFailureSettings,
+  withPublishFailureDetails,
+} from "./providers";
 import { PublishTargetConfig, UltimatePublisherSettings } from "../types";
 
 export type PublishAction = "publish" | "update";
@@ -74,14 +79,35 @@ export class PublishWorkflow {
     context?: NormalPublishExecutionContext
   ): Promise<SinglePublishWorkflowResult> {
     const action = this.resolveAction(file, target, settings);
-    const serviceResult = await this.publishService.publishFile(file, target, settings, context);
-    const nextSettings = this.publishService.updateSettings(settings, serviceResult.record);
+    try {
+      const serviceResult = await this.publishService.publishFile(file, target, settings, context);
+      const nextSettings = this.publishService.updateSettings(
+        settings,
+        serviceResult.record,
+        serviceResult.providerOptionCache
+      );
 
-    return {
-      action,
-      record: serviceResult.record,
-      settings: nextSettings,
-    };
+      return {
+        action,
+        record: serviceResult.record,
+        settings: nextSettings,
+      };
+    } catch (error) {
+      const cachedSettings = getPublishFailureSettings(error);
+      if (cachedSettings) {
+        throw withPublishFailureDetails(error, { settings: cachedSettings });
+      }
+
+      const providerOptionCache = getPublishFailureProviderOptionCache(error);
+      if (providerOptionCache) {
+        throw withPublishFailureDetails(error, {
+          providerOptionCache,
+          settings: mergeProviderOptionCacheIntoSettings(settings, providerOptionCache),
+        });
+      }
+
+      throw error;
+    }
   }
 
   async runBatch(
@@ -134,6 +160,16 @@ export class PublishWorkflow {
           remoteUrl: singleResult.record.remoteUrl,
         });
       } catch (error) {
+        const cachedSettings = getPublishFailureSettings(error);
+        if (cachedSettings) {
+          currentSettings = cachedSettings;
+        } else {
+          const providerOptionCache = getPublishFailureProviderOptionCache(error);
+          if (providerOptionCache) {
+            currentSettings = mergeProviderOptionCacheIntoSettings(currentSettings, providerOptionCache);
+          }
+        }
+
         const normalizedError = error instanceof Error ? error : new Error(String(error));
         const durationMs = Date.now() - startedAt;
 

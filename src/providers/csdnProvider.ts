@@ -2,7 +2,13 @@ import { createHmac, randomUUID } from "node:crypto";
 import { App, requestUrl } from "obsidian";
 import { renderMarkdownToHtml } from "../core/html";
 import { NormalPublishExecutionContext } from "../core/normalPublish/types";
-import { assertRemoteAssetsSupported, MediaSupport, PublisherProvider, PublishResult } from "../core/providers";
+import {
+  assertRemoteAssetsSupported,
+  MediaSupport,
+  ProviderRuntimeOptions,
+  PublisherProvider,
+  PublishResult,
+} from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { resolveCsdnPublishInput } from "../core/webPublishConfig";
 import { CsdnTargetConfig } from "../types";
@@ -258,7 +264,8 @@ export class CsdnProvider implements PublisherProvider<CsdnTargetConfig> {
   async publish(
     note: PublishableNote,
     target: CsdnTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<CsdnTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
     const input = resolveCsdnPublishInput(
@@ -289,7 +296,8 @@ export class CsdnProvider implements PublisherProvider<CsdnTargetConfig> {
     remoteId: string,
     note: PublishableNote,
     target: CsdnTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<CsdnTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
     const input = resolveCsdnPublishInput(

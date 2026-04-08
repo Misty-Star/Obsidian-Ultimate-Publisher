@@ -34397,9 +34397,384 @@ module.exports = __toCommonJS(main_exports);
 // src/plugin.ts
 var import_obsidian21 = require("obsidian");
 
+// src/core/frontmatterTemplate.ts
+var OPTION_COMMENT_LIMIT = 20;
+var WORDPRESS_STATUS_OPTIONS = ["draft", "publish", "private", "pending"];
+function buildOptionComment(prefix, options) {
+  const normalized = options.filter(Boolean);
+  if (normalized.length === 0) {
+    return null;
+  }
+  const visible = normalized.slice(0, OPTION_COMMENT_LIMIT);
+  const truncated = normalized.length > OPTION_COMMENT_LIMIT;
+  const labelParts = prefix ? [prefix, "\u53EF\u9009\u9879"] : ["\u53EF\u9009\u9879"];
+  const labelText = labelParts.join(" ");
+  const suffix = truncated ? " | \u4EC5\u5C55\u793A\u90E8\u5206\u53EF\u9009\u9879" : "";
+  return `# ${labelText}: ${visible.join(" | ")}${suffix}`;
+}
+function extractLabels(options) {
+  if (!options) {
+    return [];
+  }
+  return options.map((option) => option.label.trim()).filter(Boolean);
+}
+function buildPublishFrontmatterTemplate(args) {
+  const { targets, includeOptionComments, juejinOptions } = args;
+  const hasWordpress = targets.some((target) => target.provider === "wordpress" && target.enabled);
+  const hasJuejin = targets.some((target) => target.provider === "juejin" && target.enabled);
+  const enabledJuejinCount = targets.filter((target) => target.provider === "juejin" && target.enabled).length;
+  const lines = ["---"];
+  lines.push("title:");
+  lines.push("slug:");
+  lines.push("tags: []");
+  lines.push("categories: []");
+  lines.push("description:");
+  if (hasWordpress) {
+    if (includeOptionComments) {
+      const statusComment = buildOptionComment("WordPress", WORDPRESS_STATUS_OPTIONS);
+      if (statusComment) {
+        lines.push(statusComment);
+      }
+    }
+    lines.push("status:");
+  }
+  if (hasJuejin) {
+    lines.push("ultimatePublisher:");
+    lines.push("  juejin:");
+    const shouldRenderJuejinOptionComments = includeOptionComments && enabledJuejinCount === 1;
+    if (shouldRenderJuejinOptionComments) {
+      const categoryComment = buildOptionComment(
+        void 0,
+        extractLabels(juejinOptions?.categories)
+      );
+      if (categoryComment) {
+        lines.push(`    ${categoryComment}`);
+      }
+    }
+    lines.push("    category:");
+    if (shouldRenderJuejinOptionComments) {
+      const tagComment = buildOptionComment(void 0, extractLabels(juejinOptions?.tags));
+      if (tagComment) {
+        lines.push(`    ${tagComment}`);
+      }
+    }
+    lines.push("    tags: []");
+    lines.push("    briefContent:");
+  }
+  lines.push("---");
+  return lines.join("\n");
+}
+var FRONTMATTER_REGEX = /^[\uFEFF\s]*---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/;
+function hasLeadingFrontmatter(markdown) {
+  return FRONTMATTER_REGEX.test(markdown);
+}
+function injectPublishFrontmatter(markdown, template) {
+  if (!template) {
+    return markdown;
+  }
+  if (hasLeadingFrontmatter(markdown)) {
+    return markdown;
+  }
+  const trimmedTemplate = template.trimEnd();
+  return `${trimmedTemplate}
+
+${markdown}`;
+}
+
+// src/settings.ts
+var import_node_crypto = require("node:crypto");
+var DEFAULT_LLM_SETTINGS = {
+  enabled: false,
+  vendor: "openai",
+  apiKey: "",
+  model: "",
+  endpointOverride: "",
+  temperature: 0.3,
+  timeoutMs: 3e4,
+  maxInputChars: 12e3
+};
+var DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS = {
+  enabled: false,
+  includeOptionComments: true
+};
+function normalizeLlmSettings(value) {
+  return {
+    enabled: Boolean(value?.enabled),
+    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
+    apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
+    model: typeof value?.model === "string" ? value.model : "",
+    endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
+    temperature: typeof value?.temperature === "number" && Number.isFinite(value.temperature) ? value.temperature : DEFAULT_LLM_SETTINGS.temperature,
+    timeoutMs: typeof value?.timeoutMs === "number" && value.timeoutMs > 0 ? value.timeoutMs : DEFAULT_LLM_SETTINGS.timeoutMs,
+    maxInputChars: typeof value?.maxInputChars === "number" && value.maxInputChars > 0 ? value.maxInputChars : DEFAULT_LLM_SETTINGS.maxInputChars
+  };
+}
+function normalizeCachedProviderOption(value) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const raw = value;
+  if (typeof raw.id !== "string" || typeof raw.label !== "string") {
+    return null;
+  }
+  return {
+    id: raw.id,
+    label: raw.label,
+    description: typeof raw.description === "string" ? raw.description : void 0
+  };
+}
+function normalizeCachedProviderOptionList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((item) => normalizeCachedProviderOption(item)).filter((item) => item !== null);
+}
+function normalizeJuejinProviderOptionCacheEntry(value) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const raw = value;
+  if (typeof raw.fetchedAt !== "string") {
+    return null;
+  }
+  return {
+    fetchedAt: raw.fetchedAt,
+    categories: normalizeCachedProviderOptionList(raw.categories),
+    tags: normalizeCachedProviderOptionList(raw.tags)
+  };
+}
+function normalizeFrontmatterAutomationSettings(value) {
+  return {
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.enabled,
+    includeOptionComments: typeof value?.includeOptionComments === "boolean" ? value.includeOptionComments : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.includeOptionComments
+  };
+}
+function normalizeProviderOptionCache(value) {
+  const rawValue = typeof value === "object" && value !== null ? value : null;
+  const rawJuejinByTargetId = rawValue?.juejinByTargetId;
+  if (typeof rawJuejinByTargetId !== "object" || rawJuejinByTargetId === null) {
+    return {
+      juejinByTargetId: {}
+    };
+  }
+  const juejinByTargetId = {};
+  for (const [targetId, entry] of Object.entries(rawJuejinByTargetId)) {
+    const normalizedEntry = normalizeJuejinProviderOptionCacheEntry(entry);
+    if (normalizedEntry) {
+      juejinByTargetId[targetId] = normalizedEntry;
+    }
+  }
+  return {
+    juejinByTargetId
+  };
+}
+var DEFAULT_SETTINGS = {
+  targets: [],
+  records: [],
+  frontmatterAutomation: { ...DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS },
+  providerOptionCache: {
+    juejinByTargetId: {}
+  },
+  llm: { ...DEFAULT_LLM_SETTINGS }
+};
+function createWordpressTarget() {
+  return {
+    id: (0, import_node_crypto.randomUUID)(),
+    name: "WordPress",
+    enabled: true,
+    provider: "wordpress",
+    endpoint: "",
+    username: "",
+    appPassword: "",
+    defaultStatus: "draft",
+    contentFormat: "html"
+  };
+}
+function createYuqueTarget() {
+  return {
+    id: (0, import_node_crypto.randomUUID)(),
+    name: "Yuque",
+    enabled: true,
+    provider: "yuque",
+    baseUrl: "https://www.yuque.com",
+    repo: "",
+    token: "",
+    publicLevel: 0
+  };
+}
+function createZhihuTarget() {
+  return {
+    id: (0, import_node_crypto.randomUUID)(),
+    name: "Zhihu",
+    enabled: true,
+    provider: "zhihu",
+    cookie: "",
+    defaultColumnId: "",
+    defaultColumnTitle: ""
+  };
+}
+function createCsdnTarget() {
+  return {
+    id: (0, import_node_crypto.randomUUID)(),
+    name: "CSDN",
+    enabled: true,
+    provider: "csdn",
+    cookie: "",
+    defaultCategories: [],
+    defaultTags: []
+  };
+}
+function createJuejinTarget() {
+  return {
+    id: (0, import_node_crypto.randomUUID)(),
+    name: "Juejin",
+    enabled: true,
+    provider: "juejin",
+    cookie: "",
+    defaultCategoryId: "",
+    defaultCategoryName: "",
+    defaultTagIds: [],
+    defaultTagNames: [],
+    defaultBriefContent: ""
+  };
+}
+function getRecord(records, notePath, targetId) {
+  return records.find((record) => record.notePath === notePath && record.targetId === targetId);
+}
+function upsertRecord(records, nextRecord) {
+  const existingIndex = records.findIndex(
+    (record) => record.notePath === nextRecord.notePath && record.targetId === nextRecord.targetId
+  );
+  if (existingIndex === -1) {
+    return [...records, nextRecord];
+  }
+  const next = records.slice();
+  next[existingIndex] = nextRecord;
+  return next;
+}
+function cloneTarget(target) {
+  return JSON.parse(JSON.stringify(target));
+}
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function normalizeTarget(target) {
+  switch (target.provider) {
+    case "wordpress":
+      return {
+        ...target,
+        defaultStatus: target.defaultStatus ?? "draft",
+        contentFormat: target.contentFormat ?? "html"
+      };
+    case "yuque":
+      return {
+        ...target,
+        baseUrl: target.baseUrl || "https://www.yuque.com",
+        publicLevel: target.publicLevel ?? 0
+      };
+    case "zhihu":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultColumnId: target.defaultColumnId || "",
+        defaultColumnTitle: target.defaultColumnTitle || ""
+      };
+    case "csdn":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultCategories: normalizeStringList(target.defaultCategories),
+        defaultTags: normalizeStringList(target.defaultTags)
+      };
+    case "juejin":
+      return {
+        ...target,
+        cookie: target.cookie || "",
+        defaultCategoryId: target.defaultCategoryId || "",
+        defaultCategoryName: target.defaultCategoryName || "",
+        defaultTagIds: normalizeStringList(target.defaultTagIds),
+        defaultTagNames: normalizeStringList(target.defaultTagNames),
+        defaultBriefContent: target.defaultBriefContent || ""
+      };
+  }
+}
+
+// src/core/providerOptionCache.ts
+var PROVIDER_OPTION_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
+function toCachedOptions(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.map((item) => ({
+    id: item.id,
+    label: item.label,
+    description: typeof item.description === "string" ? item.description : void 0
+  }));
+}
+async function loadJuejinOptionSnapshot(args) {
+  const nowMs = typeof args.nowMs === "number" ? args.nowMs : Date.now();
+  const normalizedCache = normalizeProviderOptionCache(args.providerOptionCache);
+  const cachedEntry = normalizedCache.juejinByTargetId[args.targetId];
+  if (cachedEntry) {
+    const parsedFetchedAt = Date.parse(cachedEntry.fetchedAt);
+    const hasFreshCache = !Number.isNaN(parsedFetchedAt) && nowMs - parsedFetchedAt < PROVIDER_OPTION_CACHE_TTL_MS;
+    if (hasFreshCache) {
+      return {
+        source: "cache",
+        categories: cachedEntry.categories,
+        tags: cachedEntry.tags,
+        nextCache: normalizedCache
+      };
+    }
+  }
+  try {
+    const remoteOptions = await args.loadNormalPublishOptions(args.target);
+    const categories = toCachedOptions(remoteOptions.juejinCategories);
+    const tags = toCachedOptions(remoteOptions.juejinTags);
+    const nextCache = {
+      ...normalizedCache,
+      juejinByTargetId: {
+        ...normalizedCache.juejinByTargetId,
+        [args.targetId]: {
+          fetchedAt: new Date(nowMs).toISOString(),
+          categories,
+          tags
+        }
+      }
+    };
+    return {
+      source: "network",
+      categories,
+      tags,
+      nextCache
+    };
+  } catch {
+    if (cachedEntry) {
+      return {
+        source: "stale-cache",
+        categories: cachedEntry.categories,
+        tags: cachedEntry.tags,
+        nextCache: normalizedCache
+      };
+    }
+    return {
+      source: "unavailable",
+      categories: [],
+      tags: [],
+      nextCache: normalizedCache
+    };
+  }
+}
+
 // src/core/note.ts
 var import_obsidian = require("obsidian");
-var import_node_crypto = require("node:crypto");
+var import_node_crypto2 = require("node:crypto");
 var import_node_path = require("node:path");
 
 // src/core/markdown.ts
@@ -34481,7 +34856,11 @@ function pickExcerpt(markdown, frontmatter) {
 function normalizeTitleLine(value) {
   return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
 }
-function pickTitle(markdown, fallback) {
+function pickTitle(markdown, frontmatter, fallback) {
+  const frontmatterTitle = typeof frontmatter.title === "string" ? frontmatter.title.trim() : "";
+  if (frontmatterTitle) {
+    return frontmatterTitle;
+  }
   const lines = markdown.split(/\r?\n/);
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -34489,12 +34868,6 @@ function pickTitle(markdown, fallback) {
       continue;
     }
     const title = normalizeTitleLine(line);
-    if (title) {
-      return title;
-    }
-  }
-  for (const rawLine of lines) {
-    const title = normalizeTitleLine(rawLine);
     if (title) {
       return title;
     }
@@ -34556,7 +34929,7 @@ async function extractPublishableNote(app, file) {
       unresolvedAttachments.push(result.unresolved);
     }
   }
-  const title = pickTitle(markdown, file.basename);
+  const title = pickTitle(markdown, frontmatter, file.basename);
   const slug = typeof frontmatter.slug === "string" && frontmatter.slug || typeof frontmatter.permalink === "string" && frontmatter.permalink || slugify(file.basename);
   const tags = ensureArray(frontmatter.tags);
   const categories = ensureArray(frontmatter.categories ?? frontmatter.category);
@@ -34575,7 +34948,7 @@ async function extractPublishableNote(app, file) {
   };
 }
 function computeContentHash(note) {
-  return (0, import_node_crypto.createHash)("sha256").update(
+  return (0, import_node_crypto2.createHash)("sha256").update(
     JSON.stringify({
       markdown: note.markdown,
       frontmatter: note.frontmatter,
@@ -34686,164 +35059,24 @@ function applyNormalPublishContextToNote(note, context) {
   return nextNote;
 }
 
-// src/settings.ts
-var import_node_crypto2 = require("node:crypto");
-var DEFAULT_LLM_SETTINGS = {
-  enabled: false,
-  vendor: "openai",
-  apiKey: "",
-  model: "",
-  endpointOverride: "",
-  temperature: 0.3,
-  timeoutMs: 3e4,
-  maxInputChars: 12e3
-};
-function normalizeLlmSettings(value) {
-  return {
-    enabled: Boolean(value?.enabled),
-    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
-    apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
-    model: typeof value?.model === "string" ? value.model : "",
-    endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
-    temperature: typeof value?.temperature === "number" && Number.isFinite(value.temperature) ? value.temperature : DEFAULT_LLM_SETTINGS.temperature,
-    timeoutMs: typeof value?.timeoutMs === "number" && value.timeoutMs > 0 ? value.timeoutMs : DEFAULT_LLM_SETTINGS.timeoutMs,
-    maxInputChars: typeof value?.maxInputChars === "number" && value.maxInputChars > 0 ? value.maxInputChars : DEFAULT_LLM_SETTINGS.maxInputChars
-  };
-}
-var DEFAULT_SETTINGS = {
-  targets: [],
-  records: [],
-  llm: { ...DEFAULT_LLM_SETTINGS }
-};
-function createWordpressTarget() {
-  return {
-    id: (0, import_node_crypto2.randomUUID)(),
-    name: "WordPress",
-    enabled: true,
-    provider: "wordpress",
-    endpoint: "",
-    username: "",
-    appPassword: "",
-    defaultStatus: "draft",
-    contentFormat: "html"
-  };
-}
-function createYuqueTarget() {
-  return {
-    id: (0, import_node_crypto2.randomUUID)(),
-    name: "Yuque",
-    enabled: true,
-    provider: "yuque",
-    baseUrl: "https://www.yuque.com",
-    repo: "",
-    token: "",
-    publicLevel: 0
-  };
-}
-function createZhihuTarget() {
-  return {
-    id: (0, import_node_crypto2.randomUUID)(),
-    name: "Zhihu",
-    enabled: true,
-    provider: "zhihu",
-    cookie: "",
-    defaultColumnId: "",
-    defaultColumnTitle: ""
-  };
-}
-function createCsdnTarget() {
-  return {
-    id: (0, import_node_crypto2.randomUUID)(),
-    name: "CSDN",
-    enabled: true,
-    provider: "csdn",
-    cookie: "",
-    defaultCategories: [],
-    defaultTags: []
-  };
-}
-function createJuejinTarget() {
-  return {
-    id: (0, import_node_crypto2.randomUUID)(),
-    name: "Juejin",
-    enabled: true,
-    provider: "juejin",
-    cookie: "",
-    defaultCategoryId: "",
-    defaultCategoryName: "",
-    defaultTagIds: [],
-    defaultTagNames: [],
-    defaultBriefContent: ""
-  };
-}
-function getRecord(records, notePath, targetId) {
-  return records.find((record) => record.notePath === notePath && record.targetId === targetId);
-}
-function upsertRecord(records, nextRecord) {
-  const existingIndex = records.findIndex(
-    (record) => record.notePath === nextRecord.notePath && record.targetId === nextRecord.targetId
-  );
-  if (existingIndex === -1) {
-    return [...records, nextRecord];
-  }
-  const next = records.slice();
-  next[existingIndex] = nextRecord;
-  return next;
-}
-function cloneTarget(target) {
-  return JSON.parse(JSON.stringify(target));
-}
-function normalizeStringList(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-function normalizeTarget(target) {
-  switch (target.provider) {
-    case "wordpress":
-      return {
-        ...target,
-        defaultStatus: target.defaultStatus ?? "draft",
-        contentFormat: target.contentFormat ?? "html"
-      };
-    case "yuque":
-      return {
-        ...target,
-        baseUrl: target.baseUrl || "https://www.yuque.com",
-        publicLevel: target.publicLevel ?? 0
-      };
-    case "zhihu":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultColumnId: target.defaultColumnId || "",
-        defaultColumnTitle: target.defaultColumnTitle || ""
-      };
-    case "csdn":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultCategories: normalizeStringList(target.defaultCategories),
-        defaultTags: normalizeStringList(target.defaultTags)
-      };
-    case "juejin":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultCategoryId: target.defaultCategoryId || "",
-        defaultCategoryName: target.defaultCategoryName || "",
-        defaultTagIds: normalizeStringList(target.defaultTagIds),
-        defaultTagNames: normalizeStringList(target.defaultTagNames),
-        defaultBriefContent: target.defaultBriefContent || ""
-      };
-  }
-}
-
 // src/core/publishService.ts
+function mergeProviderOptionCacheIntoSettings(settings, providerOptionCache) {
+  if (!providerOptionCache) {
+    return settings;
+  }
+  const currentCache = normalizeProviderOptionCache(settings.providerOptionCache);
+  const nextCache = normalizeProviderOptionCache(providerOptionCache);
+  return {
+    ...settings,
+    providerOptionCache: {
+      ...currentCache,
+      juejinByTargetId: {
+        ...currentCache.juejinByTargetId,
+        ...nextCache.juejinByTargetId
+      }
+    }
+  };
+}
 var PublishService = class {
   constructor(app, providers, mediaPipeline = {
     prepare: prepareNoteForPublish
@@ -34851,6 +35084,12 @@ var PublishService = class {
     this.app = app;
     this.providers = providers;
     this.mediaPipeline = mediaPipeline;
+  }
+  buildProviderRuntime(settings, provider, target) {
+    return {
+      providerOptionCache: settings.providerOptionCache,
+      loadNormalPublishOptions: typeof provider.loadNormalPublishOptions === "function" ? async (currentTarget) => provider.loadNormalPublishOptions(currentTarget) : void 0
+    };
   }
   async publishFile(file, target, settings, context) {
     const provider = this.providers.get(target);
@@ -34863,7 +35102,8 @@ var PublishService = class {
       context
     );
     const existing = getRecord(settings.records, file.path, target.id);
-    const result = existing ? await provider.update(existing.remoteId, preparedNote, target, context) : await provider.publish(preparedNote, target, context);
+    const runtime = this.buildProviderRuntime(settings, provider, target);
+    const result = existing ? await provider.update(existing.remoteId, preparedNote, target, context, runtime) : await provider.publish(preparedNote, target, context, runtime);
     const previewUrl = result.remoteUrl ?? await provider.getPreviewUrl(result.remoteId, target);
     const record = {
       notePath: file.path,
@@ -34876,16 +35116,55 @@ var PublishService = class {
     };
     return {
       record,
-      created: !existing
+      created: !existing,
+      providerOptionCache: result.providerOptionCache
     };
   }
-  updateSettings(settings, record) {
+  updateSettings(settings, record, providerOptionCache) {
     return {
-      ...settings,
+      ...mergeProviderOptionCacheIntoSettings(settings, providerOptionCache),
       records: upsertRecord(settings.records, record)
     };
   }
 };
+
+// src/core/providers.ts
+var import_obsidian2 = require("obsidian");
+function assertRemoteAssetsSupported(note, targetName) {
+  if (note.attachments.length === 0) {
+    return;
+  }
+  const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
+  throw new Error(`${targetName} does not support local Obsidian assets in the MVP. Remove or externalize these files first: ${files}`);
+}
+function withPublishFailureDetails(error, details) {
+  const normalizedError = error instanceof Error ? error : new Error(String(error));
+  if (details.providerOptionCache) {
+    Object.assign(normalizedError, {
+      providerOptionCache: details.providerOptionCache
+    });
+  }
+  if (details.settings) {
+    Object.assign(normalizedError, {
+      settings: details.settings
+    });
+  }
+  return normalizedError;
+}
+function getPublishFailureProviderOptionCache(error) {
+  if (!error || typeof error !== "object") {
+    return void 0;
+  }
+  const candidate = error;
+  return candidate.providerOptionCache;
+}
+function getPublishFailureSettings(error) {
+  if (!error || typeof error !== "object") {
+    return void 0;
+  }
+  const candidate = error;
+  return candidate.settings;
+}
 
 // src/core/publishWorkflow.ts
 var PublishWorkflow = class {
@@ -34903,13 +35182,32 @@ var PublishWorkflow = class {
   }
   async runSingle(file, target, settings, context) {
     const action = this.resolveAction(file, target, settings);
-    const serviceResult = await this.publishService.publishFile(file, target, settings, context);
-    const nextSettings = this.publishService.updateSettings(settings, serviceResult.record);
-    return {
-      action,
-      record: serviceResult.record,
-      settings: nextSettings
-    };
+    try {
+      const serviceResult = await this.publishService.publishFile(file, target, settings, context);
+      const nextSettings = this.publishService.updateSettings(
+        settings,
+        serviceResult.record,
+        serviceResult.providerOptionCache
+      );
+      return {
+        action,
+        record: serviceResult.record,
+        settings: nextSettings
+      };
+    } catch (error) {
+      const cachedSettings = getPublishFailureSettings(error);
+      if (cachedSettings) {
+        throw withPublishFailureDetails(error, { settings: cachedSettings });
+      }
+      const providerOptionCache = getPublishFailureProviderOptionCache(error);
+      if (providerOptionCache) {
+        throw withPublishFailureDetails(error, {
+          providerOptionCache,
+          settings: mergeProviderOptionCacheIntoSettings(settings, providerOptionCache)
+        });
+      }
+      throw error;
+    }
   }
   async runBatch(file, targets, settings, options = {}) {
     let currentSettings = settings;
@@ -34951,6 +35249,15 @@ var PublishWorkflow = class {
           remoteUrl: singleResult.record.remoteUrl
         });
       } catch (error) {
+        const cachedSettings = getPublishFailureSettings(error);
+        if (cachedSettings) {
+          currentSettings = cachedSettings;
+        } else {
+          const providerOptionCache = getPublishFailureProviderOptionCache(error);
+          if (providerOptionCache) {
+            currentSettings = mergeProviderOptionCacheIntoSettings(currentSettings, providerOptionCache);
+          }
+        }
         const normalizedError = error instanceof Error ? error : new Error(String(error));
         const durationMs = Date.now() - startedAt;
         results.push({
@@ -34986,7 +35293,7 @@ var PublishWorkflow = class {
 };
 
 // src/i18n/index.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/i18n/locales.ts
 function normalizeLocale(input) {
@@ -35020,6 +35327,9 @@ var messages = {
     "notice.publish.started": 'Publishing "{note}" to {target}...',
     "notice.publish.succeeded": "Publish succeeded: {target} {action}.",
     "notice.publish.failed": "Publish failed: {error}",
+    "notice.frontmatter.inserted": "Publish frontmatter template inserted.",
+    "notice.frontmatter.skippedExisting": "Skipped: active note already has frontmatter.",
+    "notice.frontmatter.noActiveMarkdown": "Open a Markdown note before inserting publish frontmatter.",
     "notice.batch.selectOne": "Select at least one target before running batch publish.",
     "notice.batch.finished": "Batch publish finished: {successCount} succeeded, {failureCount} failed.",
     "notice.batch.failed": "Batch publish failed: {error}",
@@ -35055,6 +35365,10 @@ var messages = {
     "settings.llm.temperature": "Temperature",
     "settings.llm.timeoutMs": "Timeout (ms)",
     "settings.llm.maxInputChars": "Max Input Characters",
+    "settings.frontmatter.title": "Frontmatter Automation",
+    "settings.frontmatter.description": "Automatically insert publish frontmatter when creating Markdown notes.",
+    "settings.frontmatter.enabled": "Enable frontmatter automation",
+    "settings.frontmatter.includeOptionComments": "Include option comments",
     "dashboard.card.configuredTargets.label": "Configured Targets",
     "dashboard.card.configuredTargets.help": "All saved publish destinations",
     "dashboard.card.enabledTargets.label": "Enabled Targets",
@@ -35177,6 +35491,9 @@ var messages = {
     "notice.publish.started": "\u6B63\u5728\u53D1\u5E03\u201C{note}\u201D\u5230 {target}...",
     "notice.publish.succeeded": "\u53D1\u5E03\u6210\u529F\uFF1A{target} {action}\u3002",
     "notice.publish.failed": "\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
+    "notice.frontmatter.inserted": "\u5DF2\u63D2\u5165\u53D1\u5E03 frontmatter \u6A21\u677F\u3002",
+    "notice.frontmatter.skippedExisting": "\u5DF2\u8DF3\u8FC7\uFF1A\u5F53\u524D\u7B14\u8BB0\u5DF2\u6709 frontmatter\u3002",
+    "notice.frontmatter.noActiveMarkdown": "\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A Markdown \u7B14\u8BB0\u518D\u63D2\u5165\u53D1\u5E03 frontmatter\u3002",
     "notice.batch.selectOne": "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E00\u4E2A\u76EE\u6807\u540E\u518D\u6267\u884C\u6279\u91CF\u53D1\u5E03\u3002",
     "notice.batch.finished": "\u6279\u91CF\u53D1\u5E03\u5B8C\u6210\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
     "notice.batch.failed": "\u6279\u91CF\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
@@ -35212,6 +35529,10 @@ var messages = {
     "settings.llm.temperature": "\u6E29\u5EA6",
     "settings.llm.timeoutMs": "\u8D85\u65F6\uFF08\u6BEB\u79D2\uFF09",
     "settings.llm.maxInputChars": "\u6700\u5927\u8F93\u5165\u5B57\u7B26\u6570",
+    "settings.frontmatter.title": "Frontmatter \u81EA\u52A8\u5316",
+    "settings.frontmatter.description": "\u521B\u5EFA Markdown \u7B14\u8BB0\u65F6\u81EA\u52A8\u63D2\u5165\u53D1\u5E03 frontmatter \u6A21\u677F\u3002",
+    "settings.frontmatter.enabled": "\u542F\u7528 frontmatter \u81EA\u52A8\u5316",
+    "settings.frontmatter.includeOptionComments": "\u5305\u542B\u53EF\u9009\u9879\u6CE8\u91CA",
     "dashboard.card.configuredTargets.label": "\u5DF2\u914D\u7F6E\u76EE\u6807",
     "dashboard.card.configuredTargets.help": "\u6240\u6709\u5DF2\u4FDD\u5B58\u7684\u53D1\u5E03\u76EE\u6807",
     "dashboard.card.enabledTargets.label": "\u542F\u7528\u76EE\u6807",
@@ -35340,20 +35661,20 @@ function createI18n(localeInput) {
   };
 }
 function createI18nFromObsidianLanguage() {
-  return createI18n((0, import_obsidian2.getLanguage)());
+  return createI18n((0, import_obsidian3.getLanguage)());
 }
 
 // src/providers/wordpressProvider.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/core/html.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 async function renderMarkdownToHtml(app, markdown, sourcePath) {
   const container = document.createElement("div");
-  const component = new import_obsidian3.Component();
+  const component = new import_obsidian4.Component();
   component.load();
   try {
-    await import_obsidian3.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
+    await import_obsidian4.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
     container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
       copyButton.remove();
     });
@@ -35395,7 +35716,7 @@ function normalizeEndpoint(target) {
   return `${trimTrailingSlash(target.endpoint)}/wp-json/wp/v2`;
 }
 async function requestJson(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian4.requestUrl)({
+  const response = await (0, import_obsidian5.requestUrl)({
     url: `${normalizeEndpoint(target)}${path}`,
     method,
     headers: {
@@ -35482,7 +35803,7 @@ var WordpressProvider = class {
     }
     await requestJson(target, "/users/me");
   }
-  async publish(note, target, context) {
+  async publish(note, target, context, _runtime) {
     const response = await requestJson(
       target,
       "/posts",
@@ -35494,7 +35815,7 @@ var WordpressProvider = class {
       remoteUrl: response.link
     };
   }
-  async update(remoteId, note, target, context) {
+  async update(remoteId, note, target, context, _runtime) {
     const preparedNote = await this.prepareNote(note);
     const response = await requestJson(
       target,
@@ -35515,9 +35836,9 @@ var WordpressProvider = class {
     return response.link;
   }
   async uploadAsset(asset, _note, target) {
-    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian4.normalizePath)(asset.sourcePath));
+    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian5.normalizePath)(asset.sourcePath));
     const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
-    const response = await (0, import_obsidian4.requestUrl)({
+    const response = await (0, import_obsidian5.requestUrl)({
       url: `${normalizeEndpoint(target)}/media`,
       method: "POST",
       headers: {
@@ -35549,18 +35870,6 @@ var WordpressProvider = class {
 
 // src/providers/yuqueProvider.ts
 var import_obsidian6 = require("obsidian");
-
-// src/core/providers.ts
-var import_obsidian5 = require("obsidian");
-function assertRemoteAssetsSupported(note, targetName) {
-  if (note.attachments.length === 0) {
-    return;
-  }
-  const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
-  throw new Error(`${targetName} does not support local Obsidian assets in the MVP. Remove or externalize these files first: ${files}`);
-}
-
-// src/providers/yuqueProvider.ts
 function trimTrailingSlash2(value) {
   return value.replace(/\/+$/, "");
 }
@@ -35613,7 +35922,7 @@ var YuqueProvider = class {
     }
     await requestYuque(target, `/api/v2/repos/${encodeURIComponent(target.repo)}`);
   }
-  async publish(note, target, context) {
+  async publish(note, target, context, _runtime) {
     assertRemoteAssetsSupported(note, target.name);
     const doc = await requestYuque(
       target,
@@ -35627,7 +35936,7 @@ var YuqueProvider = class {
       remoteUrl: getDocUrl(doc)
     };
   }
-  async update(remoteId, note, target, context) {
+  async update(remoteId, note, target, context, _runtime) {
     assertRemoteAssetsSupported(note, target.name);
     const doc = await requestYuque(
       target,
@@ -35712,14 +36021,68 @@ function resolveCsdnPublishInput(note, target, overrides) {
     tags
   };
 }
-function resolveJuejinPublishInput(note, target, overrides) {
-  const categoryId = readString(overrides?.categoryId) || readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "categoryId"])) || target.defaultCategoryId;
-  const tagIds = pickFirstNonEmptyArray(
-    overrides?.tagIds,
-    getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tagIds"]),
-    target.defaultTagIds
-  );
+function normalizeOptionLabel(value) {
+  return value.trim().toLocaleLowerCase();
+}
+function resolveNamedJuejinOptionId(kind, name, options) {
+  const normalizedName = normalizeOptionLabel(name);
+  const matches = options.filter((option) => normalizeOptionLabel(option.label) === normalizedName);
+  if (matches.length === 0) {
+    throw new Error(`Juejin ${kind} "${name}" did not match any available option.`);
+  }
+  if (matches.length > 1) {
+    throw new Error(`Juejin ${kind} "${name}" matched multiple available options.`);
+  }
+  return matches[0].id;
+}
+async function resolveJuejinPublishInput(note, target, overrides, runtime) {
+  const frontmatterCategoryName = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "category"]));
+  const frontmatterTagNames = readStringArray(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tags"]));
+  const legacyCategoryId = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "categoryId"]));
+  const legacyTagIds = readStringArray(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tagIds"]));
   const briefContent = readString(overrides?.briefContent) || readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "briefContent"])) || target.defaultBriefContent || note.excerpt;
+  const overrideCategoryId = readString(overrides?.categoryId);
+  const overrideTagIds = readStringArray(overrides?.tagIds);
+  const shouldResolveCategoryName = !overrideCategoryId && Boolean(frontmatterCategoryName);
+  const shouldResolveTagNames = overrideTagIds.length === 0 && frontmatterTagNames.length > 0;
+  let categoryId = overrideCategoryId;
+  let tagIds = overrideTagIds;
+  let providerOptionCache;
+  if (shouldResolveCategoryName || shouldResolveTagNames) {
+    const snapshot = await loadJuejinOptionSnapshot({
+      targetId: target.id,
+      target,
+      providerOptionCache: runtime?.providerOptionCache,
+      loadNormalPublishOptions: runtime?.loadNormalPublishOptions ?? (async () => {
+        throw new Error("Juejin options are unavailable.");
+      }),
+      nowMs: runtime?.nowMs
+    });
+    if (snapshot.source === "unavailable") {
+      if (shouldResolveCategoryName) {
+        throw new Error(`Juejin options are unavailable, so category "${frontmatterCategoryName}" could not be resolved.`);
+      }
+      throw new Error(`Juejin options are unavailable, so tag "${frontmatterTagNames[0]}" could not be resolved.`);
+    }
+    try {
+      if (shouldResolveCategoryName) {
+        categoryId = resolveNamedJuejinOptionId("category", frontmatterCategoryName, snapshot.categories);
+      }
+      if (shouldResolveTagNames) {
+        tagIds = frontmatterTagNames.map((name) => resolveNamedJuejinOptionId("tag", name, snapshot.tags));
+      }
+    } catch (error) {
+      if (snapshot.source === "network") {
+        throw withPublishFailureDetails(error, { providerOptionCache: snapshot.nextCache });
+      }
+      throw error;
+    }
+    if (snapshot.source === "network") {
+      providerOptionCache = snapshot.nextCache;
+    }
+  }
+  categoryId = categoryId || legacyCategoryId || target.defaultCategoryId;
+  tagIds = tagIds.length > 0 ? tagIds : legacyTagIds.length > 0 ? legacyTagIds : target.defaultTagIds;
   if (!categoryId) {
     throw new Error("Juejin publish requires a categoryId.");
   }
@@ -35727,9 +36090,12 @@ function resolveJuejinPublishInput(note, target, overrides) {
     throw new Error("Juejin publish requires at least one tagId.");
   }
   return {
-    categoryId,
-    tagIds,
-    briefContent
+    input: {
+      categoryId,
+      tagIds,
+      briefContent
+    },
+    providerOptionCache
   };
 }
 
@@ -35879,7 +36245,7 @@ var CsdnProvider = class {
       accountAvatarUrl: response.data?.avatar
     };
   }
-  async publish(note, target, context) {
+  async publish(note, target, context, _runtime) {
     assertRemoteAssetsSupported(note, target.name);
     const input = resolveCsdnPublishInput(
       note,
@@ -35902,7 +36268,7 @@ var CsdnProvider = class {
       remoteUrl: buildPreviewUrl(target, articleId)
     };
   }
-  async update(remoteId, note, target, context) {
+  async update(remoteId, note, target, context, _runtime) {
     assertRemoteAssetsSupported(note, target.name);
     const input = resolveCsdnPublishInput(
       note,
@@ -36011,7 +36377,7 @@ var JuejinProvider = class {
       {
         cursor: "0",
         key_word: "",
-        limit: 10,
+        limit: 500,
         sort_type: 1
       }
     );
@@ -36047,101 +36413,117 @@ var JuejinProvider = class {
       accountAvatarUrl: response.data.avatar_large
     };
   }
-  async publish(note, target, context) {
+  async publish(note, target, context, runtime) {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(
+    const resolved = await resolveJuejinPublishInput(
       note,
       target,
-      context?.provider.provider === "juejin" ? context.provider : void 0
+      context?.provider.provider === "juejin" ? context.provider : void 0,
+      runtime
     );
-    const draftResponse = await requestJuejin(
-      target,
-      "https://api.juejin.cn/content_api/v1/article_draft/create",
-      "POST",
-      {
-        category_id: input.categoryId,
-        tag_ids: input.tagIds,
-        link_url: "",
-        cover_image: "",
-        title: note.title,
-        brief_content: input.briefContent,
-        edit_type: 10,
-        html_content: "deprecated",
-        mark_content: note.markdown,
-        theme_ids: []
+    const input = resolved.input;
+    try {
+      const draftResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/create",
+        "POST",
+        {
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: []
+        }
+      );
+      const draftId = String(draftResponse.data?.id ?? "");
+      if (draftResponse.err_no !== 0 || !draftId) {
+        throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
       }
-    );
-    const draftId = String(draftResponse.data?.id ?? "");
-    if (draftResponse.err_no !== 0 || !draftId) {
-      throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
-    }
-    const publishResponse = await requestJuejin(
-      target,
-      "https://api.juejin.cn/content_api/v1/article/publish",
-      "POST",
-      {
-        draft_id: draftId,
-        sync_to_org: false,
-        column_ids: [],
-        theme_ids: []
+      const publishResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: []
+        }
+      );
+      const articleId = String(publishResponse.data?.article_id ?? "");
+      if (publishResponse.err_no !== 0 || !articleId) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
       }
-    );
-    const articleId = String(publishResponse.data?.article_id ?? "");
-    if (publishResponse.err_no !== 0 || !articleId) {
-      throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl2(articleId),
+        providerOptionCache: resolved.providerOptionCache
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
     }
-    return {
-      remoteId: encodeRemoteId(articleId, draftId),
-      remoteUrl: buildPreviewUrl2(articleId)
-    };
   }
-  async update(remoteId, note, target, context) {
+  async update(remoteId, note, target, context, runtime) {
     assertRemoteAssetsSupported(note, target.name);
-    const input = resolveJuejinPublishInput(
+    const resolved = await resolveJuejinPublishInput(
       note,
       target,
-      context?.provider.provider === "juejin" ? context.provider : void 0
+      context?.provider.provider === "juejin" ? context.provider : void 0,
+      runtime
     );
+    const input = resolved.input;
     const { articleId, draftId } = decodeRemoteId(remoteId);
-    const draftResponse = await requestJuejin(
-      target,
-      "https://api.juejin.cn/content_api/v1/article_draft/update",
-      "POST",
-      {
-        id: draftId,
-        category_id: input.categoryId,
-        tag_ids: input.tagIds,
-        link_url: "",
-        cover_image: "",
-        title: note.title,
-        brief_content: input.briefContent,
-        edit_type: 10,
-        html_content: "deprecated",
-        mark_content: note.markdown,
-        theme_ids: []
+    try {
+      const draftResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/update",
+        "POST",
+        {
+          id: draftId,
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: []
+        }
+      );
+      if (draftResponse.err_no !== 0) {
+        throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
       }
-    );
-    if (draftResponse.err_no !== 0) {
-      throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
-    }
-    const publishResponse = await requestJuejin(
-      target,
-      "https://api.juejin.cn/content_api/v1/article/publish",
-      "POST",
-      {
-        draft_id: draftId,
-        sync_to_org: false,
-        column_ids: [],
-        theme_ids: []
+      const publishResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: []
+        }
+      );
+      if (publishResponse.err_no !== 0) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
       }
-    );
-    if (publishResponse.err_no !== 0) {
-      throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl2(articleId),
+        providerOptionCache: resolved.providerOptionCache
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
     }
-    return {
-      remoteId: encodeRemoteId(articleId, draftId),
-      remoteUrl: buildPreviewUrl2(articleId)
-    };
   }
   async delete(remoteId, target) {
     const { articleId } = decodeRemoteId(remoteId);
@@ -36237,7 +36619,7 @@ var ZhihuProvider = class {
       accountAvatarUrl: account.avatar_url
     };
   }
-  async publish(note, target, context) {
+  async publish(note, target, context, _runtime) {
     assertRemoteAssetsSupported(note, target.name);
     const { columnId } = resolveZhihuPublishInput(
       note,
@@ -36288,7 +36670,7 @@ var ZhihuProvider = class {
       remoteUrl: buildPreviewUrl3(articleId)
     };
   }
-  async update(remoteId, note, target, context) {
+  async update(remoteId, note, target, context, _runtime) {
     assertRemoteAssetsSupported(note, target.name);
     void context;
     const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
@@ -37254,23 +37636,20 @@ function ConfiguredTargetsTab({
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "ultimate-publisher-target-grid", children: targets.map((target) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TargetCard, { i18n, target, onEdit: onEditTarget, onDelete: onDeleteTarget }, target.id)) });
 }
 
-// src/ui/settings/LlmSettingsTab.tsx
+// src/ui/settings/FrontmatterAutomationPanel.tsx
 var import_jsx_runtime3 = __toESM(require_jsx_runtime());
-var DEFAULT_ENDPOINT_PLACEHOLDERS = {
-  openai: "https://api.openai.com/v1",
-  "openai-compatible": "https://api.openai.com/v1/chat/completions",
-  anthropic: "https://api.anthropic.com/v1",
-  gemini: "https://generativelanguage.googleapis.com/v1beta"
-};
-function LlmSettingsTab({ i18n, settings, onChange }) {
-  const endpointPlaceholder = DEFAULT_ENDPOINT_PLACEHOLDERS[settings.vendor];
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "ultimate-publisher-llm-tab", children: [
+function FrontmatterAutomationPanel({
+  i18n,
+  settings,
+  onChange
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "ultimate-publisher-llm-tab ultimate-publisher-frontmatter-panel", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("header", { className: "ultimate-publisher-llm-header", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h3", { children: i18n.t("settings.llm.title") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: i18n.t("settings.llm.description") })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h3", { children: i18n.t("settings.frontmatter.title") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: i18n.t("settings.frontmatter.description") })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.enabled") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.frontmatter.enabled") }),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
         "input",
         {
@@ -37283,31 +37662,75 @@ function LlmSettingsTab({ i18n, settings, onChange }) {
       )
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.vendor") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("select", { value: settings.vendor, onChange: (event) => onChange((draft) => {
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.frontmatter.includeOptionComments") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "input",
+        {
+          type: "checkbox",
+          checked: settings.includeOptionComments,
+          onChange: (event) => onChange((draft) => {
+            draft.includeOptionComments = event.currentTarget.checked;
+          })
+        }
+      )
+    ] })
+  ] });
+}
+
+// src/ui/settings/LlmSettingsTab.tsx
+var import_jsx_runtime4 = __toESM(require_jsx_runtime());
+var DEFAULT_ENDPOINT_PLACEHOLDERS = {
+  openai: "https://api.openai.com/v1",
+  "openai-compatible": "https://api.openai.com/v1/chat/completions",
+  anthropic: "https://api.anthropic.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta"
+};
+function LlmSettingsTab({ i18n, settings, onChange }) {
+  const endpointPlaceholder = DEFAULT_ENDPOINT_PLACEHOLDERS[settings.vendor];
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ultimate-publisher-llm-tab", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("header", { className: "ultimate-publisher-llm-header", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h3", { children: i18n.t("settings.llm.title") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { children: i18n.t("settings.llm.description") })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.enabled") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        "input",
+        {
+          type: "checkbox",
+          checked: settings.enabled,
+          onChange: (event) => onChange((draft) => {
+            draft.enabled = event.currentTarget.checked;
+          })
+        }
+      )
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.vendor") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("select", { value: settings.vendor, onChange: (event) => onChange((draft) => {
         draft.vendor = event.currentTarget.value;
       }), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "openai", children: "OpenAI" }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "openai-compatible", children: "OpenAI Compatible" }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "anthropic", children: "Anthropic" }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "gemini", children: "Gemini" })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "openai", children: "OpenAI" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "openai-compatible", children: "OpenAI Compatible" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "anthropic", children: "Anthropic" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "gemini", children: "Gemini" })
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.model") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { type: "text", value: settings.model, onChange: (event) => onChange((draft) => {
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.model") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "text", value: settings.model, onChange: (event) => onChange((draft) => {
         draft.model = event.currentTarget.value;
       }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.apiKey") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { type: "password", value: settings.apiKey, onChange: (event) => onChange((draft) => {
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.apiKey") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "password", value: settings.apiKey, onChange: (event) => onChange((draft) => {
         draft.apiKey = event.currentTarget.value;
       }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.endpointOverride") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.endpointOverride") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "input",
         {
           type: "text",
@@ -37319,21 +37742,21 @@ function LlmSettingsTab({ i18n, settings, onChange }) {
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.temperature") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { type: "number", value: String(settings.temperature), onChange: (event) => onChange((draft) => {
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.temperature") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "number", value: String(settings.temperature), onChange: (event) => onChange((draft) => {
         draft.temperature = Number(event.currentTarget.value || 0);
       }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.timeoutMs") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { type: "number", value: String(settings.timeoutMs), onChange: (event) => onChange((draft) => {
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.timeoutMs") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "number", value: String(settings.timeoutMs), onChange: (event) => onChange((draft) => {
         draft.timeoutMs = Number(event.currentTarget.value || 0);
       }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: i18n.t("settings.llm.maxInputChars") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { type: "number", value: String(settings.maxInputChars), onChange: (event) => onChange((draft) => {
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "ultimate-publisher-llm-field", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: i18n.t("settings.llm.maxInputChars") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("input", { type: "number", value: String(settings.maxInputChars), onChange: (event) => onChange((draft) => {
         draft.maxInputChars = Number(event.currentTarget.value || 0);
       }) })
     ] })
@@ -37341,7 +37764,7 @@ function LlmSettingsTab({ i18n, settings, onChange }) {
 }
 
 // src/ui/settings/ProviderCard.tsx
-var import_jsx_runtime4 = __toESM(require_jsx_runtime());
+var import_jsx_runtime5 = __toESM(require_jsx_runtime());
 function resolveTranslation5(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
@@ -37357,18 +37780,18 @@ function ProviderCard({ i18n, provider, onAdd }) {
     en: "Configured",
     "zh-CN": "\u5DF2\u914D\u7F6E"
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("article", { className: "ultimate-publisher-provider-card", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ultimate-publisher-provider-icon", "aria-hidden": "true", children: provider.icon }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ultimate-publisher-provider-copy", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h3", { children: provider.name }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { children: provider.description })
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("article", { className: "ultimate-publisher-provider-card", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ultimate-publisher-provider-icon", "aria-hidden": "true", children: provider.icon }),
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ultimate-publisher-provider-copy", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h3", { children: provider.name }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { children: provider.description })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ultimate-publisher-provider-card-footer", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("button", { type: "button", onClick: () => onAdd(provider.id), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ultimate-publisher-provider-card-footer", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("button", { type: "button", onClick: () => onAdd(provider.id), children: [
         "+ ",
         addLabel
       ] }),
-      provider.configured ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ultimate-publisher-provider-badge", children: [
+      provider.configured ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ultimate-publisher-provider-badge", children: [
         configuredLabel,
         provider.configuredCount > 1 ? ` (${provider.configuredCount})` : ""
       ] }) : null
@@ -37377,13 +37800,13 @@ function ProviderCard({ i18n, provider, onAdd }) {
 }
 
 // src/ui/settings/MarketplaceTab.tsx
-var import_jsx_runtime5 = __toESM(require_jsx_runtime());
+var import_jsx_runtime6 = __toESM(require_jsx_runtime());
 function MarketplaceTab({ i18n, providers, onAddProvider }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ultimate-publisher-provider-grid", children: providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ProviderCard, { i18n, provider, onAdd: onAddProvider }, provider.id)) });
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ultimate-publisher-provider-grid", children: providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ProviderCard, { i18n, provider, onAdd: onAddProvider }, provider.id)) });
 }
 
 // src/ui/settings/TabBar.tsx
-var import_jsx_runtime6 = __toESM(require_jsx_runtime());
+var import_jsx_runtime7 = __toESM(require_jsx_runtime());
 function resolveTranslation6(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
@@ -37418,7 +37841,7 @@ function TabBar({ i18n, activeTab, onSelectTab }) {
     en: "Ultimate Publisher settings tabs",
     "zh-CN": "Ultimate Publisher \u8BBE\u7F6E\u6807\u7B7E\u9875"
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ultimate-publisher-settings-tabs", role: "tablist", "aria-label": tabAriaLabel, children: tabs.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ultimate-publisher-settings-tabs", role: "tablist", "aria-label": tabAriaLabel, children: tabs.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
     "button",
     {
       type: "button",
@@ -37433,7 +37856,7 @@ function TabBar({ i18n, activeTab, onSelectTab }) {
 }
 
 // src/ui/settings/SettingsView.tsx
-var import_jsx_runtime7 = __toESM(require_jsx_runtime());
+var import_jsx_runtime8 = __toESM(require_jsx_runtime());
 var DEFAULT_I18N3 = createI18n("en");
 function resolveTranslation7(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
@@ -37448,14 +37871,20 @@ function SettingsView({
   onAddProvider,
   onEditTarget,
   onDeleteTarget,
-  onUpdateLlmSettings
+  onUpdateLlmSettings,
+  onUpdateFrontmatterAutomationSettings
 }) {
   const [activeTab, setActiveTab] = (0, import_react.useState)(initialTab);
   const [llmSettings, setLlmSettings] = (0, import_react.useState)(() => ({
     ...settings.llm ?? DEFAULT_LLM_SETTINGS
   }));
+  const [frontmatterAutomationSettings, setFrontmatterAutomationSettings] = (0, import_react.useState)(() => ({
+    ...settings.frontmatterAutomation ?? DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS
+  }));
   const llmSettingsRef = (0, import_react.useRef)(llmSettings);
   const llmPersistVersionRef = (0, import_react.useRef)(0);
+  const frontmatterAutomationSettingsRef = (0, import_react.useRef)(frontmatterAutomationSettings);
+  const frontmatterPersistVersionRef = (0, import_react.useRef)(0);
   const providerCatalog = (0, import_react.useMemo)(() => getProviderCatalog(i18n), [i18n]);
   const configuredTargets = (0, import_react.useMemo)(
     () => buildConfiguredTargetCards(settings, providerCatalog),
@@ -37478,6 +37907,13 @@ function SettingsView({
     llmSettingsRef.current = nextLlmSettings;
     setLlmSettings(nextLlmSettings);
   }, [settings.llm]);
+  (0, import_react.useEffect)(() => {
+    const nextFrontmatterAutomationSettings = {
+      ...settings.frontmatterAutomation ?? DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS
+    };
+    frontmatterAutomationSettingsRef.current = nextFrontmatterAutomationSettings;
+    setFrontmatterAutomationSettings(nextFrontmatterAutomationSettings);
+  }, [settings.frontmatterAutomation]);
   const handleUpdateLlmSettings = (updater) => {
     const previous = llmSettingsRef.current;
     const next = { ...previous };
@@ -37497,13 +37933,32 @@ function SettingsView({
       setLlmSettings(previous);
     });
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("section", { className: "ultimate-publisher-settings-page", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("header", { className: "ultimate-publisher-settings-header", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { children: "Ultimate Publisher" }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: headerDescription })
+  const handleUpdateFrontmatterAutomationSettings = (updater) => {
+    const previous = frontmatterAutomationSettingsRef.current;
+    const next = { ...previous };
+    updater(next);
+    frontmatterAutomationSettingsRef.current = next;
+    setFrontmatterAutomationSettings(next);
+    const persistVersion = ++frontmatterPersistVersionRef.current;
+    void Promise.resolve(
+      onUpdateFrontmatterAutomationSettings((draft) => {
+        Object.assign(draft, next);
+      })
+    ).catch(() => {
+      if (frontmatterPersistVersionRef.current !== persistVersion) {
+        return;
+      }
+      frontmatterAutomationSettingsRef.current = previous;
+      setFrontmatterAutomationSettings(previous);
+    });
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "ultimate-publisher-settings-page", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("header", { className: "ultimate-publisher-settings-header", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h2", { children: "Ultimate Publisher" }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: headerDescription })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(TabBar, { i18n, activeTab, onSelectTab: setActiveTab }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ultimate-publisher-settings-panel", children: activeTab === "configured" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(TabBar, { i18n, activeTab, onSelectTab: setActiveTab }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ultimate-publisher-settings-panel", children: activeTab === "configured" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
       ConfiguredTargetsTab,
       {
         i18n,
@@ -37511,19 +37966,29 @@ function SettingsView({
         onEditTarget,
         onDeleteTarget
       }
-    ) : activeTab === "marketplace" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(MarketplaceTab, { i18n, providers: marketplaceProviders, onAddProvider }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-      LlmSettingsTab,
-      {
-        i18n,
-        settings: llmSettings,
-        onChange: handleUpdateLlmSettings
-      }
-    ) })
+    ) : activeTab === "marketplace" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarketplaceTab, { i18n, providers: marketplaceProviders, onAddProvider }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        LlmSettingsTab,
+        {
+          i18n,
+          settings: llmSettings,
+          onChange: handleUpdateLlmSettings
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        FrontmatterAutomationPanel,
+        {
+          i18n,
+          settings: frontmatterAutomationSettings,
+          onChange: handleUpdateFrontmatterAutomationSettings
+        }
+      )
+    ] }) })
   ] });
 }
 
 // src/ui/settings/renderSettingsRoot.tsx
-var import_jsx_runtime8 = __toESM(require_jsx_runtime());
+var import_jsx_runtime9 = __toESM(require_jsx_runtime());
 function mountSettingsView(containerEl, options) {
   const root = (0, import_client.createRoot)(containerEl);
   const providers = new ProviderRegistry(options.plugin.app);
@@ -37609,13 +38074,17 @@ function mountSettingsView(containerEl, options) {
   const handleUpdateLlmSettings = async (updater) => {
     await options.plugin.updateLlmSettings(updater);
   };
+  const handleUpdateFrontmatterAutomationSettings = async (updater) => {
+    await options.plugin.updateFrontmatterAutomationSettings(updater);
+  };
   render(root, {
     i18n,
     settings: options.settings,
     onAddProvider: handleAddProvider,
     onDeleteTarget: handleDeleteTarget,
     onEditTarget: handleEditTarget,
-    onUpdateLlmSettings: handleUpdateLlmSettings
+    onUpdateLlmSettings: handleUpdateLlmSettings,
+    onUpdateFrontmatterAutomationSettings: handleUpdateFrontmatterAutomationSettings
   });
   return {
     destroy() {
@@ -37625,7 +38094,7 @@ function mountSettingsView(containerEl, options) {
 }
 function render(root, props) {
   root.render(
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
       SettingsView,
       {
         i18n: props.i18n,
@@ -37633,7 +38102,8 @@ function render(root, props) {
         onAddProvider: props.onAddProvider,
         onDeleteTarget: props.onDeleteTarget,
         onEditTarget: props.onEditTarget,
-        onUpdateLlmSettings: props.onUpdateLlmSettings
+        onUpdateLlmSettings: props.onUpdateLlmSettings,
+        onUpdateFrontmatterAutomationSettings: props.onUpdateFrontmatterAutomationSettings
       }
     )
   );
@@ -39788,6 +40258,8 @@ var NormalPublishModal = class extends import_obsidian19.Modal {
       );
       this.setSelectedTargetError(null);
     } catch (error) {
+      const pluginWithFailurePersistence = this.plugin;
+      await pluginWithFailurePersistence.persistPublishFailureState?.(error);
       const message = error instanceof Error ? error.message : String(error);
       this.setSelectedTargetError(message);
       new import_obsidian19.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
@@ -40240,6 +40712,7 @@ var PublisherDashboardView = class extends import_obsidian20.ItemView {
 };
 
 // src/plugin.ts
+var FRONTMATTER_INSERTION_DEBOUNCE_MS = 5e3;
 function isRecordLike(value) {
   return typeof value === "object" && value !== null;
 }
@@ -40271,12 +40744,13 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
     this.i18n = createI18nFromObsidianLanguage();
+    this.recentFrontmatterInsertions = /* @__PURE__ */ new Map();
   }
   async onload() {
     await this.loadSettings();
     this.i18n = createI18nFromObsidianLanguage();
-    const providers = new ProviderRegistry(this.app);
-    this.publishService = new PublishService(this.app, providers);
+    this.providers = new ProviderRegistry(this.app);
+    this.publishService = new PublishService(this.app, this.providers);
     this.publishWorkflow = new PublishWorkflow(this.publishService);
     this.registerView(PUBLISHER_DASHBOARD_VIEW_TYPE, (leaf) => new PublisherDashboardView(leaf, this));
     this.addRibbonIcon("upload", this.i18n.t("menu.publish"), (event) => {
@@ -40290,6 +40764,18 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
         void this.publishActiveNote();
       }
     });
+    this.addCommand({
+      id: "insert-publish-frontmatter-template",
+      name: "Insert publish frontmatter template",
+      callback: () => {
+        void this.insertPublishFrontmatterForActiveNote();
+      }
+    });
+    this.registerEvent(this.app.vault.on?.("create", (file) => {
+      if (file instanceof import_obsidian21.TFile) {
+        void this.handleCreatedMarkdownFile(file);
+      }
+    }));
     this.addSettingTab(new UltimatePublisherSettingTab(this));
   }
   async loadSettings() {
@@ -40304,13 +40790,17 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
       ...loaded,
       targets,
       records,
+      frontmatterAutomation: normalizeFrontmatterAutomationSettings(loaded?.frontmatterAutomation),
+      providerOptionCache: normalizeProviderOptionCache(loaded?.providerOptionCache),
       llm: normalizeLlmSettings(loaded?.llm)
     };
     this.settings = nextSettings;
     const targetCountChanged = rawTargets.length !== targets.length;
     const recordCountChanged = rawRecords.length !== records.length;
+    const frontmatterAutomationChanged = JSON.stringify(loaded?.frontmatterAutomation ?? null) !== JSON.stringify(nextSettings.frontmatterAutomation);
+    const providerOptionCacheChanged = JSON.stringify(loaded?.providerOptionCache ?? null) !== JSON.stringify(nextSettings.providerOptionCache);
     const llmChanged = JSON.stringify(loaded?.llm ?? null) !== JSON.stringify(nextSettings.llm);
-    if (loaded && (targetCountChanged || recordCountChanged || llmChanged)) {
+    if (loaded && (targetCountChanged || recordCountChanged || frontmatterAutomationChanged || providerOptionCacheChanged || llmChanged)) {
       await this.saveSettings();
     }
   }
@@ -40339,10 +40829,17 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
     await this.saveSettings();
   }
   async removeTarget(targetId) {
+    const currentCache = normalizeProviderOptionCache(this.settings.providerOptionCache);
+    const nextJuejinByTargetId = { ...currentCache.juejinByTargetId };
+    delete nextJuejinByTargetId[targetId];
     this.settings = {
       ...this.settings,
       targets: this.settings.targets.filter((target) => target.id !== targetId),
-      records: this.settings.records.filter((record) => record.targetId !== targetId)
+      records: this.settings.records.filter((record) => record.targetId !== targetId),
+      providerOptionCache: {
+        ...currentCache,
+        juejinByTargetId: nextJuejinByTargetId
+      }
     };
     await this.saveSettings();
   }
@@ -40354,6 +40851,39 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
       llm: normalizeLlmSettings(draft)
     };
     await this.saveSettings();
+  }
+  async updateFrontmatterAutomationSettings(updater) {
+    const draft = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
+    updater(draft);
+    this.settings = {
+      ...this.settings,
+      frontmatterAutomation: normalizeFrontmatterAutomationSettings(draft)
+    };
+    await this.saveSettings();
+  }
+  async updateProviderOptionCache(updater) {
+    const draft = normalizeProviderOptionCache(this.settings.providerOptionCache);
+    updater(draft);
+    this.settings = {
+      ...this.settings,
+      providerOptionCache: normalizeProviderOptionCache(draft)
+    };
+    await this.saveSettings();
+  }
+  async persistPublishFailureState(error) {
+    const failureSettings = getPublishFailureSettings(error);
+    if (failureSettings) {
+      this.settings = failureSettings;
+      await this.saveSettings();
+      return true;
+    }
+    const providerOptionCache = getPublishFailureProviderOptionCache(error);
+    if (providerOptionCache) {
+      this.settings = mergeProviderOptionCacheIntoSettings(this.settings, providerOptionCache);
+      await this.saveSettings();
+      return true;
+    }
+    return false;
   }
   openRibbonMenu(anchorEl) {
     const activeFile = this.getActiveMarkdownFile();
@@ -40436,8 +40966,114 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
       void this.publishToTarget(file, target);
     }).open();
   }
+  async insertPublishFrontmatterForActiveNote() {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new import_obsidian21.Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
+      return;
+    }
+    const result = await this.insertPublishFrontmatterIfNeeded(file);
+    if (result === "skipped-existing") {
+      new import_obsidian21.Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
+      return;
+    }
+    if (result === "inserted") {
+      new import_obsidian21.Notice(this.i18n.t("notice.frontmatter.inserted"));
+    }
+  }
+  async handleCreatedMarkdownFile(file) {
+    if (!(file instanceof import_obsidian21.TFile) || file.extension !== "md") {
+      return;
+    }
+    const automationSettings = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
+    if (!automationSettings.enabled) {
+      return;
+    }
+    const nowMs = Date.now();
+    if (this.wasRecentlyInserted(file.path, nowMs)) {
+      return;
+    }
+    await this.insertPublishFrontmatterIfNeeded(file);
+  }
   getEnabledTargets() {
     return this.settings.targets.filter((target) => target.enabled);
+  }
+  async insertPublishFrontmatterIfNeeded(file) {
+    if (file.extension !== "md") {
+      return "ignored";
+    }
+    const initialMarkdown = await this.app.vault.cachedRead(file);
+    if (hasLeadingFrontmatter(initialMarkdown)) {
+      return "skipped-existing";
+    }
+    const template = await this.buildFrontmatterTemplateForCurrentSettings();
+    const latestMarkdown = await this.app.vault.cachedRead(file);
+    if (hasLeadingFrontmatter(latestMarkdown)) {
+      return "skipped-existing";
+    }
+    const nextMarkdown = injectPublishFrontmatter(latestMarkdown, template);
+    if (nextMarkdown === latestMarkdown) {
+      return "skipped-existing";
+    }
+    this.recordRecentFrontmatterInsertion(file.path, Date.now());
+    await this.app.vault.modify(file, nextMarkdown);
+    return "inserted";
+  }
+  async buildFrontmatterTemplateForCurrentSettings() {
+    const automationSettings = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
+    let juejinOptions;
+    const includeOptionComments = automationSettings.includeOptionComments;
+    const target = includeOptionComments ? this.findSingleEnabledJuejinTarget() : null;
+    if (target) {
+      const provider = this.providers.get(target);
+      if (typeof provider.loadNormalPublishOptions === "function") {
+        const snapshot = await loadJuejinOptionSnapshot({
+          targetId: target.id,
+          target,
+          providerOptionCache: this.settings.providerOptionCache,
+          loadNormalPublishOptions: async (currentTarget) => provider.loadNormalPublishOptions(currentTarget)
+        });
+        if (snapshot.source === "network") {
+          await this.updateProviderOptionCache((cache) => {
+            cache.juejinByTargetId = { ...snapshot.nextCache.juejinByTargetId };
+          });
+        }
+        juejinOptions = {
+          categories: snapshot.categories,
+          tags: snapshot.tags
+        };
+      }
+    }
+    return buildPublishFrontmatterTemplate({
+      targets: this.settings.targets,
+      includeOptionComments,
+      juejinOptions
+    });
+  }
+  findSingleEnabledJuejinTarget() {
+    const enabledJuejinTargets = this.settings.targets.filter(
+      (target) => target.enabled && target.provider === "juejin"
+    );
+    return enabledJuejinTargets.length === 1 ? enabledJuejinTargets[0] : null;
+  }
+  wasRecentlyInserted(path, nowMs) {
+    this.pruneRecentFrontmatterInsertions(nowMs);
+    const insertedAt = this.recentFrontmatterInsertions.get(path);
+    if (typeof insertedAt !== "number") {
+      return false;
+    }
+    return nowMs - insertedAt < FRONTMATTER_INSERTION_DEBOUNCE_MS;
+  }
+  recordRecentFrontmatterInsertion(path, nowMs) {
+    this.recentFrontmatterInsertions.set(path, nowMs);
+    this.pruneRecentFrontmatterInsertions(nowMs);
+  }
+  pruneRecentFrontmatterInsertions(nowMs) {
+    for (const [path, insertedAt] of this.recentFrontmatterInsertions.entries()) {
+      if (nowMs - insertedAt >= FRONTMATTER_INSERTION_DEBOUNCE_MS) {
+        this.recentFrontmatterInsertions.delete(path);
+      }
+    }
   }
   getActiveMarkdownFile() {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian21.MarkdownView);
@@ -40534,6 +41170,7 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
       const actionLabel = result.action === "update" ? this.i18n.t("notice.publish.action.updated") : this.i18n.t("notice.publish.action.published");
       new import_obsidian21.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
+      await this.persistPublishFailureState(error);
       const message = error instanceof Error ? error.message : String(error);
       new import_obsidian21.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;

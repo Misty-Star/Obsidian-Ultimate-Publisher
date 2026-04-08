@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { NormalPublishExecutionContext } from "../src/core/normalPublish/types";
 import { BatchPublishProgressEvent, PublishWorkflow } from "../src/core/publishWorkflow";
+import { getPublishFailureSettings } from "../src/core/providers";
 
 describe("PublishWorkflow", () => {
   it("runs a single publish and reports update when a record already exists", async () => {
@@ -338,5 +339,92 @@ describe("PublishWorkflow", () => {
       durationMs: expect.any(Number),
     });
     expect(publishService.publishFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("attaches merged settings to single publish failures that carry provider option cache", async () => {
+    const target = { id: "jj", name: "Juejin", provider: "juejin", enabled: true };
+    const file = { path: "Notes/Post.md", basename: "Post" };
+    const providerOptionCache = {
+      juejinByTargetId: {
+        jj: {
+          fetchedAt: "2026-04-09T00:00:00.000Z",
+          categories: [{ id: "category-1", label: "后端" }],
+          tags: [{ id: "tag-1", label: "Obsidian" }],
+        },
+      },
+    };
+    const publishService = {
+      publishFile: vi.fn().mockRejectedValue(Object.assign(new Error("draft creation failed"), { providerOptionCache })),
+      updateSettings: vi.fn(),
+    };
+    const workflow = new PublishWorkflow(publishService as never);
+
+    let thrown: unknown;
+    try {
+      await workflow.runSingle(
+        file as never,
+        target as never,
+        {
+          targets: [target],
+          records: [],
+          providerOptionCache: { juejinByTargetId: {} },
+        } as never
+      );
+    } catch (error) {
+      thrown = error;
+    }
+
+    const failureSettings = getPublishFailureSettings(thrown);
+    expect((thrown as Error).message).toBe("draft creation failed");
+    expect(failureSettings?.providerOptionCache).toEqual(providerOptionCache);
+  });
+
+  it("keeps refreshed provider option cache in batch settings even when a target fails later", async () => {
+    const file = { path: "Notes/Post.md", basename: "Post" };
+    const juejin = { id: "jj", name: "Juejin", provider: "juejin", enabled: true };
+    const zhihu = { id: "zh", name: "Zhihu", provider: "zhihu", enabled: true };
+    const refreshedCache = {
+      juejinByTargetId: {
+        jj: {
+          fetchedAt: "2026-04-09T00:00:00.000Z",
+          categories: [{ id: "category-1", label: "后端" }],
+          tags: [{ id: "tag-1", label: "Obsidian" }],
+        },
+      },
+    };
+    const publishService = {
+      publishFile: vi
+        .fn()
+        .mockRejectedValueOnce(Object.assign(new Error("publish failed"), { providerOptionCache: refreshedCache }))
+        .mockResolvedValueOnce({
+          record: {
+            notePath: "Notes/Post.md",
+            provider: "zhihu",
+            targetId: "zh",
+            remoteId: "zh-1",
+            lastPublishedAt: "2026-03-17T00:00:00.000Z",
+            contentHash: "hash",
+          },
+          created: true,
+        }),
+      updateSettings: vi.fn((settings, nextRecord) => ({ ...settings, records: [...settings.records, nextRecord] })),
+    };
+
+    const workflow = new PublishWorkflow(publishService as never);
+    const result = await workflow.runBatch(
+      file as never,
+      [juejin, zhihu] as never,
+      {
+        targets: [juejin, zhihu],
+        records: [],
+        providerOptionCache: { juejinByTargetId: {} },
+      } as never
+    );
+
+    expect(result.results.map((item) => [item.targetId, item.status])).toEqual([
+      ["jj", "failure"],
+      ["zh", "success"],
+    ]);
+    expect(result.settings.providerOptionCache).toEqual(refreshedCache);
   });
 });

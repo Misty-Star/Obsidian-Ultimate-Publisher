@@ -1,11 +1,25 @@
 import { MarkdownView, Menu, MenuItem, Notice, Plugin, TFile } from "obsidian";
+import { buildPublishFrontmatterTemplate, hasLeadingFrontmatter, injectPublishFrontmatter } from "./core/frontmatterTemplate";
+import { loadJuejinOptionSnapshot } from "./core/providerOptionCache";
 import { PublishService } from "./core/publishService";
 import { PublishWorkflow } from "./core/publishWorkflow";
+import { getPublishFailureProviderOptionCache, getPublishFailureSettings } from "./core/providers";
+import { mergeProviderOptionCacheIntoSettings } from "./core/publishService";
 import { createI18nFromObsidianLanguage, Translator } from "./i18n";
 import { ProviderRegistry } from "./providers/registry";
-import { cloneTarget, DEFAULT_SETTINGS, normalizeLlmSettings, normalizeTarget } from "./settings";
 import {
+  cloneTarget,
+  DEFAULT_SETTINGS,
+  normalizeFrontmatterAutomationSettings,
+  normalizeLlmSettings,
+  normalizeProviderOptionCache,
+  normalizeTarget,
+} from "./settings";
+import {
+  FrontmatterAutomationSettings,
+  JuejinTargetConfig,
   LlmSettings,
+  ProviderOptionCache,
   isProviderId,
   PublishRecord,
   PublishTargetConfig,
@@ -41,6 +55,8 @@ interface MenuPosition {
 interface MenuItemWithSubmenu extends MenuItem {
   setSubmenu(): Menu;
 }
+
+const FRONTMATTER_INSERTION_DEBOUNCE_MS = 5000;
 
 function isRecordLike(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -89,16 +105,18 @@ function normalizeLoadedRecord(record: unknown, targetIds: Set<string>): Publish
 
 export default class UltimatePublisherPlugin extends Plugin {
   settings: UltimatePublisherSettings = DEFAULT_SETTINGS;
+  private providers!: ProviderRegistry;
   private publishService!: PublishService;
   private publishWorkflow!: PublishWorkflow;
   private i18n: Translator = createI18nFromObsidianLanguage();
+  private readonly recentFrontmatterInsertions = new Map<string, number>();
 
   async onload(): Promise<void> {
     await this.loadSettings();
     this.i18n = createI18nFromObsidianLanguage();
 
-    const providers = new ProviderRegistry(this.app);
-    this.publishService = new PublishService(this.app, providers);
+    this.providers = new ProviderRegistry(this.app);
+    this.publishService = new PublishService(this.app, this.providers);
     this.publishWorkflow = new PublishWorkflow(this.publishService);
 
     this.registerView(PUBLISHER_DASHBOARD_VIEW_TYPE, (leaf) => new PublisherDashboardView(leaf, this));
@@ -115,6 +133,20 @@ export default class UltimatePublisherPlugin extends Plugin {
         void this.publishActiveNote();
       },
     });
+
+    this.addCommand({
+      id: "insert-publish-frontmatter-template",
+      name: "Insert publish frontmatter template",
+      callback: () => {
+        void this.insertPublishFrontmatterForActiveNote();
+      },
+    });
+
+    this.registerEvent(this.app.vault.on?.("create", (file) => {
+      if (file instanceof TFile) {
+        void this.handleCreatedMarkdownFile(file);
+      }
+    }) as never);
 
     this.addSettingTab(new UltimatePublisherSettingTab(this));
   }
@@ -136,6 +168,8 @@ export default class UltimatePublisherPlugin extends Plugin {
       ...loaded,
       targets,
       records,
+      frontmatterAutomation: normalizeFrontmatterAutomationSettings(loaded?.frontmatterAutomation),
+      providerOptionCache: normalizeProviderOptionCache(loaded?.providerOptionCache),
       llm: normalizeLlmSettings(loaded?.llm),
     };
 
@@ -143,8 +177,12 @@ export default class UltimatePublisherPlugin extends Plugin {
 
     const targetCountChanged = rawTargets.length !== targets.length;
     const recordCountChanged = rawRecords.length !== records.length;
+    const frontmatterAutomationChanged =
+      JSON.stringify(loaded?.frontmatterAutomation ?? null) !== JSON.stringify(nextSettings.frontmatterAutomation);
+    const providerOptionCacheChanged =
+      JSON.stringify(loaded?.providerOptionCache ?? null) !== JSON.stringify(nextSettings.providerOptionCache);
     const llmChanged = JSON.stringify(loaded?.llm ?? null) !== JSON.stringify(nextSettings.llm);
-    if (loaded && (targetCountChanged || recordCountChanged || llmChanged)) {
+    if (loaded && (targetCountChanged || recordCountChanged || frontmatterAutomationChanged || providerOptionCacheChanged || llmChanged)) {
       await this.saveSettings();
     }
   }
@@ -177,10 +215,17 @@ export default class UltimatePublisherPlugin extends Plugin {
   }
 
   async removeTarget(targetId: string): Promise<void> {
+    const currentCache = normalizeProviderOptionCache(this.settings.providerOptionCache);
+    const nextJuejinByTargetId = { ...currentCache.juejinByTargetId };
+    delete nextJuejinByTargetId[targetId];
     this.settings = {
       ...this.settings,
       targets: this.settings.targets.filter((target) => target.id !== targetId),
       records: this.settings.records.filter((record) => record.targetId !== targetId),
+      providerOptionCache: {
+        ...currentCache,
+        juejinByTargetId: nextJuejinByTargetId,
+      },
     };
     await this.saveSettings();
   }
@@ -193,6 +238,46 @@ export default class UltimatePublisherPlugin extends Plugin {
       llm: normalizeLlmSettings(draft),
     };
     await this.saveSettings();
+  }
+
+  async updateFrontmatterAutomationSettings(
+    updater: (settings: FrontmatterAutomationSettings) => void
+  ): Promise<void> {
+    const draft = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
+    updater(draft);
+    this.settings = {
+      ...this.settings,
+      frontmatterAutomation: normalizeFrontmatterAutomationSettings(draft),
+    };
+    await this.saveSettings();
+  }
+
+  async updateProviderOptionCache(updater: (cache: ProviderOptionCache) => void): Promise<void> {
+    const draft = normalizeProviderOptionCache(this.settings.providerOptionCache);
+    updater(draft);
+    this.settings = {
+      ...this.settings,
+      providerOptionCache: normalizeProviderOptionCache(draft),
+    };
+    await this.saveSettings();
+  }
+
+  async persistPublishFailureState(error: unknown): Promise<boolean> {
+    const failureSettings = getPublishFailureSettings(error);
+    if (failureSettings) {
+      this.settings = failureSettings;
+      await this.saveSettings();
+      return true;
+    }
+
+    const providerOptionCache = getPublishFailureProviderOptionCache(error);
+    if (providerOptionCache) {
+      this.settings = mergeProviderOptionCacheIntoSettings(this.settings, providerOptionCache);
+      await this.saveSettings();
+      return true;
+    }
+
+    return false;
   }
 
   openRibbonMenu(anchorEl: HTMLElement | null): void {
@@ -293,8 +378,136 @@ export default class UltimatePublisherPlugin extends Plugin {
     }).open();
   }
 
+  async insertPublishFrontmatterForActiveNote(): Promise<void> {
+    const file = this.getActiveMarkdownFile();
+    if (!file) {
+      new Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
+      return;
+    }
+
+    const result = await this.insertPublishFrontmatterIfNeeded(file);
+    if (result === "skipped-existing") {
+      new Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
+      return;
+    }
+
+    if (result === "inserted") {
+      new Notice(this.i18n.t("notice.frontmatter.inserted"));
+    }
+  }
+
+  async handleCreatedMarkdownFile(file: TFile): Promise<void> {
+    if (!(file instanceof TFile) || file.extension !== "md") {
+      return;
+    }
+
+    const automationSettings = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
+    if (!automationSettings.enabled) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    if (this.wasRecentlyInserted(file.path, nowMs)) {
+      return;
+    }
+
+    await this.insertPublishFrontmatterIfNeeded(file);
+  }
+
   private getEnabledTargets(): PublishTargetConfig[] {
     return this.settings.targets.filter((target) => target.enabled);
+  }
+
+  private async insertPublishFrontmatterIfNeeded(file: TFile): Promise<"inserted" | "skipped-existing" | "ignored"> {
+    if (file.extension !== "md") {
+      return "ignored";
+    }
+
+    const initialMarkdown = await this.app.vault.cachedRead(file);
+    if (hasLeadingFrontmatter(initialMarkdown)) {
+      return "skipped-existing";
+    }
+
+    const template = await this.buildFrontmatterTemplateForCurrentSettings();
+    const latestMarkdown = await this.app.vault.cachedRead(file);
+    if (hasLeadingFrontmatter(latestMarkdown)) {
+      return "skipped-existing";
+    }
+
+    const nextMarkdown = injectPublishFrontmatter(latestMarkdown, template);
+    if (nextMarkdown === latestMarkdown) {
+      return "skipped-existing";
+    }
+
+    this.recordRecentFrontmatterInsertion(file.path, Date.now());
+    await this.app.vault.modify(file, nextMarkdown);
+    return "inserted";
+  }
+
+  private async buildFrontmatterTemplateForCurrentSettings(): Promise<string> {
+    const automationSettings = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
+    let juejinOptions: {
+      categories?: { id: string; label: string; description?: string }[];
+      tags?: { id: string; label: string; description?: string }[];
+    } | undefined;
+
+    const includeOptionComments = automationSettings.includeOptionComments;
+    const target = includeOptionComments ? this.findSingleEnabledJuejinTarget() : null;
+    if (target) {
+      const provider = this.providers.get(target);
+      if (typeof provider.loadNormalPublishOptions === "function") {
+        const snapshot = await loadJuejinOptionSnapshot({
+          targetId: target.id,
+          target,
+          providerOptionCache: this.settings.providerOptionCache,
+          loadNormalPublishOptions: async (currentTarget) => provider.loadNormalPublishOptions!(currentTarget),
+        });
+        if (snapshot.source === "network") {
+          await this.updateProviderOptionCache((cache) => {
+            cache.juejinByTargetId = { ...snapshot.nextCache.juejinByTargetId };
+          });
+        }
+        juejinOptions = {
+          categories: snapshot.categories,
+          tags: snapshot.tags,
+        };
+      }
+    }
+
+    return buildPublishFrontmatterTemplate({
+      targets: this.settings.targets,
+      includeOptionComments,
+      juejinOptions,
+    });
+  }
+
+  private findSingleEnabledJuejinTarget(): JuejinTargetConfig | null {
+    const enabledJuejinTargets = this.settings.targets.filter(
+      (target): target is JuejinTargetConfig => target.enabled && target.provider === "juejin"
+    );
+    return enabledJuejinTargets.length === 1 ? enabledJuejinTargets[0] : null;
+  }
+
+  private wasRecentlyInserted(path: string, nowMs: number): boolean {
+    this.pruneRecentFrontmatterInsertions(nowMs);
+    const insertedAt = this.recentFrontmatterInsertions.get(path);
+    if (typeof insertedAt !== "number") {
+      return false;
+    }
+    return nowMs - insertedAt < FRONTMATTER_INSERTION_DEBOUNCE_MS;
+  }
+
+  private recordRecentFrontmatterInsertion(path: string, nowMs: number): void {
+    this.recentFrontmatterInsertions.set(path, nowMs);
+    this.pruneRecentFrontmatterInsertions(nowMs);
+  }
+
+  private pruneRecentFrontmatterInsertions(nowMs: number): void {
+    for (const [path, insertedAt] of this.recentFrontmatterInsertions.entries()) {
+      if (nowMs - insertedAt >= FRONTMATTER_INSERTION_DEBOUNCE_MS) {
+        this.recentFrontmatterInsertions.delete(path);
+      }
+    }
   }
 
   private getActiveMarkdownFile(): TFile | null {
@@ -423,6 +636,7 @@ export default class UltimatePublisherPlugin extends Plugin {
           : this.i18n.t("notice.publish.action.published");
       new Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
+      await this.persistPublishFailureState(error);
       const message = error instanceof Error ? error.message : String(error);
       new Notice(this.i18n.t("notice.publish.failed", { error: message }), 8000);
       throw error;

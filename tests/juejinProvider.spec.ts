@@ -152,5 +152,17 @@ describe("JuejinProvider", () => {
         },
       ],
     });
+    expect(requestUrl).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        url: "https://api.juejin.cn/tag_api/v1/query_tag_list",
+        body: JSON.stringify({
+          cursor: "0",
+          key_word: "",
+          limit: 500,
+          sort_type: 1,
+        }),
+      })
+    );
   });
 });

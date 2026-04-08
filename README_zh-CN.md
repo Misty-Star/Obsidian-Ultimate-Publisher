@@ -72,6 +72,46 @@
 
 不同平台需要不同的认证方式，请参考各平台的 API 文档获取认证信息。
 
+### Frontmatter 元数据
+
+你可以在笔记 frontmatter 中预填发布元数据：
+
+- 通用字段：`title`、`slug`、`tags`、`categories`、`description`
+- WordPress 字段：`status`
+- CSDN 字段：`ultimatePublisher.csdn.categories`、`ultimatePublisher.csdn.tags`
+- 知乎不再使用独立的 frontmatter 专属字段
+- 掘金字段（名称型）：
+  - `ultimatePublisher.juejin.category`
+  - `ultimatePublisher.juejin.tags`
+  - `ultimatePublisher.juejin.briefContent`
+
+掘金的 `category` 和 `tags` 请填写“名称”，发布时会自动解析为对应 ID。
+
+frontmatter 模板中的可选项提示会优先使用掘金缓存；若缓存缺失或超过一天，插件会自动刷新并回写缓存。
+
+你可以在设置页开启自动插入模板，也可以通过命令 `Insert publish frontmatter template` 手动为当前笔记插入发布 frontmatter 模板。
+
+发布标题优先级：`frontmatter.title` -> 正文第一个一级标题 -> 文件名。
+
+```yaml
+---
+title: 一次写作，多端发布
+slug: write-once-publish-everywhere
+tags: [obsidian, 发布]
+categories: [效率]
+description: 用一份笔记同步到多个平台。
+status: draft
+ultimatePublisher:
+  csdn:
+    categories: [Obsidian]
+    tags: [插件]
+  juejin:
+    category: 后端
+    tags: [Obsidian, 效率工具]
+    briefContent: 从 Obsidian 到多平台发布的快速实践。
+---
+```
+
 ## 📝 使用场景
 
 - **技术博客作者** - 一次编写，同步发布到多个技术平台

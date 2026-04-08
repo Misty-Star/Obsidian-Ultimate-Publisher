@@ -6,6 +6,7 @@ import {
   MediaSupport,
   MediaUploadResult,
   NormalPublishOptionItem,
+  ProviderRuntimeOptions,
   ProviderRemoteOptions,
   PublisherProvider,
   PublishResult,
@@ -188,7 +189,8 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
   async publish(
     note: PublishableNote,
     target: WordpressTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<WordpressTargetConfig>
   ): Promise<PublishResult> {
     const response = await requestJson<WordpressPostResponse>(
       target,
@@ -206,7 +208,8 @@ export class WordpressProvider implements PublisherProvider<WordpressTargetConfi
     remoteId: string,
     note: PublishableNote,
     target: WordpressTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<WordpressTargetConfig>
   ): Promise<PublishResult> {
     const preparedNote = await this.prepareNote(note);
     const response = await requestJson<WordpressPostResponse>(

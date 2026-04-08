@@ -1,16 +1,40 @@
 import { App, TFile } from "obsidian";
 import { extractPublishableNote, computeContentHash } from "./note";
 import { prepareNoteForPublish } from "./mediaPipeline";
-import { PublisherProvider } from "./providers";
+import { ProviderRuntimeOptions, PublisherProvider } from "./providers";
 import { applyNormalPublishContextToNote } from "./normalPublish/overrides";
 import { NormalPublishExecutionContext } from "./normalPublish/types";
 import { ProviderRegistry } from "../providers/registry";
-import { PublishRecord, PublishTargetConfig, UltimatePublisherSettings } from "../types";
-import { getRecord, upsertRecord } from "../settings";
+import { ProviderOptionCache, PublishRecord, PublishTargetConfig, UltimatePublisherSettings } from "../types";
+import { getRecord, normalizeProviderOptionCache, upsertRecord } from "../settings";
 
 export interface PublishServiceResult {
   record: PublishRecord;
   created: boolean;
+  providerOptionCache?: ProviderOptionCache;
+}
+
+export function mergeProviderOptionCacheIntoSettings(
+  settings: UltimatePublisherSettings,
+  providerOptionCache?: ProviderOptionCache
+): UltimatePublisherSettings {
+  if (!providerOptionCache) {
+    return settings;
+  }
+
+  const currentCache = normalizeProviderOptionCache(settings.providerOptionCache);
+  const nextCache = normalizeProviderOptionCache(providerOptionCache);
+
+  return {
+    ...settings,
+    providerOptionCache: {
+      ...currentCache,
+      juejinByTargetId: {
+        ...currentCache.juejinByTargetId,
+        ...nextCache.juejinByTargetId,
+      },
+    },
+  };
 }
 
 export interface PublishMediaPipeline {
@@ -30,6 +54,20 @@ export class PublishService {
     }
   ) {}
 
+  private buildProviderRuntime(
+    settings: UltimatePublisherSettings,
+    provider: PublisherProvider,
+    target: PublishTargetConfig
+  ): ProviderRuntimeOptions {
+    return {
+      providerOptionCache: settings.providerOptionCache,
+      loadNormalPublishOptions:
+        typeof provider.loadNormalPublishOptions === "function"
+          ? async (currentTarget) => provider.loadNormalPublishOptions!(currentTarget as never)
+          : undefined,
+    };
+  }
+
   async publishFile(
     file: TFile,
     target: PublishTargetConfig,
@@ -47,10 +85,11 @@ export class PublishService {
       context
     );
     const existing = getRecord(settings.records, file.path, target.id);
+    const runtime = this.buildProviderRuntime(settings, provider, target);
 
     const result = existing
-      ? await provider.update(existing.remoteId, preparedNote, target as never, context)
-      : await provider.publish(preparedNote, target as never, context);
+      ? await provider.update(existing.remoteId, preparedNote, target as never, context, runtime as never)
+      : await provider.publish(preparedNote, target as never, context, runtime as never);
 
     const previewUrl = result.remoteUrl ?? (await provider.getPreviewUrl(result.remoteId, target as never));
     const record: PublishRecord = {
@@ -66,12 +105,17 @@ export class PublishService {
     return {
       record,
       created: !existing,
+      providerOptionCache: result.providerOptionCache,
     };
   }
 
-  updateSettings(settings: UltimatePublisherSettings, record: PublishRecord): UltimatePublisherSettings {
+  updateSettings(
+    settings: UltimatePublisherSettings,
+    record: PublishRecord,
+    providerOptionCache?: ProviderOptionCache
+  ): UltimatePublisherSettings {
     return {
-      ...settings,
+      ...mergeProviderOptionCacheIntoSettings(settings, providerOptionCache),
       records: upsertRecord(settings.records, record),
     };
   }

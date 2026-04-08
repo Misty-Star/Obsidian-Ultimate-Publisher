@@ -1,7 +1,13 @@
 import { App, requestUrl } from "obsidian";
 import { renderMarkdownToHtml } from "../core/html";
 import { NormalPublishExecutionContext } from "../core/normalPublish/types";
-import { assertRemoteAssetsSupported, MediaSupport, PublisherProvider, PublishResult } from "../core/providers";
+import {
+  assertRemoteAssetsSupported,
+  MediaSupport,
+  ProviderRuntimeOptions,
+  PublisherProvider,
+  PublishResult,
+} from "../core/providers";
 import { PublishableNote } from "../core/note";
 import { resolveZhihuPublishInput } from "../core/webPublishConfig";
 import { ZhihuTargetConfig } from "../types";
@@ -129,7 +135,8 @@ export class ZhihuProvider implements PublisherProvider<ZhihuTargetConfig> {
   async publish(
     note: PublishableNote,
     target: ZhihuTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<ZhihuTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
     const { columnId } = resolveZhihuPublishInput(
@@ -189,7 +196,8 @@ export class ZhihuProvider implements PublisherProvider<ZhihuTargetConfig> {
     remoteId: string,
     note: PublishableNote,
     target: ZhihuTargetConfig,
-    context?: NormalPublishExecutionContext
+    context?: NormalPublishExecutionContext,
+    _runtime?: ProviderRuntimeOptions<ZhihuTargetConfig>
   ): Promise<PublishResult> {
     assertRemoteAssetsSupported(note, target.name);
     void context;

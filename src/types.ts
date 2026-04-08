@@ -96,8 +96,31 @@ export interface LlmSettings {
   maxInputChars: number;
 }
 
+export interface FrontmatterAutomationSettings {
+  enabled: boolean;
+  includeOptionComments: boolean;
+}
+
+export interface CachedProviderOption {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface JuejinProviderOptionCacheEntry {
+  fetchedAt: string;
+  categories: CachedProviderOption[];
+  tags: CachedProviderOption[];
+}
+
+export interface ProviderOptionCache {
+  juejinByTargetId: Record<string, JuejinProviderOptionCacheEntry>;
+}
+
 export interface UltimatePublisherSettings {
   targets: PublishTargetConfig[];
   records: PublishRecord[];
+  frontmatterAutomation?: FrontmatterAutomationSettings;
+  providerOptionCache?: ProviderOptionCache;
   llm?: LlmSettings;
 }

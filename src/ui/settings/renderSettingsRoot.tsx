@@ -4,7 +4,7 @@ import { createDesktopWebAuthService } from "../../core/desktopWebAuth";
 import { createI18nFromObsidianLanguage, Translator } from "../../i18n";
 import UltimatePublisherPlugin from "../../plugin";
 import { cloneTarget, normalizeTarget } from "../../settings";
-import { LlmSettings, ProviderId, UltimatePublisherSettings } from "../../types";
+import { FrontmatterAutomationSettings, LlmSettings, ProviderId, UltimatePublisherSettings } from "../../types";
 import { ProviderRegistry } from "../../providers/registry";
 import { EditTargetModal } from "./EditTargetModal";
 import { getProviderCatalogEntry } from "./providerCatalog";
@@ -134,6 +134,12 @@ export function mountSettingsView(containerEl: HTMLElement, options: MountSettin
     await options.plugin.updateLlmSettings(updater);
   };
 
+  const handleUpdateFrontmatterAutomationSettings = async (
+    updater: (draft: FrontmatterAutomationSettings) => void
+  ): Promise<void> => {
+    await options.plugin.updateFrontmatterAutomationSettings(updater);
+  };
+
   render(root, {
     i18n,
     settings: options.settings,
@@ -141,6 +147,7 @@ export function mountSettingsView(containerEl: HTMLElement, options: MountSettin
     onDeleteTarget: handleDeleteTarget,
     onEditTarget: handleEditTarget,
     onUpdateLlmSettings: handleUpdateLlmSettings,
+    onUpdateFrontmatterAutomationSettings: handleUpdateFrontmatterAutomationSettings,
   });
 
   return {
@@ -159,6 +166,7 @@ function render(
     onDeleteTarget: (targetId: string) => void | Promise<void>;
     onEditTarget: (targetId: string) => void;
     onUpdateLlmSettings: (updater: (draft: LlmSettings) => void) => void | Promise<void>;
+    onUpdateFrontmatterAutomationSettings: (updater: (draft: FrontmatterAutomationSettings) => void) => void | Promise<void>;
   }
 ): void {
   root.render(
@@ -169,6 +177,7 @@ function render(
       onDeleteTarget={props.onDeleteTarget}
       onEditTarget={props.onEditTarget}
       onUpdateLlmSettings={props.onUpdateLlmSettings}
+      onUpdateFrontmatterAutomationSettings={props.onUpdateFrontmatterAutomationSettings}
     />
   );
 }
