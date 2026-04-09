@@ -149,19 +149,18 @@ export function SettingsView({
           />
         ) : activeTab === "marketplace" ? (
           <MarketplaceTab i18n={i18n} providers={marketplaceProviders} onAddProvider={onAddProvider} />
+        ) : activeTab === "llm" ? (
+          <LlmSettingsTab
+            i18n={i18n}
+            settings={llmSettings}
+            onChange={handleUpdateLlmSettings}
+          />
         ) : (
-          <>
-            <LlmSettingsTab
-              i18n={i18n}
-              settings={llmSettings}
-              onChange={handleUpdateLlmSettings}
-            />
-            <FrontmatterAutomationPanel
-              i18n={i18n}
-              settings={frontmatterAutomationSettings}
-              onChange={handleUpdateFrontmatterAutomationSettings}
-            />
-          </>
+          <FrontmatterAutomationPanel
+            i18n={i18n}
+            settings={frontmatterAutomationSettings}
+            onChange={handleUpdateFrontmatterAutomationSettings}
+          />
         )}
       </div>
     </section>

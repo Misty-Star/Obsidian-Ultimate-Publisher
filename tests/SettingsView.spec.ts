@@ -112,6 +112,34 @@ describe("SettingsView", () => {
     expect(zhMarkup).toContain("AI");
   });
 
+  it("renders the Other tab label in both locales", () => {
+    const enMarkup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: DEFAULT_SETTINGS,
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+        onUpdateFrontmatterAutomationSettings: vi.fn(),
+      })
+    );
+    const zhMarkup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: DEFAULT_SETTINGS,
+        i18n: createI18n("zh-CN"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+        onUpdateLlmSettings: vi.fn(),
+        onUpdateFrontmatterAutomationSettings: vi.fn(),
+      })
+    );
+
+    expect(enMarkup).toContain("Other");
+    expect(zhMarkup).toContain("其他");
+  });
+
   it("renders the llm settings panel when the ai tab is selected", () => {
     const markup = renderToStaticMarkup(
       React.createElement(SettingsView, {
@@ -137,6 +165,7 @@ describe("SettingsView", () => {
     expect(markup).toContain("Vendor");
     expect(markup).toContain("Model");
     expect(markup).toContain("claude-sonnet-4-5");
+    expect(markup).not.toContain("Frontmatter Automation");
   });
 
   it("renders localized llm settings copy in zh-CN", () => {
@@ -167,7 +196,7 @@ describe("SettingsView", () => {
     expect(markup).toContain("最大输入字符数");
   });
 
-  it("renders frontmatter automation panel copy in English", () => {
+  it("renders frontmatter automation panel copy in English under the Other tab", () => {
     const markup = renderToStaticMarkup(
       React.createElement(SettingsView, {
         settings: {
@@ -177,7 +206,7 @@ describe("SettingsView", () => {
             includeOptionComments: false,
           },
         },
-        initialTab: "llm",
+        initialTab: "other" as never,
         i18n: createI18n("en"),
         onAddProvider: vi.fn(),
         onDeleteTarget: vi.fn(),
@@ -191,9 +220,10 @@ describe("SettingsView", () => {
     expect(markup).toContain("Automatically insert publish frontmatter when creating Markdown notes.");
     expect(markup).toContain("Enable frontmatter automation");
     expect(markup).toContain("Include option comments");
+    expect(markup).not.toContain("AI Settings");
   });
 
-  it("renders frontmatter automation panel copy in zh-CN", () => {
+  it("renders frontmatter automation panel copy in zh-CN under the Other tab", () => {
     const markup = renderToStaticMarkup(
       React.createElement(SettingsView, {
         settings: {
@@ -203,7 +233,7 @@ describe("SettingsView", () => {
             includeOptionComments: true,
           },
         },
-        initialTab: "llm",
+        initialTab: "other" as never,
         i18n: createI18n("zh-CN"),
         onAddProvider: vi.fn(),
         onDeleteTarget: vi.fn(),
@@ -217,6 +247,7 @@ describe("SettingsView", () => {
     expect(markup).toContain("创建 Markdown 笔记时自动插入发布 frontmatter 模板。");
     expect(markup).toContain("启用 frontmatter 自动化");
     expect(markup).toContain("包含可选项注释");
+    expect(markup).not.toContain("AI 设置");
   });
 
   it("shows the vendor default endpoint as placeholder when endpoint override is empty", () => {

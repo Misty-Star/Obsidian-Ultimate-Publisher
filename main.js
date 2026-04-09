@@ -30,9 +30,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.production.js
+// node_modules/scheduler/cjs/scheduler.production.js
 var require_scheduler_production = __commonJS({
-  "node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.production.js"(exports2) {
+  "node_modules/scheduler/cjs/scheduler.production.js"(exports2) {
     "use strict";
     function push(heap, node) {
       var index = heap.length;
@@ -303,9 +303,9 @@ var require_scheduler_production = __commonJS({
   }
 });
 
-// node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.development.js
+// node_modules/scheduler/cjs/scheduler.development.js
 var require_scheduler_development = __commonJS({
-  "node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.development.js"(exports2) {
+  "node_modules/scheduler/cjs/scheduler.development.js"(exports2) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function performWorkUntilDeadline() {
@@ -562,9 +562,9 @@ var require_scheduler_development = __commonJS({
   }
 });
 
-// node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/index.js
+// node_modules/scheduler/index.js
 var require_scheduler = __commonJS({
-  "node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/index.js"(exports2, module2) {
+  "node_modules/scheduler/index.js"(exports2, module2) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module2.exports = require_scheduler_production();
@@ -574,9 +574,9 @@ var require_scheduler = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react.production.js
+// node_modules/react/cjs/react.production.js
 var require_react_production = __commonJS({
-  "node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react.production.js"(exports2) {
+  "node_modules/react/cjs/react.production.js"(exports2) {
     "use strict";
     var REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element");
     var REACT_PORTAL_TYPE = Symbol.for("react.portal");
@@ -1015,9 +1015,9 @@ var require_react_production = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react.development.js
+// node_modules/react/cjs/react.development.js
 var require_react_development = __commonJS({
-  "node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react.development.js"(exports2, module2) {
+  "node_modules/react/cjs/react.development.js"(exports2, module2) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function defineDeprecationWarning(methodName, info) {
@@ -1987,9 +1987,9 @@ var require_react_development = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react@19.2.4/node_modules/react/index.js
+// node_modules/react/index.js
 var require_react = __commonJS({
-  "node_modules/.pnpm/react@19.2.4/node_modules/react/index.js"(exports2, module2) {
+  "node_modules/react/index.js"(exports2, module2) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module2.exports = require_react_production();
@@ -1999,9 +1999,9 @@ var require_react = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom.production.js
+// node_modules/react-dom/cjs/react-dom.production.js
 var require_react_dom_production = __commonJS({
-  "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom.production.js"(exports2) {
+  "node_modules/react-dom/cjs/react-dom.production.js"(exports2) {
     "use strict";
     var React2 = require_react();
     function formatProdErrorMessage(code) {
@@ -2148,9 +2148,9 @@ var require_react_dom_production = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom.development.js
+// node_modules/react-dom/cjs/react-dom.development.js
 var require_react_dom_development = __commonJS({
-  "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom.development.js"(exports2) {
+  "node_modules/react-dom/cjs/react-dom.development.js"(exports2) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function noop() {
@@ -2392,9 +2392,9 @@ var require_react_dom_development = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/index.js
+// node_modules/react-dom/index.js
 var require_react_dom = __commonJS({
-  "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/index.js"(exports2, module2) {
+  "node_modules/react-dom/index.js"(exports2, module2) {
     "use strict";
     function checkDCE() {
       if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -2418,9 +2418,9 @@ var require_react_dom = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.production.js
+// node_modules/react-dom/cjs/react-dom-client.production.js
 var require_react_dom_client_production = __commonJS({
-  "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.production.js"(exports2) {
+  "node_modules/react-dom/cjs/react-dom-client.production.js"(exports2) {
     "use strict";
     var Scheduler = require_scheduler();
     var React2 = require_react();
@@ -14163,9 +14163,9 @@ var require_react_dom_client_production = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.development.js
+// node_modules/react-dom/cjs/react-dom-client.development.js
 var require_react_dom_client_development = __commonJS({
-  "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.development.js"(exports2) {
+  "node_modules/react-dom/cjs/react-dom-client.development.js"(exports2) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function findHook(fiber, id) {
@@ -34062,9 +34062,9 @@ var require_react_dom_client_development = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/client.js
+// node_modules/react-dom/client.js
 var require_client = __commonJS({
-  "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/client.js"(exports2, module2) {
+  "node_modules/react-dom/client.js"(exports2, module2) {
     "use strict";
     function checkDCE() {
       if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -34088,9 +34088,9 @@ var require_client = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react-jsx-runtime.production.js
+// node_modules/react/cjs/react-jsx-runtime.production.js
 var require_react_jsx_runtime_production = __commonJS({
-  "node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react-jsx-runtime.production.js"(exports2) {
+  "node_modules/react/cjs/react-jsx-runtime.production.js"(exports2) {
     "use strict";
     var REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element");
     var REACT_FRAGMENT_TYPE = Symbol.for("react.fragment");
@@ -34118,9 +34118,9 @@ var require_react_jsx_runtime_production = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react-jsx-runtime.development.js
+// node_modules/react/cjs/react-jsx-runtime.development.js
 var require_react_jsx_runtime_development = __commonJS({
-  "node_modules/.pnpm/react@19.2.4/node_modules/react/cjs/react-jsx-runtime.development.js"(exports2) {
+  "node_modules/react/cjs/react-jsx-runtime.development.js"(exports2) {
     "use strict";
     "production" !== process.env.NODE_ENV && (function() {
       function getComponentNameFromType(type) {
@@ -34375,9 +34375,9 @@ var require_react_jsx_runtime_development = __commonJS({
   }
 });
 
-// node_modules/.pnpm/react@19.2.4/node_modules/react/jsx-runtime.js
+// node_modules/react/jsx-runtime.js
 var require_jsx_runtime = __commonJS({
-  "node_modules/.pnpm/react@19.2.4/node_modules/react/jsx-runtime.js"(exports2, module2) {
+  "node_modules/react/jsx-runtime.js"(exports2, module2) {
     "use strict";
     if (process.env.NODE_ENV === "production") {
       module2.exports = require_react_jsx_runtime_production();
@@ -35355,6 +35355,7 @@ var messages = {
     "settings.modal.action.cancel": "Cancel",
     "settings.modal.action.save": "Save",
     "settings.tab.llm": "AI",
+    "settings.tab.other": "Other",
     "settings.llm.title": "AI Settings",
     "settings.llm.description": "Configure the shared LLM provider used for title and summary generation.",
     "settings.llm.enabled": "Enable AI assistance",
@@ -35519,6 +35520,7 @@ var messages = {
     "settings.modal.action.cancel": "\u53D6\u6D88",
     "settings.modal.action.save": "\u4FDD\u5B58",
     "settings.tab.llm": "AI",
+    "settings.tab.other": "\u5176\u4ED6",
     "settings.llm.title": "AI \u8BBE\u7F6E",
     "settings.llm.description": "\u914D\u7F6E\u7528\u4E8E\u6807\u9898\u548C\u6458\u8981\u751F\u6210\u7684\u5171\u4EAB LLM Provider\u3002",
     "settings.llm.enabled": "\u542F\u7528 AI \u8F85\u52A9",
@@ -37835,6 +37837,13 @@ function TabBar({ i18n, activeTab, onSelectTab }) {
         en: "AI",
         "zh-CN": "AI"
       })
+    },
+    {
+      id: "other",
+      label: resolveTranslation6(i18n, "settings.tab.other", {
+        en: "Other",
+        "zh-CN": "\u5176\u4ED6"
+      })
     }
   ];
   const tabAriaLabel = resolveTranslation6(i18n, "settings.tab.aria", {
@@ -37966,24 +37975,21 @@ function SettingsView({
         onEditTarget,
         onDeleteTarget
       }
-    ) : activeTab === "marketplace" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarketplaceTab, { i18n, providers: marketplaceProviders, onAddProvider }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        LlmSettingsTab,
-        {
-          i18n,
-          settings: llmSettings,
-          onChange: handleUpdateLlmSettings
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        FrontmatterAutomationPanel,
-        {
-          i18n,
-          settings: frontmatterAutomationSettings,
-          onChange: handleUpdateFrontmatterAutomationSettings
-        }
-      )
-    ] }) })
+    ) : activeTab === "marketplace" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarketplaceTab, { i18n, providers: marketplaceProviders, onAddProvider }) : activeTab === "llm" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      LlmSettingsTab,
+      {
+        i18n,
+        settings: llmSettings,
+        onChange: handleUpdateLlmSettings
+      }
+    ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      FrontmatterAutomationPanel,
+      {
+        i18n,
+        settings: frontmatterAutomationSettings,
+        onChange: handleUpdateFrontmatterAutomationSettings
+      }
+    ) })
   ] });
 }
 
