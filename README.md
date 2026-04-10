@@ -80,14 +80,16 @@ Use note frontmatter to prefill publish metadata:
 
 - Common fields: `title`, `slug`, `tags`, `categories`, `description`
 - WordPress field: `status`
-- CSDN fields: `ultimatePublisher.csdn.categories`, `ultimatePublisher.csdn.tags`
-- Zhihu no longer uses a dedicated frontmatter field
-- Juejin fields (name-based):
-  - `ultimatePublisher.juejin.category`
-  - `ultimatePublisher.juejin.tags`
-  - `ultimatePublisher.juejin.briefContent`
+- Juejin fields:
+  - `juejinCategory`
+  - `juejinTags`
 
-For Juejin, `category` and `tags` should be names. They are resolved to IDs automatically at publish time.
+Notes:
+
+- CSDN uses the shared `categories` and `tags` fields.
+- Juejin summary now reuses the shared `description` field.
+- Zhihu no longer uses a frontmatter field for `columnId`.
+- `juejinCategory` and `juejinTags` should be names. They are resolved to IDs automatically at publish time.
 
 Frontmatter option hints prioritize cached Juejin options. If cache is missing or older than one day, the plugin refreshes options automatically and writes them back to cache.
 
@@ -103,14 +105,8 @@ tags: [obsidian, publishing]
 categories: [productivity]
 description: Reuse one note for multiple publishing platforms.
 status: draft
-ultimatePublisher:
-  csdn:
-    categories: [Obsidian]
-    tags: [Plugin]
-  juejin:
-    category: Backend
-    tags: [Obsidian, Efficiency]
-    briefContent: A quick guide to cross-platform publishing from Obsidian.
+juejinCategory: Backend
+juejinTags: [Obsidian, Efficiency]
 ---
 ```
 

@@ -60,12 +60,12 @@
 
 ### 添加发布目标
 
-1. 打开插件设置页面
-2. 点击"添加发布目标"
+1. 打开插件设置
+2. 点击“添加发布目标”
 3. 选择平台类型
-4. 填写配置信息：
-   - **目标名称**：自定义名称，便于识别
-   - **认证信息**：根据平台要求填写（API Token、Cookie 等）
+4. 填写配置：
+   - **目标名称**：用于区分不同发布目标的自定义名称
+   - **认证信息**：API Token、Cookie 等平台相关认证参数
    - **默认设置**：标签、分类等默认值
 
 ### 平台特定配置
@@ -74,20 +74,22 @@
 
 ### Frontmatter 元数据
 
-你可以在笔记 frontmatter 中预填发布元数据：
+你可以在笔记的 frontmatter 中预填发布元数据：
 
 - 通用字段：`title`、`slug`、`tags`、`categories`、`description`
 - WordPress 字段：`status`
-- CSDN 字段：`ultimatePublisher.csdn.categories`、`ultimatePublisher.csdn.tags`
-- 知乎不再使用独立的 frontmatter 专属字段
-- 掘金字段（名称型）：
-  - `ultimatePublisher.juejin.category`
-  - `ultimatePublisher.juejin.tags`
-  - `ultimatePublisher.juejin.briefContent`
+- 掘金字段：
+  - `juejinCategory`
+  - `juejinTags`
 
-掘金的 `category` 和 `tags` 请填写“名称”，发布时会自动解析为对应 ID。
+说明：
 
-frontmatter 模板中的可选项提示会优先使用掘金缓存；若缓存缺失或超过一天，插件会自动刷新并回写缓存。
+- CSDN 直接使用通用 `categories` 和 `tags` 字段。
+- 掘金摘要现在复用通用 `description` 字段。
+- Zhihu 不再使用 `columnId` 的 frontmatter 字段。
+- `juejinCategory` 和 `juejinTags` 填写的是名称，发布时会自动解析为对应 ID。
+
+frontmatter 模板中的掘金可选项提示会优先使用缓存；如果缓存缺失或超过一天，插件会自动刷新并回写缓存。
 
 你可以在设置页开启自动插入模板，也可以通过命令 `Insert publish frontmatter template` 手动为当前笔记插入发布 frontmatter 模板。
 
@@ -95,20 +97,14 @@ frontmatter 模板中的可选项提示会优先使用掘金缓存；若缓存�
 
 ```yaml
 ---
-title: 一次写作，多端发布
-slug: write-once-publish-everywhere
-tags: [obsidian, 发布]
-categories: [效率]
-description: 用一份笔记同步到多个平台。
+title: Build Once, Publish Everywhere
+slug: build-once-publish-everywhere
+tags: [obsidian, publishing]
+categories: [productivity]
+description: Reuse one note for multiple publishing platforms.
 status: draft
-ultimatePublisher:
-  csdn:
-    categories: [Obsidian]
-    tags: [插件]
-  juejin:
-    category: 后端
-    tags: [Obsidian, 效率工具]
-    briefContent: 从 Obsidian 到多平台发布的快速实践。
+juejinCategory: Backend
+juejinTags: [Obsidian, Efficiency]
 ---
 ```
 

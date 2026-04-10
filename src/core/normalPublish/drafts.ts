@@ -43,14 +43,9 @@ function buildYuqueDraft(note: PublishableNote, target: Extract<PublishTargetCon
 }
 
 function buildZhihuDraft(note: PublishableNote, target: Extract<PublishTargetConfig, { provider: "zhihu" }>): ZhihuPublishDraft {
-  const frontmatterConfig = (note.frontmatter.ultimatePublisher as Record<string, unknown> | undefined)?.zhihu as
-    | Record<string, unknown>
-    | undefined;
   return {
     provider: "zhihu",
-    columnId:
-      (typeof frontmatterConfig?.columnId === "string" ? frontmatterConfig.columnId.trim() : "") ||
-      target.defaultColumnId,
+    columnId: target.defaultColumnId,
     columnTitle: target.defaultColumnTitle ?? "",
   };
 }

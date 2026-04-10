@@ -22,9 +22,9 @@ function buildOptionComment(prefix: string | undefined, options: string[]): stri
 
   const visible = normalized.slice(0, OPTION_COMMENT_LIMIT);
   const truncated = normalized.length > OPTION_COMMENT_LIMIT;
-  const labelParts = prefix ? [prefix, "可选项"] : ["可选项"];
+  const labelParts = prefix ? [prefix, "\u53ef\u9009\u9879"] : ["\u53ef\u9009\u9879"];
   const labelText = labelParts.join(" ");
-  const suffix = truncated ? " | 仅展示部分可选项" : "";
+  const suffix = truncated ? " | \u4ec5\u5c55\u793a\u90e8\u5206\u53ef\u9009\u9879" : "";
 
   return `# ${labelText}: ${visible.join(" | ")}${suffix}`;
 }
@@ -63,8 +63,6 @@ export function buildPublishFrontmatterTemplate(args: BuildPublishFrontmatterTem
   }
 
   if (hasJuejin) {
-    lines.push("ultimatePublisher:");
-    lines.push("  juejin:");
     const shouldRenderJuejinOptionComments = includeOptionComments && enabledJuejinCount === 1;
     if (shouldRenderJuejinOptionComments) {
       const categoryComment = buildOptionComment(
@@ -72,18 +70,17 @@ export function buildPublishFrontmatterTemplate(args: BuildPublishFrontmatterTem
         extractLabels(juejinOptions?.categories)
       );
       if (categoryComment) {
-        lines.push(`    ${categoryComment}`);
+        lines.push(categoryComment);
       }
     }
-    lines.push("    category:");
+    lines.push("juejinCategory:");
     if (shouldRenderJuejinOptionComments) {
       const tagComment = buildOptionComment(undefined, extractLabels(juejinOptions?.tags));
       if (tagComment) {
-        lines.push(`    ${tagComment}`);
+        lines.push(tagComment);
       }
     }
-    lines.push("    tags: []");
-    lines.push("    briefContent:");
+    lines.push("juejinTags: []");
   }
 
   lines.push("---");

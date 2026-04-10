@@ -3,7 +3,7 @@ import { createCsdnTarget, createJuejinTarget, createWordpressTarget, createZhih
 import { buildPublishFrontmatterTemplate, hasLeadingFrontmatter, injectPublishFrontmatter } from "../src/core/frontmatterTemplate";
 
 describe("frontmatter template builder", () => {
-  it("includes general fields and juejin section while skipping zhihu", () => {
+  it("includes general fields and top-level juejin fields while skipping zhihu fields", () => {
     const template = buildPublishFrontmatterTemplate({
       targets: [
         createWordpressTarget(),
@@ -13,21 +13,21 @@ describe("frontmatter template builder", () => {
       ],
       includeOptionComments: true,
       juejinOptions: {
-        categories: [{ id: "cat-1", label: "分类 1" }],
-        tags: [{ id: "tag-1", label: "标签 1" }],
+        categories: [{ id: "cat-1", label: "Category 1" }],
+        tags: [{ id: "tag-1", label: "Tag 1" }],
       },
     });
 
     expect(template).toContain("title:");
     expect(template).toContain("slug:");
     expect(template).toContain("tags: []\ncategories: []\ndescription:");
-    expect(template).toContain("# WordPress 可选项");
-    expect(template).toContain("status:");
-    expect(template).toContain("ultimatePublisher:");
-    expect(template).toContain("juejin:");
-    expect(template).toContain("category:");
-    expect(template).toContain("    tags: []");
-    expect(template).toContain("briefContent:");
+    expect(template).toMatch(/\n# WordPress .*?\nstatus:\n/);
+    expect(template).toContain("juejinCategory:");
+    expect(template).toContain("juejinTags: []");
+    expect(template).toMatch(/\n# .*Category 1\njuejinCategory:\n/);
+    expect(template).toMatch(/\n# .*Tag 1\njuejinTags: \[\]\n/);
+    expect(template).not.toContain("ultimatePublisher:");
+    expect(template).not.toContain("briefContent:");
     expect(template).not.toContain("zhihu:");
     expect(template).not.toContain("columnId:");
   });
@@ -35,7 +35,7 @@ describe("frontmatter template builder", () => {
   it("truncates option comments when more than 20 labels", () => {
     const tagOptions = Array.from({ length: 22 }, (_value, index) => ({
       id: `tag-${index + 1}`,
-      label: `标签 ${index + 1}`,
+      label: `Tag ${index + 1}`,
     }));
 
     const template = buildPublishFrontmatterTemplate({
@@ -46,12 +46,12 @@ describe("frontmatter template builder", () => {
       },
     });
 
-    expect(template).not.toContain("Juejin 标签");
-    expect(template).toContain("# 可选项:");
-    expect(template).toContain("标签 1");
-    expect(template).toContain("标签 20");
-    expect(template).not.toContain("标签 21");
-    expect(template).toMatch(/# 可选项: .*仅展示部分可选项/);
+    expect(template).not.toContain("Juejin Tag");
+    expect(template).toContain("Tag 1");
+    expect(template).toContain("Tag 20");
+    expect(template).not.toContain("Tag 21");
+    expect(template).toContain("\u4ec5\u5c55\u793a\u90e8\u5206\u53ef\u9009\u9879");
+    expect(template).toMatch(/\n# .*Tag 20.*\u4ec5\u5c55\u793a\u90e8\u5206\u53ef\u9009\u9879\njuejinTags: \[\]\n/);
   });
 
   it("does not render dynamic juejin option comments when multiple juejin targets are enabled", () => {
@@ -62,19 +62,17 @@ describe("frontmatter template builder", () => {
       ],
       includeOptionComments: true,
       juejinOptions: {
-        categories: [{ id: "cat-1", label: "分类 1" }],
-        tags: [{ id: "tag-1", label: "标签 1" }],
+        categories: [{ id: "cat-1", label: "Category 1" }],
+        tags: [{ id: "tag-1", label: "Tag 1" }],
       },
     });
 
-    expect(template).toContain("ultimatePublisher:");
-    expect(template).toContain("  juejin:");
-    expect(template).toContain("    category:");
-    expect(template).toContain("    tags: []");
-    expect(template).toContain("    briefContent:");
-    expect(template).not.toContain("# 可选项:");
-    expect(template).not.toContain("分类 1");
-    expect(template).not.toContain("标签 1");
+    expect(template).toContain("juejinCategory:");
+    expect(template).toContain("juejinTags: []");
+    expect(template).not.toContain("ultimatePublisher:");
+    expect(template).not.toContain("briefContent:");
+    expect(template).not.toContain("Category 1");
+    expect(template).not.toContain("Tag 1");
   });
 });
 
@@ -90,10 +88,10 @@ describe("frontmatter helpers", () => {
 
   it("injects template when missing frontmatter but leaves valid frontmatter untouched", () => {
     const template = "---\ntitle:\n---\n";
-    const markdown = "# 你好";
-    const prefixed = "---\ntitle: demo\n---\n# 你好";
+    const markdown = "# Hello";
+    const prefixed = "---\ntitle: demo\n---\n# Hello";
 
-    expect(injectPublishFrontmatter(markdown, template)).toBe("---\ntitle:\n---\n\n# 你好");
+    expect(injectPublishFrontmatter(markdown, template)).toBe("---\ntitle:\n---\n\n# Hello");
     expect(injectPublishFrontmatter(prefixed, template)).toBe(prefixed);
   });
 });

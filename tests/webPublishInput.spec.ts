@@ -41,7 +41,7 @@ describe("web publish input", () => {
     expect(input.columnId).toBeUndefined();
   });
 
-  it("prefers zhihu frontmatter columnId over target defaults", () => {
+  it("ignores removed zhihu frontmatter columnId and uses target defaults", () => {
     const input = resolveZhihuPublishInput(
       createNote({
         frontmatter: {
@@ -58,20 +58,12 @@ describe("web publish input", () => {
       }
     );
 
-    expect(input.columnId).toBe("frontmatter-column");
+    expect(input.columnId).toBe("target-column");
   });
 
-  it("prefers explicit zhihu overrides over frontmatter and target defaults", () => {
+  it("prefers explicit zhihu overrides over target defaults", () => {
     const input = resolveZhihuPublishInput(
-      createNote({
-        frontmatter: {
-          ultimatePublisher: {
-            zhihu: {
-              columnId: "frontmatter-column",
-            },
-          },
-        },
-      }),
+      createNote(),
       {
         ...createZhihuTarget(),
         defaultColumnId: "target-column",
@@ -87,42 +79,42 @@ describe("web publish input", () => {
   it("normalizes csdn categories and tags from generic note metadata", () => {
     const input = resolveCsdnPublishInput(
       createNote({
-        categories: ["后端"],
+        categories: ["Backend"],
         tags: ["Obsidian"],
       }),
       createCsdnTarget()
     );
 
-    expect(input.categories).toEqual(["后端"]);
+    expect(input.categories).toEqual(["Backend"]);
     expect(input.tags).toEqual(["Obsidian"]);
   });
 
   it("prefers explicit csdn overrides over note metadata and target defaults", () => {
     const input = resolveCsdnPublishInput(
       createNote({
-        categories: ["后端"],
+        categories: ["Backend"],
         tags: ["Obsidian"],
       }),
       {
         ...createCsdnTarget(),
-        defaultCategories: ["默认分类"],
-        defaultTags: ["默认标签"],
+        defaultCategories: ["Default category"],
+        defaultTags: ["Default tag"],
       },
       {
-        categories: ["覆盖分类"],
-        tags: ["覆盖标签"],
+        categories: ["Override category"],
+        tags: ["Override tag"],
       }
     );
 
-    expect(input.categories).toEqual(["覆盖分类"]);
-    expect(input.tags).toEqual(["覆盖标签"]);
+    expect(input.categories).toEqual(["Override category"]);
+    expect(input.tags).toEqual(["Override tag"]);
   });
 
   it("requires juejin category and tag ids before publish", async () => {
     await expect(resolveJuejinPublishInput(createNote(), createJuejinTarget())).rejects.toThrow(/category/i);
   });
 
-  it("uses target defaults when juejin frontmatter overrides are absent", async () => {
+  it("uses target defaults when juejin top-level overrides are absent", async () => {
     const result = await resolveJuejinPublishInput(
       createNote({
         excerpt: "short brief",
@@ -141,18 +133,33 @@ describe("web publish input", () => {
     expect(result.providerOptionCache).toBeUndefined();
   });
 
-  it("prefers explicit juejin overrides over frontmatter and target defaults", async () => {
+  it("uses top-level description as juejin brief content before excerpt", async () => {
+    const result = await resolveJuejinPublishInput(
+      createNote({
+        excerpt: "excerpt brief",
+        frontmatter: {
+          description: "frontmatter brief",
+        },
+      }),
+      {
+        ...createJuejinTarget(),
+        defaultCategoryId: "category-1",
+        defaultTagIds: ["tag-1"],
+        defaultBriefContent: "",
+      }
+    );
+
+    expect(result.input.briefContent).toBe("frontmatter brief");
+  });
+
+  it("prefers explicit juejin overrides over top-level frontmatter and target defaults", async () => {
     const result = await resolveJuejinPublishInput(
       createNote({
         excerpt: "short brief",
         frontmatter: {
-          ultimatePublisher: {
-            juejin: {
-              categoryId: "frontmatter-category",
-              tagIds: ["frontmatter-tag"],
-              briefContent: "frontmatter brief",
-            },
-          },
+          juejinCategory: "Frontmatter category",
+          juejinTags: ["Frontmatter tag"],
+          description: "frontmatter brief",
         },
       }),
       {
@@ -179,10 +186,10 @@ describe("web publish input", () => {
         "juejin-target": {
           fetchedAt: "2026-04-08T00:00:00.000Z",
           categories: [
-            { id: "6809637769959178254", label: "后端" },
+            { id: "category-backend", label: "Backend" },
           ],
           tags: [
-            { id: "6809640398105874446", label: "Obsidian" },
+            { id: "tag-obsidian", label: "Obsidian" },
           ],
         },
       },
@@ -191,12 +198,8 @@ describe("web publish input", () => {
     const result = await resolveJuejinPublishInput(
       createNote({
         frontmatter: {
-          ultimatePublisher: {
-            juejin: {
-              category: "后端",
-              tags: ["Obsidian"],
-            },
-          },
+          juejinCategory: "Backend",
+          juejinTags: ["Obsidian"],
         },
       }),
       {
@@ -212,15 +215,15 @@ describe("web publish input", () => {
       }
     );
 
-    expect(result.input.categoryId).toBe("6809637769959178254");
-    expect(result.input.tagIds).toEqual(["6809640398105874446"]);
+    expect(result.input.categoryId).toBe("category-backend");
+    expect(result.input.tagIds).toEqual(["tag-obsidian"]);
     expect(result.providerOptionCache).toBeUndefined();
   });
 
   it("refreshes juejin options when cache is missing and returns updated cache", async () => {
     const loadNormalPublishOptions = vi.fn().mockResolvedValue({
       juejinCategories: [
-        { id: "category-remote", label: "后端" },
+        { id: "category-remote", label: "Backend" },
       ],
       juejinTags: [
         { id: "tag-remote", label: "Obsidian" },
@@ -231,12 +234,8 @@ describe("web publish input", () => {
     const result = await resolveJuejinPublishInput(
       createNote({
         frontmatter: {
-          ultimatePublisher: {
-            juejin: {
-              category: "后端",
-              tags: ["Obsidian"],
-            },
-          },
+          juejinCategory: "Backend",
+          juejinTags: ["Obsidian"],
         },
       }),
       {
@@ -256,7 +255,7 @@ describe("web publish input", () => {
       juejinByTargetId: {
         "juejin-target": {
           fetchedAt: new Date(nowMs).toISOString(),
-          categories: [{ id: "category-remote", label: "后端" }],
+          categories: [{ id: "category-remote", label: "Backend" }],
           tags: [{ id: "tag-remote", label: "Obsidian" }],
         },
       },
@@ -264,23 +263,23 @@ describe("web publish input", () => {
     expect(loadNormalPublishOptions).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps supporting legacy juejin categoryId and tagIds fields", async () => {
-    const result = await resolveJuejinPublishInput(
-      createNote({
-        frontmatter: {
-          ultimatePublisher: {
-            juejin: {
-              categoryId: "legacy-category",
-              tagIds: ["legacy-tag"],
+  it("does not read removed ultimatePublisher juejin fields", async () => {
+    await expect(
+      resolveJuejinPublishInput(
+        createNote({
+          frontmatter: {
+            ultimatePublisher: {
+              juejin: {
+                category: "Backend",
+                tags: ["Obsidian"],
+                briefContent: "old brief",
+              },
             },
           },
-        },
-      }),
-      createJuejinTarget()
-    );
-
-    expect(result.input.categoryId).toBe("legacy-category");
-    expect(result.input.tagIds).toEqual(["legacy-tag"]);
+        }),
+        createJuejinTarget()
+      )
+    ).rejects.toThrow(/category/i);
   });
 
   it("throws a clear error when juejin category name does not match", async () => {
@@ -288,12 +287,8 @@ describe("web publish input", () => {
       resolveJuejinPublishInput(
         createNote({
           frontmatter: {
-            ultimatePublisher: {
-              juejin: {
-                category: "不存在的分类",
-                tags: ["Obsidian"],
-              },
-            },
+            juejinCategory: "Missing category",
+            juejinTags: ["Obsidian"],
           },
         }),
         {
@@ -306,7 +301,7 @@ describe("web publish input", () => {
             juejinByTargetId: {
               "juejin-target": {
                 fetchedAt: "2026-04-08T00:00:00.000Z",
-                categories: [{ id: "category-1", label: "前端" }],
+                categories: [{ id: "category-1", label: "Frontend" }],
                 tags: [{ id: "tag-1", label: "Obsidian" }],
               },
             },
@@ -315,7 +310,7 @@ describe("web publish input", () => {
           loadNormalPublishOptions: vi.fn(),
         }
       )
-    ).rejects.toThrow('Juejin category "不存在的分类" did not match any available option.');
+    ).rejects.toThrow('Juejin category "Missing category" did not match any available option.');
   });
 
   it("surfaces options unavailable when juejin names need refresh but remote loading fails", async () => {
@@ -323,12 +318,8 @@ describe("web publish input", () => {
       resolveJuejinPublishInput(
         createNote({
           frontmatter: {
-            ultimatePublisher: {
-              juejin: {
-                category: "后端",
-                tags: ["Obsidian"],
-              },
-            },
+            juejinCategory: "Backend",
+            juejinTags: ["Obsidian"],
           },
         }),
         {
@@ -341,7 +332,7 @@ describe("web publish input", () => {
           loadNormalPublishOptions: vi.fn().mockRejectedValue(new Error("network down")),
         }
       )
-    ).rejects.toThrow('Juejin options are unavailable, so category "后端" could not be resolved.');
+    ).rejects.toThrow('Juejin options are unavailable, so category "Backend" could not be resolved.');
   });
 
   it("throws a clear error when juejin tag name matches multiple options", async () => {
@@ -349,12 +340,8 @@ describe("web publish input", () => {
       resolveJuejinPublishInput(
         createNote({
           frontmatter: {
-            ultimatePublisher: {
-              juejin: {
-                category: "后端",
-                tags: ["Obsidian"],
-              },
-            },
+            juejinCategory: "Backend",
+            juejinTags: ["Obsidian"],
           },
         }),
         {
@@ -367,7 +354,7 @@ describe("web publish input", () => {
             juejinByTargetId: {
               "juejin-target": {
                 fetchedAt: "2026-04-08T00:00:00.000Z",
-                categories: [{ id: "category-1", label: "后端" }],
+                categories: [{ id: "category-1", label: "Backend" }],
                 tags: [
                   { id: "tag-1", label: "Obsidian" },
                   { id: "tag-2", label: "obsidian" },

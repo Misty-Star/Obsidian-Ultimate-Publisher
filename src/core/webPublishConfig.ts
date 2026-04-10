@@ -28,19 +28,6 @@ type ZhihuPublishOverrides = Pick<ZhihuPublishDraft, "columnId">;
 type CsdnPublishOverrides = Pick<CsdnPublishDraft, "categories" | "tags">;
 type JuejinPublishOverrides = Pick<JuejinPublishDraft, "categoryId" | "tagIds" | "briefContent">;
 
-function getNestedValue(source: Record<string, unknown>, path: string[]): unknown {
-  let current: unknown = source;
-
-  for (const segment of path) {
-    if (!current || typeof current !== "object" || !(segment in current)) {
-      return undefined;
-    }
-    current = (current as Record<string, unknown>)[segment];
-  }
-
-  return current;
-}
-
 function readString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -78,10 +65,7 @@ export function resolveZhihuPublishInput(
   target: ZhihuTargetConfig,
   overrides?: Partial<ZhihuPublishOverrides>
 ): ZhihuPublishInput {
-  const columnId =
-    readString(overrides?.columnId) ||
-    readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "zhihu", "columnId"])) ||
-    target.defaultColumnId;
+  const columnId = readString(overrides?.columnId) || target.defaultColumnId;
 
   return {
     columnId: columnId || undefined,
@@ -95,13 +79,11 @@ export function resolveCsdnPublishInput(
 ): CsdnPublishInput {
   const categories = pickFirstNonEmptyArray(
     overrides?.categories,
-    getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "categories"]),
     note.categories,
     target.defaultCategories
   );
   const tags = pickFirstNonEmptyArray(
     overrides?.tags,
-    getNestedValue(note.frontmatter, ["ultimatePublisher", "csdn", "tags"]),
     note.tags,
     target.defaultTags
   );
@@ -141,13 +123,11 @@ export async function resolveJuejinPublishInput(
   overrides?: Partial<JuejinPublishOverrides>,
   runtime?: ProviderRuntimeOptions<JuejinTargetConfig>
 ): Promise<ResolveJuejinPublishInputResult> {
-  const frontmatterCategoryName = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "category"]));
-  const frontmatterTagNames = readStringArray(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tags"]));
-  const legacyCategoryId = readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "categoryId"]));
-  const legacyTagIds = readStringArray(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "tagIds"]));
+  const frontmatterCategoryName = readString(note.frontmatter["juejinCategory"]);
+  const frontmatterTagNames = readStringArray(note.frontmatter["juejinTags"]);
   const briefContent =
     readString(overrides?.briefContent) ||
-    readString(getNestedValue(note.frontmatter, ["ultimatePublisher", "juejin", "briefContent"])) ||
+    readString(note.frontmatter["description"]) ||
     target.defaultBriefContent ||
     note.excerpt;
   const overrideCategoryId = readString(overrides?.categoryId);
@@ -199,8 +179,8 @@ export async function resolveJuejinPublishInput(
     }
   }
 
-  categoryId = categoryId || legacyCategoryId || target.defaultCategoryId;
-  tagIds = tagIds.length > 0 ? tagIds : legacyTagIds.length > 0 ? legacyTagIds : target.defaultTagIds;
+  categoryId = categoryId || target.defaultCategoryId;
+  tagIds = tagIds.length > 0 ? tagIds : target.defaultTagIds;
 
   if (!categoryId) {
     throw new Error("Juejin publish requires a categoryId.");

@@ -57,6 +57,34 @@ describe("normal publish drafts", () => {
     });
   });
 
+  it("does not prefill zhihu draft columnId from removed frontmatter", () => {
+    const state = buildNormalPublishSessionState(
+      createNote({
+        frontmatter: {
+          ultimatePublisher: {
+            zhihu: {
+              columnId: "frontmatter-column",
+            },
+          },
+        },
+      }),
+      [
+        {
+          ...createZhihuTarget(),
+          id: "zh",
+          defaultColumnId: "target-column",
+          defaultColumnTitle: "Demo Column",
+        },
+      ]
+    );
+
+    expect(state.targetDrafts.zh).toMatchObject({
+      provider: "zhihu",
+      columnId: "target-column",
+      columnTitle: "Demo Column",
+    });
+  });
+
   it("pre-fills only fields with explicit sources and leaves the rest empty", () => {
     const state = buildNormalPublishSessionState(createNote(), [
       {

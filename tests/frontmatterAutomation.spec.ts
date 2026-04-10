@@ -2,7 +2,7 @@ import { MarkdownView, Notice, TFile, resetObsidianTestState } from "obsidian";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createI18n } from "../src/i18n";
 import UltimatePublisherPlugin from "../src/plugin";
-import { createWordpressTarget, DEFAULT_SETTINGS } from "../src/settings";
+import { createJuejinTarget, createWordpressTarget, DEFAULT_SETTINGS } from "../src/settings";
 
 interface AppHarness {
   app: Record<string, unknown>;
@@ -86,7 +86,10 @@ describe("frontmatter automation", () => {
     const plugin = new UltimatePublisherPlugin(harness.app as never, { id: "ultimate-publisher" } as never);
     plugin.settings = {
       ...DEFAULT_SETTINGS,
-      targets: [{ ...createWordpressTarget(), id: "wp", name: "Main Blog", enabled: true }],
+      targets: [
+        { ...createWordpressTarget(), id: "wp", name: "Main Blog", enabled: true },
+        { ...createJuejinTarget(), id: "jj", name: "Main Juejin", enabled: true },
+      ],
       records: [],
       frontmatterAutomation: {
         enabled: false,
@@ -96,9 +99,16 @@ describe("frontmatter automation", () => {
 
     await plugin.insertPublishFrontmatterForActiveNote();
 
+    const content = harness.readContent();
     expect(harness.vaultModifySpy).toHaveBeenCalledTimes(1);
-    expect(harness.readContent().startsWith("---\ntitle:\nslug:\ntags: []\ncategories: []\ndescription:\nstatus:\n---\n\n")).toBe(true);
-    expect(harness.readContent()).toContain("# Hello");
+    expect(content).toContain("---\n");
+    expect(content).toContain("\nstatus:\n");
+    expect(content).toContain("\njuejinCategory:\n");
+    expect(content).toContain("\njuejinTags: []\n");
+    expect(content.indexOf("status:")).toBeLessThan(content.indexOf("juejinCategory:"));
+    expect(content.indexOf("juejinCategory:")).toBeLessThan(content.indexOf("juejinTags: []"));
+    expect(content).not.toContain("ultimatePublisher:");
+    expect(content).toContain("# Hello");
     expect(Notice.instances.at(-1)?.message).toBe(createI18n("en").t("notice.frontmatter.inserted"));
   });
 
@@ -128,7 +138,10 @@ describe("frontmatter automation", () => {
     const plugin = new UltimatePublisherPlugin(harness.app as never, { id: "ultimate-publisher" } as never);
     plugin.settings = {
       ...DEFAULT_SETTINGS,
-      targets: [{ ...createWordpressTarget(), id: "wp", name: "Main Blog", enabled: true }],
+      targets: [
+        { ...createWordpressTarget(), id: "wp", name: "Main Blog", enabled: true },
+        { ...createJuejinTarget(), id: "jj", name: "Main Juejin", enabled: true },
+      ],
       records: [],
       frontmatterAutomation: {
         enabled: true,
@@ -144,6 +157,9 @@ describe("frontmatter automation", () => {
       expect(harness.vaultModifySpy).toHaveBeenCalledTimes(1);
     });
 
+    expect(harness.readContent()).toContain("\njuejinCategory:\n");
+    expect(harness.readContent()).toContain("\njuejinTags: []\n");
+    expect(harness.readContent()).not.toContain("ultimatePublisher:");
     expect(harness.readContent()).toContain("# Auto");
     expect(Notice.instances).toHaveLength(0);
   });
