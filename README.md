@@ -70,10 +70,6 @@ Publish your Obsidian notes to multiple platforms with one click.
    - **Authentication**: API Token, Cookie, etc. (platform-specific)
    - **Default Settings**: Tags, categories, etc.
 
-### Platform-Specific Configuration
-
-Different platforms require different authentication methods. Please refer to each platform's API documentation.
-
 ### Frontmatter Metadata
 
 Use note frontmatter to prefill publish metadata:
@@ -83,15 +79,6 @@ Use note frontmatter to prefill publish metadata:
 - Juejin fields:
   - `juejinCategory`
   - `juejinTags`
-
-Notes:
-
-- CSDN uses the shared `categories` and `tags` fields.
-- Juejin summary now reuses the shared `description` field.
-- Zhihu no longer uses a frontmatter field for `columnId`.
-- `juejinCategory` and `juejinTags` should be names. They are resolved to IDs automatically at publish time.
-
-Frontmatter option hints prioritize cached Juejin options. If cache is missing or older than one day, the plugin refreshes options automatically and writes them back to cache.
 
 You can enable automatic template insertion in the settings panel, and you can also run the command `Insert publish frontmatter template` manually for the current note.
 

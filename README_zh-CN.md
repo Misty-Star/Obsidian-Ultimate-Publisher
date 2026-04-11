@@ -68,10 +68,6 @@
    - **认证信息**：API Token、Cookie 等平台相关认证参数
    - **默认设置**：标签、分类等默认值
 
-### 平台特定配置
-
-不同平台需要不同的认证方式，请参考各平台的 API 文档获取认证信息。
-
 ### Frontmatter 元数据
 
 你可以在笔记的 frontmatter 中预填发布元数据：
@@ -81,15 +77,6 @@
 - 掘金字段：
   - `juejinCategory`
   - `juejinTags`
-
-说明：
-
-- CSDN 直接使用通用 `categories` 和 `tags` 字段。
-- 掘金摘要现在复用通用 `description` 字段。
-- Zhihu 不再使用 `columnId` 的 frontmatter 字段。
-- `juejinCategory` 和 `juejinTags` 填写的是名称，发布时会自动解析为对应 ID。
-
-frontmatter 模板中的掘金可选项提示会优先使用缓存；如果缓存缺失或超过一天，插件会自动刷新并回写缓存。
 
 你可以在设置页开启自动插入模板，也可以通过命令 `Insert publish frontmatter template` 手动为当前笔记插入发布 frontmatter 模板。
 
