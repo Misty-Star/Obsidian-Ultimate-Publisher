@@ -34395,7 +34395,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian21 = require("obsidian");
+var import_obsidian22 = require("obsidian");
 
 // src/core/frontmatterTemplate.ts
 var OPTION_COMMENT_LIMIT = 20;
@@ -34769,6 +34769,97 @@ async function loadJuejinOptionSnapshot(args) {
   }
 }
 
+// src/core/normalPublish/drafts.ts
+function createIdleRemoteOptionsState() {
+  return {
+    status: "idle",
+    data: {},
+    manualFallbackFields: []
+  };
+}
+function cloneStringList(values) {
+  return values.slice();
+}
+function buildWordpressDraft(note, target) {
+  return {
+    provider: "wordpress",
+    slug: note.slug,
+    excerpt: note.excerpt,
+    tags: cloneStringList(note.tags),
+    categories: cloneStringList(note.categories),
+    status: target.defaultStatus,
+    password: ""
+  };
+}
+function buildYuqueDraft(note, target) {
+  return {
+    provider: "yuque",
+    slug: note.slug,
+    publicLevel: target.publicLevel
+  };
+}
+function buildZhihuDraft(note, target) {
+  return {
+    provider: "zhihu",
+    columnId: target.defaultColumnId,
+    columnTitle: target.defaultColumnTitle ?? ""
+  };
+}
+function buildCsdnDraft(note, target) {
+  return {
+    provider: "csdn",
+    excerpt: note.excerpt,
+    tags: note.tags.length > 0 ? cloneStringList(note.tags) : cloneStringList(target.defaultTags),
+    categories: note.categories.length > 0 ? cloneStringList(note.categories) : cloneStringList(target.defaultCategories)
+  };
+}
+function buildJuejinDraft(note, target) {
+  return {
+    provider: "juejin",
+    categoryId: target.defaultCategoryId,
+    categoryName: target.defaultCategoryName ?? "",
+    tagIds: cloneStringList(target.defaultTagIds),
+    tagNames: cloneStringList(target.defaultTagNames ?? []),
+    briefContent: target.defaultBriefContent || note.excerpt
+  };
+}
+function buildInitialTargetDraft(target, note) {
+  switch (target.provider) {
+    case "wordpress":
+      return buildWordpressDraft(note, target);
+    case "yuque":
+      return buildYuqueDraft(note, target);
+    case "zhihu":
+      return buildZhihuDraft(note, target);
+    case "csdn":
+      return buildCsdnDraft(note, target);
+    case "juejin":
+      return buildJuejinDraft(note, target);
+    default:
+      throw new Error(`Unsupported provider: ${target.provider}`);
+  }
+}
+function buildNormalPublishSessionState(note, targets) {
+  const enabledTargets = targets.filter((target) => target.enabled);
+  const targetDrafts = {};
+  const remoteOptions = {};
+  const lastErrorByTargetId = {};
+  for (const target of enabledTargets) {
+    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
+    remoteOptions[target.id] = createIdleRemoteOptionsState();
+    lastErrorByTargetId[target.id] = null;
+  }
+  return {
+    selectedTargetId: enabledTargets[0]?.id ?? null,
+    commonDraft: {
+      title: note.title
+    },
+    targetDrafts,
+    remoteOptions,
+    lastErrorByTargetId
+  };
+}
+
 // src/core/note.ts
 var import_obsidian = require("obsidian");
 var import_node_crypto2 = require("node:crypto");
@@ -35017,7 +35108,7 @@ async function prepareNoteForPublish(note, target, provider) {
 }
 
 // src/core/normalPublish/overrides.ts
-function cloneStringList(values) {
+function cloneStringList2(values) {
   return values.slice();
 }
 function applyNormalPublishContextToNote(note, context) {
@@ -35032,23 +35123,23 @@ function applyNormalPublishContextToNote(note, context) {
     attachments: note.attachments.slice(),
     unresolvedAttachments: note.unresolvedAttachments.slice(),
     title: context.common.title || note.title,
-    tags: cloneStringList(note.tags),
-    categories: cloneStringList(note.categories)
+    tags: cloneStringList2(note.tags),
+    categories: cloneStringList2(note.categories)
   };
   switch (context.provider.provider) {
     case "wordpress":
       nextNote.slug = context.provider.slug;
       nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList(context.provider.tags);
-      nextNote.categories = cloneStringList(context.provider.categories);
+      nextNote.tags = cloneStringList2(context.provider.tags);
+      nextNote.categories = cloneStringList2(context.provider.categories);
       break;
     case "yuque":
       nextNote.slug = context.provider.slug;
       break;
     case "csdn":
       nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList(context.provider.tags);
-      nextNote.categories = cloneStringList(context.provider.categories);
+      nextNote.tags = cloneStringList2(context.provider.tags);
+      nextNote.categories = cloneStringList2(context.provider.categories);
       break;
     default:
       break;
@@ -35289,6 +35380,126 @@ var PublishWorkflow = class {
   }
 };
 
+// src/core/webPublishConfig.ts
+function readString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+function readStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function pickFirstNonEmptyArray(...values) {
+  for (const value of values) {
+    const items = readStringArray(value);
+    if (items.length > 0) {
+      return items;
+    }
+  }
+  return [];
+}
+function resolveZhihuPublishInput(note, target, overrides) {
+  const columnId = readString(overrides?.columnId) || target.defaultColumnId;
+  return {
+    columnId: columnId || void 0
+  };
+}
+function resolveCsdnPublishInput(note, target, overrides) {
+  const categories = pickFirstNonEmptyArray(
+    overrides?.categories,
+    note.categories,
+    target.defaultCategories
+  );
+  const tags = pickFirstNonEmptyArray(
+    overrides?.tags,
+    note.tags,
+    target.defaultTags
+  );
+  return {
+    categories,
+    tags
+  };
+}
+function normalizeOptionLabel(value) {
+  return value.trim().toLocaleLowerCase();
+}
+function resolveNamedJuejinOptionId(kind, name, options) {
+  const normalizedName = normalizeOptionLabel(name);
+  const matches = options.filter((option) => normalizeOptionLabel(option.label) === normalizedName);
+  if (matches.length === 0) {
+    throw new Error(`Juejin ${kind} "${name}" did not match any available option.`);
+  }
+  if (matches.length > 1) {
+    throw new Error(`Juejin ${kind} "${name}" matched multiple available options.`);
+  }
+  return matches[0].id;
+}
+async function resolveJuejinPublishInput(note, target, overrides, runtime) {
+  const frontmatterCategoryName = readString(note.frontmatter["juejinCategory"]);
+  const frontmatterTagNames = readStringArray(note.frontmatter["juejinTags"]);
+  const briefContent = readString(overrides?.briefContent) || readString(note.frontmatter["description"]) || target.defaultBriefContent || note.excerpt;
+  const overrideCategoryId = readString(overrides?.categoryId);
+  const overrideTagIds = readStringArray(overrides?.tagIds);
+  const shouldResolveCategoryName = !overrideCategoryId && Boolean(frontmatterCategoryName);
+  const shouldResolveTagNames = overrideTagIds.length === 0 && frontmatterTagNames.length > 0;
+  let categoryId = overrideCategoryId;
+  let tagIds = overrideTagIds;
+  let providerOptionCache;
+  if (shouldResolveCategoryName || shouldResolveTagNames) {
+    const snapshot = await loadJuejinOptionSnapshot({
+      targetId: target.id,
+      target,
+      providerOptionCache: runtime?.providerOptionCache,
+      loadNormalPublishOptions: runtime?.loadNormalPublishOptions ?? (async () => {
+        throw new Error("Juejin options are unavailable.");
+      }),
+      nowMs: runtime?.nowMs
+    });
+    if (snapshot.source === "unavailable") {
+      if (shouldResolveCategoryName) {
+        throw new Error(`Juejin options are unavailable, so category "${frontmatterCategoryName}" could not be resolved.`);
+      }
+      throw new Error(`Juejin options are unavailable, so tag "${frontmatterTagNames[0]}" could not be resolved.`);
+    }
+    try {
+      if (shouldResolveCategoryName) {
+        categoryId = resolveNamedJuejinOptionId("category", frontmatterCategoryName, snapshot.categories);
+      }
+      if (shouldResolveTagNames) {
+        tagIds = frontmatterTagNames.map((name) => resolveNamedJuejinOptionId("tag", name, snapshot.tags));
+      }
+    } catch (error) {
+      if (snapshot.source === "network") {
+        throw withPublishFailureDetails(error, { providerOptionCache: snapshot.nextCache });
+      }
+      throw error;
+    }
+    if (snapshot.source === "network") {
+      providerOptionCache = snapshot.nextCache;
+    }
+  }
+  categoryId = categoryId || target.defaultCategoryId;
+  tagIds = tagIds.length > 0 ? tagIds : target.defaultTagIds;
+  if (!categoryId) {
+    throw new Error("Juejin publish requires a categoryId.");
+  }
+  if (tagIds.length === 0) {
+    throw new Error("Juejin publish requires at least one tagId.");
+  }
+  return {
+    input: {
+      categoryId,
+      tagIds,
+      briefContent
+    },
+    providerOptionCache
+  };
+}
+
 // src/i18n/index.ts
 var import_obsidian3 = require("obsidian");
 
@@ -35436,6 +35647,10 @@ var messages = {
     "publish.normal.option.visibility.private": "Private",
     "publish.normal.option.visibility.public": "Public",
     "publish.normal.summary.selectedAction": "Selected action: {action}",
+    "publish.quickJuejin.title": "Complete Juejin Metadata",
+    "publish.quickJuejin.subtitle": "Quick Publish to Juejin requires category and tags. These values apply only to this publish.",
+    "publish.quickJuejin.action.cancel": "Cancel",
+    "publish.quickJuejin.action.confirm": "Continue Publishing",
     "publish.batch.title": "Batch Publish",
     "publish.batch.wizard.step1.title": "Select Targets",
     "publish.batch.wizard.step2.title": "Edit Fields",
@@ -35601,6 +35816,10 @@ var messages = {
     "publish.normal.option.visibility.private": "\u79C1\u5BC6",
     "publish.normal.option.visibility.public": "\u516C\u5F00",
     "publish.normal.summary.selectedAction": "\u5F53\u524D\u64CD\u4F5C\uFF1A{action}",
+    "publish.quickJuejin.title": "\u8865\u5168\u6398\u91D1\u53D1\u5E03\u4FE1\u606F",
+    "publish.quickJuejin.subtitle": "\u5FEB\u901F\u53D1\u5E03\u5230\u7A00\u571F\u6398\u91D1\u524D\uFF0C\u9700\u8981\u5148\u586B\u5199\u5206\u7C7B\u548C\u6807\u7B7E\u3002\u672C\u6B21\u586B\u5199\u4EC5\u7528\u4E8E\u5F53\u524D\u8FD9\u6B21\u53D1\u5E03\u3002",
+    "publish.quickJuejin.action.cancel": "\u53D6\u6D88",
+    "publish.quickJuejin.action.confirm": "\u7EE7\u7EED\u53D1\u5E03",
     "publish.batch.title": "\u6279\u91CF\u53D1\u5E03",
     "publish.batch.wizard.step1.title": "\u9009\u62E9\u76EE\u6807",
     "publish.batch.wizard.step2.title": "\u7F16\u8F91\u5B57\u6BB5",
@@ -35963,128 +36182,6 @@ var YuqueProvider = class {
 // src/providers/csdnProvider.ts
 var import_node_crypto3 = require("node:crypto");
 var import_obsidian7 = require("obsidian");
-
-// src/core/webPublishConfig.ts
-function readString(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
-function readStringArray(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-function pickFirstNonEmptyArray(...values) {
-  for (const value of values) {
-    const items = readStringArray(value);
-    if (items.length > 0) {
-      return items;
-    }
-  }
-  return [];
-}
-function resolveZhihuPublishInput(note, target, overrides) {
-  const columnId = readString(overrides?.columnId) || target.defaultColumnId;
-  return {
-    columnId: columnId || void 0
-  };
-}
-function resolveCsdnPublishInput(note, target, overrides) {
-  const categories = pickFirstNonEmptyArray(
-    overrides?.categories,
-    note.categories,
-    target.defaultCategories
-  );
-  const tags = pickFirstNonEmptyArray(
-    overrides?.tags,
-    note.tags,
-    target.defaultTags
-  );
-  return {
-    categories,
-    tags
-  };
-}
-function normalizeOptionLabel(value) {
-  return value.trim().toLocaleLowerCase();
-}
-function resolveNamedJuejinOptionId(kind, name, options) {
-  const normalizedName = normalizeOptionLabel(name);
-  const matches = options.filter((option) => normalizeOptionLabel(option.label) === normalizedName);
-  if (matches.length === 0) {
-    throw new Error(`Juejin ${kind} "${name}" did not match any available option.`);
-  }
-  if (matches.length > 1) {
-    throw new Error(`Juejin ${kind} "${name}" matched multiple available options.`);
-  }
-  return matches[0].id;
-}
-async function resolveJuejinPublishInput(note, target, overrides, runtime) {
-  const frontmatterCategoryName = readString(note.frontmatter["juejinCategory"]);
-  const frontmatterTagNames = readStringArray(note.frontmatter["juejinTags"]);
-  const briefContent = readString(overrides?.briefContent) || readString(note.frontmatter["description"]) || target.defaultBriefContent || note.excerpt;
-  const overrideCategoryId = readString(overrides?.categoryId);
-  const overrideTagIds = readStringArray(overrides?.tagIds);
-  const shouldResolveCategoryName = !overrideCategoryId && Boolean(frontmatterCategoryName);
-  const shouldResolveTagNames = overrideTagIds.length === 0 && frontmatterTagNames.length > 0;
-  let categoryId = overrideCategoryId;
-  let tagIds = overrideTagIds;
-  let providerOptionCache;
-  if (shouldResolveCategoryName || shouldResolveTagNames) {
-    const snapshot = await loadJuejinOptionSnapshot({
-      targetId: target.id,
-      target,
-      providerOptionCache: runtime?.providerOptionCache,
-      loadNormalPublishOptions: runtime?.loadNormalPublishOptions ?? (async () => {
-        throw new Error("Juejin options are unavailable.");
-      }),
-      nowMs: runtime?.nowMs
-    });
-    if (snapshot.source === "unavailable") {
-      if (shouldResolveCategoryName) {
-        throw new Error(`Juejin options are unavailable, so category "${frontmatterCategoryName}" could not be resolved.`);
-      }
-      throw new Error(`Juejin options are unavailable, so tag "${frontmatterTagNames[0]}" could not be resolved.`);
-    }
-    try {
-      if (shouldResolveCategoryName) {
-        categoryId = resolveNamedJuejinOptionId("category", frontmatterCategoryName, snapshot.categories);
-      }
-      if (shouldResolveTagNames) {
-        tagIds = frontmatterTagNames.map((name) => resolveNamedJuejinOptionId("tag", name, snapshot.tags));
-      }
-    } catch (error) {
-      if (snapshot.source === "network") {
-        throw withPublishFailureDetails(error, { providerOptionCache: snapshot.nextCache });
-      }
-      throw error;
-    }
-    if (snapshot.source === "network") {
-      providerOptionCache = snapshot.nextCache;
-    }
-  }
-  categoryId = categoryId || target.defaultCategoryId;
-  tagIds = tagIds.length > 0 ? tagIds : target.defaultTagIds;
-  if (!categoryId) {
-    throw new Error("Juejin publish requires a categoryId.");
-  }
-  if (tagIds.length === 0) {
-    throw new Error("Juejin publish requires at least one tagId.");
-  }
-  return {
-    input: {
-      categoryId,
-      tagIds,
-      briefContent
-    },
-    providerOptionCache
-  };
-}
-
-// src/providers/csdnProvider.ts
 function buildHeaders(target) {
   return {
     Cookie: target.cookie
@@ -38121,97 +38218,6 @@ var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingT
 // src/ui/modals/BatchPublishModal.ts
 var import_obsidian13 = require("obsidian");
 
-// src/core/normalPublish/drafts.ts
-function createIdleRemoteOptionsState() {
-  return {
-    status: "idle",
-    data: {},
-    manualFallbackFields: []
-  };
-}
-function cloneStringList2(values) {
-  return values.slice();
-}
-function buildWordpressDraft(note, target) {
-  return {
-    provider: "wordpress",
-    slug: note.slug,
-    excerpt: note.excerpt,
-    tags: cloneStringList2(note.tags),
-    categories: cloneStringList2(note.categories),
-    status: target.defaultStatus,
-    password: ""
-  };
-}
-function buildYuqueDraft(note, target) {
-  return {
-    provider: "yuque",
-    slug: note.slug,
-    publicLevel: target.publicLevel
-  };
-}
-function buildZhihuDraft(note, target) {
-  return {
-    provider: "zhihu",
-    columnId: target.defaultColumnId,
-    columnTitle: target.defaultColumnTitle ?? ""
-  };
-}
-function buildCsdnDraft(note, target) {
-  return {
-    provider: "csdn",
-    excerpt: note.excerpt,
-    tags: note.tags.length > 0 ? cloneStringList2(note.tags) : cloneStringList2(target.defaultTags),
-    categories: note.categories.length > 0 ? cloneStringList2(note.categories) : cloneStringList2(target.defaultCategories)
-  };
-}
-function buildJuejinDraft(note, target) {
-  return {
-    provider: "juejin",
-    categoryId: target.defaultCategoryId,
-    categoryName: target.defaultCategoryName ?? "",
-    tagIds: cloneStringList2(target.defaultTagIds),
-    tagNames: cloneStringList2(target.defaultTagNames ?? []),
-    briefContent: target.defaultBriefContent || note.excerpt
-  };
-}
-function buildInitialTargetDraft(target, note) {
-  switch (target.provider) {
-    case "wordpress":
-      return buildWordpressDraft(note, target);
-    case "yuque":
-      return buildYuqueDraft(note, target);
-    case "zhihu":
-      return buildZhihuDraft(note, target);
-    case "csdn":
-      return buildCsdnDraft(note, target);
-    case "juejin":
-      return buildJuejinDraft(note, target);
-    default:
-      throw new Error(`Unsupported provider: ${target.provider}`);
-  }
-}
-function buildNormalPublishSessionState(note, targets) {
-  const enabledTargets = targets.filter((target) => target.enabled);
-  const targetDrafts = {};
-  const remoteOptions = {};
-  const lastErrorByTargetId = {};
-  for (const target of enabledTargets) {
-    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
-    remoteOptions[target.id] = createIdleRemoteOptionsState();
-    lastErrorByTargetId[target.id] = null;
-  }
-  return {
-    selectedTargetId: enabledTargets[0]?.id ?? null,
-    commonDraft: {
-      title: note.title
-    },
-    targetDrafts,
-    remoteOptions,
-    lastErrorByTargetId
-  };
-}
-
 // src/core/batchPublish/state.ts
 function cloneStringList3(values) {
   return values.slice();
@@ -39503,14 +39509,228 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
   }
 };
 
+// src/ui/modals/JuejinQuickPublishMetadataModal.ts
+var import_obsidian14 = require("obsidian");
+function cloneDraft(draft) {
+  return {
+    ...draft,
+    tagIds: draft.tagIds.slice(),
+    tagNames: draft.tagNames.slice()
+  };
+}
+function createIdleRemoteOptionsState3() {
+  return {
+    status: "idle",
+    data: {},
+    manualFallbackFields: []
+  };
+}
+function readString2(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+function readStringArray2(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function normalizeOptionLabel2(value) {
+  return value.trim().toLocaleLowerCase();
+}
+var JuejinQuickPublishMetadataModal = class extends import_obsidian14.Modal {
+  constructor(app, target, note, initialDraft, providerRegistry = new ProviderRegistry(app)) {
+    super(app);
+    this.target = target;
+    this.note = note;
+    this.providerRegistry = providerRegistry;
+    this.remoteOptions = createIdleRemoteOptionsState3();
+    this.errorMessage = null;
+    this.isLoading = false;
+    this.isSubmitting = false;
+    this.resolved = false;
+    this.draft = cloneDraft(initialDraft);
+    let resolvePromise = () => {
+    };
+    this.resultPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+    this.resolveResult = resolvePromise;
+  }
+  openAndWait() {
+    this.open();
+    return this.resultPromise;
+  }
+  async onOpen() {
+    await this.render();
+    await this.loadRemoteOptions();
+    await this.render();
+  }
+  onClose() {
+    this.contentEl.empty();
+    if (!this.resolved) {
+      this.finish(null);
+    }
+  }
+  finish(result) {
+    if (this.resolved) {
+      return;
+    }
+    this.resolved = true;
+    this.resolveResult(result ? cloneDraft(result) : null);
+  }
+  readOptionItems(key) {
+    const raw = this.remoteOptions.data[key];
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+    return raw.filter(
+      (item) => typeof item === "object" && item !== null && typeof item.id === "string" && typeof item.label === "string"
+    );
+  }
+  applyFrontmatterPrefill() {
+    const categories = this.readOptionItems("juejinCategories");
+    const tags = this.readOptionItems("juejinTags");
+    if (!this.draft.categoryId) {
+      const frontmatterCategory = readString2(this.note.frontmatter["juejinCategory"]);
+      if (frontmatterCategory) {
+        const matchedCategory = categories.find(
+          (item) => normalizeOptionLabel2(item.label) === normalizeOptionLabel2(frontmatterCategory)
+        );
+        if (matchedCategory) {
+          this.draft = {
+            ...this.draft,
+            categoryId: matchedCategory.id,
+            categoryName: matchedCategory.label
+          };
+        }
+      }
+    }
+    if (this.draft.tagIds.length === 0) {
+      const frontmatterTags = readStringArray2(this.note.frontmatter["juejinTags"]);
+      if (frontmatterTags.length > 0) {
+        const matchedTags = frontmatterTags.map(
+          (tagName) => tags.find((item) => normalizeOptionLabel2(item.label) === normalizeOptionLabel2(tagName))
+        ).filter((item) => Boolean(item));
+        if (matchedTags.length > 0) {
+          this.draft = {
+            ...this.draft,
+            tagIds: matchedTags.map((item) => item.id),
+            tagNames: matchedTags.map((item) => item.label)
+          };
+        }
+      }
+    }
+  }
+  async loadRemoteOptions() {
+    const provider = this.providerRegistry.get(this.target);
+    if (!provider.loadNormalPublishOptions) {
+      this.remoteOptions = {
+        status: "loaded",
+        data: {},
+        manualFallbackFields: []
+      };
+      return;
+    }
+    this.isLoading = true;
+    try {
+      const data = await provider.loadNormalPublishOptions(this.target);
+      this.remoteOptions = {
+        status: "loaded",
+        data,
+        manualFallbackFields: []
+      };
+      this.applyFrontmatterPrefill();
+    } catch (error) {
+      this.remoteOptions = {
+        status: "error",
+        data: {},
+        errorMessage: error instanceof Error ? error.message : String(error),
+        manualFallbackFields: ["categoryId", "tagIds"]
+      };
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  updateDraft(update) {
+    this.draft = update(this.draft);
+    this.errorMessage = null;
+    void this.render();
+  }
+  async handleSubmit() {
+    const validationError = validateTargetDraft(this.draft);
+    if (validationError) {
+      this.errorMessage = validationError;
+      await this.render();
+      return;
+    }
+    this.isSubmitting = true;
+    this.errorMessage = null;
+    await this.render();
+    this.finish(this.draft);
+    this.close();
+  }
+  async render() {
+    const i18n = createI18nFromObsidianLanguage();
+    this.titleEl.setText(i18n.t("publish.quickJuejin.title"));
+    this.contentEl.empty();
+    const container = this.contentEl.createDiv({ cls: "ultimate-publisher-normal-modal" });
+    container.createEl("p", {
+      text: i18n.t("publish.quickJuejin.subtitle")
+    });
+    if (this.errorMessage) {
+      renderHelperText(container, this.errorMessage, "warning");
+    }
+    if (this.isLoading) {
+      renderHelperText(container, i18n.t("publish.normal.loading"), "info");
+    }
+    renderTargetForm({
+      container,
+      draft: this.draft,
+      remoteOptions: this.remoteOptions,
+      i18n,
+      hiddenFields: ["briefContent"],
+      fieldNamePrefix: "quick-publish",
+      onChange: (update) => {
+        if (this.isSubmitting) {
+          return;
+        }
+        this.updateDraft((draft) => {
+          const nextDraft = update(draft);
+          return nextDraft.provider === "juejin" ? nextDraft : draft;
+        });
+      }
+    });
+    const actions = container.createDiv({ cls: "ultimate-publisher-setting-actions" });
+    const cancelButton = actions.createEl("button", {
+      text: i18n.t("publish.quickJuejin.action.cancel")
+    });
+    cancelButton.disabled = this.isSubmitting;
+    cancelButton.addEventListener("click", () => {
+      this.finish(null);
+      this.close();
+    });
+    const confirmButton = actions.createEl("button", {
+      text: i18n.t("publish.quickJuejin.action.confirm")
+    });
+    confirmButton.toggleClass("mod-cta", true);
+    confirmButton.disabled = this.isSubmitting;
+    confirmButton.addEventListener("click", () => {
+      void this.handleSubmit();
+    });
+  }
+};
+
 // src/ui/modals/NormalPublishModal.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 
 // src/core/llm/service.ts
-var import_obsidian18 = require("obsidian");
+var import_obsidian19 = require("obsidian");
 
 // src/core/llm/providers/anthropicProvider.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 
 // src/core/llm/types.ts
 var LlmHttpError = class extends Error {
@@ -39522,7 +39742,7 @@ var LlmHttpError = class extends Error {
 
 // src/core/llm/providers/anthropicProvider.ts
 var AnthropicLlmProvider = class {
-  constructor(request = import_obsidian14.requestUrl) {
+  constructor(request = import_obsidian15.requestUrl) {
     this.request = request;
     this.vendor = "anthropic";
   }
@@ -39561,9 +39781,9 @@ var AnthropicLlmProvider = class {
 };
 
 // src/core/llm/providers/geminiProvider.ts
-var import_obsidian15 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 var GeminiLlmProvider = class {
-  constructor(request = import_obsidian15.requestUrl) {
+  constructor(request = import_obsidian16.requestUrl) {
     this.request = request;
     this.vendor = "gemini";
   }
@@ -39601,7 +39821,7 @@ var GeminiLlmProvider = class {
 };
 
 // src/core/llm/providers/openaiProvider.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 function resolveBaseUrl(endpointOverride) {
   const base = (endpointOverride || "https://api.openai.com/v1").replace(/\/+$/, "");
   return `${base}/responses`;
@@ -39614,7 +39834,7 @@ function extractResponsesText(payload) {
   return responsePayload.output?.flatMap((item) => item.content ?? []).filter((item) => item.type === "output_text" && typeof item.text === "string").map((item) => item.text ?? "").join("").trim() ?? "";
 }
 var OpenAiLlmProvider = class {
-  constructor(request = import_obsidian16.requestUrl) {
+  constructor(request = import_obsidian17.requestUrl) {
     this.request = request;
     this.vendor = "openai";
   }
@@ -39659,7 +39879,7 @@ var OpenAiLlmProvider = class {
 };
 
 // src/core/llm/providers/openaiCompatibleProvider.ts
-var import_obsidian17 = require("obsidian");
+var import_obsidian18 = require("obsidian");
 function resolveChatCompletionsUrl(endpointOverride) {
   const base = (endpointOverride || "https://api.openai.com/v1/chat/completions").replace(/\/+$/, "");
   return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
@@ -39680,7 +39900,7 @@ function extractChatCompletionText(payload) {
   return "";
 }
 var OpenAiCompatibleLlmProvider = class {
-  constructor(request = import_obsidian17.requestUrl) {
+  constructor(request = import_obsidian18.requestUrl) {
     this.request = request;
     this.vendor = "openai-compatible";
   }
@@ -39772,7 +39992,7 @@ function mapLlmError(error) {
   return error instanceof Error ? error : new Error(String(error));
 }
 var LlmService = class {
-  constructor(request = import_obsidian18.requestUrl) {
+  constructor(request = import_obsidian19.requestUrl) {
     this.openai = new OpenAiLlmProvider(request);
     this.openaiCompatible = new OpenAiCompatibleLlmProvider(request);
     this.anthropic = new AnthropicLlmProvider(request);
@@ -39948,7 +40168,7 @@ function deriveNoteTargetSummaries(settings, notePath) {
 // src/ui/modals/NormalPublishModal.ts
 var NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
 var NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
-var NormalPublishModal = class extends import_obsidian19.Modal {
+var NormalPublishModal = class extends import_obsidian20.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote, llmService = new LlmService()) {
     super(plugin.app);
     this.plugin = plugin;
@@ -40220,7 +40440,7 @@ var NormalPublishModal = class extends import_obsidian19.Modal {
       const validationError = validateTargetDraft(draft);
       if (validationError) {
         this.setSelectedTargetError(validationError);
-        new import_obsidian19.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
+        new import_obsidian20.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
         await this.render();
         return;
       }
@@ -40238,7 +40458,7 @@ var NormalPublishModal = class extends import_obsidian19.Modal {
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
       const actionLabel = result.action === "update" ? i18n.t("notice.publish.action.updated") : i18n.t("notice.publish.action.published");
-      new import_obsidian19.Notice(
+      new import_obsidian20.Notice(
         i18n.t("notice.publish.succeeded", {
           target: target.name,
           action: actionLabel
@@ -40250,7 +40470,7 @@ var NormalPublishModal = class extends import_obsidian19.Modal {
       await pluginWithFailurePersistence.persistPublishFailureState?.(error);
       const message = error instanceof Error ? error.message : String(error);
       this.setSelectedTargetError(message);
-      new import_obsidian19.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian20.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -40445,7 +40665,7 @@ var NormalPublishModal = class extends import_obsidian19.Modal {
       if (!target || !target.enabled) {
         const message = i18n.t("publish.shared.error.targetUnavailable");
         this.setSelectedTargetError(message);
-        new import_obsidian19.Notice(message, 6e3);
+        new import_obsidian20.Notice(message, 6e3);
         void this.render();
         return;
       }
@@ -40557,7 +40777,7 @@ function buildQuickPublishChildren(enabledTargets, i18n) {
 }
 
 // src/ui/views/PublisherDashboardView.ts
-var import_obsidian20 = require("obsidian");
+var import_obsidian21 = require("obsidian");
 var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
 function formatTimestamp(timestamp, i18n) {
   if (!timestamp) {
@@ -40569,7 +40789,7 @@ function formatTimestamp(timestamp, i18n) {
   }
   return parsed.toLocaleString();
 }
-var PublisherDashboardView = class extends import_obsidian20.ItemView {
+var PublisherDashboardView = class extends import_obsidian21.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -40727,7 +40947,7 @@ function normalizeLoadedRecord(record, targetIds) {
     contentHash: record.contentHash
   };
 }
-var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
+var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -40760,7 +40980,7 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
       }
     });
     this.registerEvent(this.app.vault.on?.("create", (file) => {
-      if (file instanceof import_obsidian21.TFile) {
+      if (file instanceof import_obsidian22.TFile) {
         void this.handleCreatedMarkdownFile(file);
       }
     }));
@@ -40889,7 +41109,7 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new import_obsidian21.Notice(this.i18n.t("notice.dashboard.openFailed"));
+      new import_obsidian22.Notice(this.i18n.t("notice.dashboard.openFailed"));
       return;
     }
     await leaf.setViewState({
@@ -40904,7 +41124,7 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
   openNormalPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new NormalPublishModal(this, file, this.publishWorkflow).open();
@@ -40912,7 +41132,7 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
   openBatchPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new BatchPublishModal(this, file, this.publishWorkflow).open();
@@ -40920,15 +41140,27 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
   async runQuickPublishForTarget(targetId) {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new import_obsidian21.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
+      new import_obsidian22.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
       return;
     }
-    await this.publishToTarget(file, target);
+    let quickPublishContext;
+    try {
+      quickPublishContext = await this.resolveQuickPublishContext(file, target);
+    } catch (error) {
+      await this.persistPublishFailureState(error);
+      const message = error instanceof Error ? error.message : String(error);
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      throw error;
+    }
+    if (quickPublishContext === null) {
+      return;
+    }
+    await this.publishToTarget(file, target, quickPublishContext ?? void 0);
   }
   openPublishSettings() {
     const appWithSettings = this.app;
@@ -40938,12 +41170,12 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian21.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian21.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
       return;
     }
     if (targets.length === 1) {
@@ -40957,20 +41189,20 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
   async insertPublishFrontmatterForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian21.Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
+      new import_obsidian22.Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
       return;
     }
     const result = await this.insertPublishFrontmatterIfNeeded(file);
     if (result === "skipped-existing") {
-      new import_obsidian21.Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
+      new import_obsidian22.Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
       return;
     }
     if (result === "inserted") {
-      new import_obsidian21.Notice(this.i18n.t("notice.frontmatter.inserted"));
+      new import_obsidian22.Notice(this.i18n.t("notice.frontmatter.inserted"));
     }
   }
   async handleCreatedMarkdownFile(file) {
-    if (!(file instanceof import_obsidian21.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian22.TFile) || file.extension !== "md") {
       return;
     }
     const automationSettings = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
@@ -41064,15 +41296,15 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
     }
   }
   getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian21.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian22.MarkdownView);
     const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian21.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian22.TFile) || file.extension !== "md") {
       return null;
     }
     return file;
   }
   showPublisherMenu(items, position) {
-    const menu = new import_obsidian21.Menu();
+    const menu = new import_obsidian22.Menu();
     menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -41149,18 +41381,63 @@ var UltimatePublisherPlugin = class extends import_obsidian21.Plugin {
         return;
     }
   }
-  async publishToTarget(file, target) {
-    new import_obsidian21.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
+  shouldPromptForJuejinQuickPublish(error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return message === "Juejin publish requires a categoryId." || message === "Juejin publish requires at least one tagId.";
+  }
+  async promptForJuejinQuickPublishDraft(target, note) {
+    const initialDraft = buildInitialTargetDraft(target, note);
+    if (initialDraft.provider !== "juejin") {
+      throw new Error(`Expected Juejin draft, received ${initialDraft.provider}.`);
+    }
+    return new JuejinQuickPublishMetadataModal(
+      this.app,
+      target,
+      note,
+      initialDraft,
+      this.providers
+    ).openAndWait();
+  }
+  async resolveQuickPublishContext(file, target) {
+    if (target.provider !== "juejin") {
+      return void 0;
+    }
+    const note = await extractPublishableNote(this.app, file);
+    const provider = this.providers.get(target);
     try {
-      const result = await this.publishWorkflow.runSingle(file, target, this.settings);
+      await resolveJuejinPublishInput(note, target, void 0, {
+        providerOptionCache: this.settings.providerOptionCache,
+        loadNormalPublishOptions: typeof provider.loadNormalPublishOptions === "function" ? async (currentTarget) => provider.loadNormalPublishOptions(currentTarget) : void 0
+      });
+      return void 0;
+    } catch (error) {
+      if (!this.shouldPromptForJuejinQuickPublish(error)) {
+        throw error;
+      }
+    }
+    const promptDraft = await this.promptForJuejinQuickPublishDraft(target, note);
+    if (!promptDraft) {
+      return null;
+    }
+    return {
+      common: {
+        title: note.title
+      },
+      provider: promptDraft
+    };
+  }
+  async publishToTarget(file, target, context) {
+    new import_obsidian22.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
+    try {
+      const result = await this.publishWorkflow.runSingle(file, target, this.settings, context);
       this.settings = result.settings;
       await this.saveSettings();
       const actionLabel = result.action === "update" ? this.i18n.t("notice.publish.action.updated") : this.i18n.t("notice.publish.action.published");
-      new import_obsidian21.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
       await this.persistPublishFailureState(error);
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian21.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian22.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
   }

@@ -1,10 +1,14 @@
 import { MarkdownView, Menu, MenuItem, Notice, Plugin, TFile } from "obsidian";
 import { buildPublishFrontmatterTemplate, hasLeadingFrontmatter, injectPublishFrontmatter } from "./core/frontmatterTemplate";
 import { loadJuejinOptionSnapshot } from "./core/providerOptionCache";
+import { buildInitialTargetDraft } from "./core/normalPublish/drafts";
+import { NormalPublishExecutionContext, JuejinPublishDraft } from "./core/normalPublish/types";
+import { extractPublishableNote, PublishableNote } from "./core/note";
 import { PublishService } from "./core/publishService";
 import { PublishWorkflow } from "./core/publishWorkflow";
 import { getPublishFailureProviderOptionCache, getPublishFailureSettings } from "./core/providers";
 import { mergeProviderOptionCacheIntoSettings } from "./core/publishService";
+import { resolveJuejinPublishInput } from "./core/webPublishConfig";
 import { createI18nFromObsidianLanguage, Translator } from "./i18n";
 import { ProviderRegistry } from "./providers/registry";
 import {
@@ -28,6 +32,7 @@ import {
 import { PublishTargetModal } from "./ui/PublishTargetModal";
 import { UltimatePublisherSettingTab } from "./ui/UltimatePublisherSettingTab";
 import { BatchPublishModal } from "./ui/modals/BatchPublishModal";
+import { JuejinQuickPublishMetadataModal } from "./ui/modals/JuejinQuickPublishMetadataModal";
 import { NormalPublishModal } from "./ui/modals/NormalPublishModal";
 import { buildPublisherMenuModel, PublisherMenuItem } from "./ui/publisherMenu";
 import {
@@ -346,7 +351,21 @@ export default class UltimatePublisherPlugin extends Plugin {
       return;
     }
 
-    await this.publishToTarget(file, target);
+    let quickPublishContext: NormalPublishExecutionContext | null | undefined;
+    try {
+      quickPublishContext = await this.resolveQuickPublishContext(file, target);
+    } catch (error) {
+      await this.persistPublishFailureState(error);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(this.i18n.t("notice.publish.failed", { error: message }), 8000);
+      throw error;
+    }
+
+    if (quickPublishContext === null) {
+      return;
+    }
+
+    await this.publishToTarget(file, target, quickPublishContext ?? undefined);
   }
 
   openPublishSettings(): void {
@@ -623,11 +642,77 @@ export default class UltimatePublisherPlugin extends Plugin {
     }
   }
 
-  private async publishToTarget(file: TFile, target: PublishTargetConfig): Promise<void> {
+  private shouldPromptForJuejinQuickPublish(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return message === "Juejin publish requires a categoryId." || message === "Juejin publish requires at least one tagId.";
+  }
+
+  private async promptForJuejinQuickPublishDraft(
+    target: JuejinTargetConfig,
+    note: PublishableNote
+  ): Promise<JuejinPublishDraft | null> {
+    const initialDraft = buildInitialTargetDraft(target, note);
+    if (initialDraft.provider !== "juejin") {
+      throw new Error(`Expected Juejin draft, received ${initialDraft.provider}.`);
+    }
+
+    return new JuejinQuickPublishMetadataModal(
+      this.app,
+      target,
+      note,
+      initialDraft,
+      this.providers
+    ).openAndWait();
+  }
+
+  private async resolveQuickPublishContext(
+    file: TFile,
+    target: PublishTargetConfig
+  ): Promise<NormalPublishExecutionContext | null | undefined> {
+    if (target.provider !== "juejin") {
+      return undefined;
+    }
+
+    const note = await extractPublishableNote(this.app, file);
+    const provider = this.providers.get(target);
+
+    try {
+      await resolveJuejinPublishInput(note, target, undefined, {
+        providerOptionCache: this.settings.providerOptionCache,
+        loadNormalPublishOptions:
+          typeof provider.loadNormalPublishOptions === "function"
+            ? async (currentTarget) => provider.loadNormalPublishOptions!(currentTarget)
+            : undefined,
+      });
+      return undefined;
+    } catch (error) {
+      if (!this.shouldPromptForJuejinQuickPublish(error)) {
+        throw error;
+      }
+    }
+
+    const promptDraft = await this.promptForJuejinQuickPublishDraft(target, note);
+    if (!promptDraft) {
+      return null;
+    }
+
+    return {
+      common: {
+        title: note.title,
+      },
+      provider: promptDraft,
+    };
+  }
+
+  private async publishToTarget(
+    file: TFile,
+    target: PublishTargetConfig,
+    context?: NormalPublishExecutionContext
+  ): Promise<void> {
     new Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
 
     try {
-      const result = await this.publishWorkflow.runSingle(file, target, this.settings);
+      const result = await this.publishWorkflow.runSingle(file, target, this.settings, context);
       this.settings = result.settings;
       await this.saveSettings();
       const actionLabel =
