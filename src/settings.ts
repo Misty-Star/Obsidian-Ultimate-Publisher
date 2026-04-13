@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { getProviderDefinition } from "./providers/definitions";
 import {
   CachedProviderOption,
   CsdnTargetConfig,
@@ -7,7 +7,6 @@ import {
   JuejinProviderOptionCacheEntry,
   LlmSettings,
   ProviderOptionCache,
-  PublishContentFormat,
   PublishRecord,
   PublishTargetConfig,
   UltimatePublisherSettings,
@@ -150,69 +149,23 @@ export const DEFAULT_SETTINGS: UltimatePublisherSettings = {
 };
 
 export function createWordpressTarget(): WordpressTargetConfig {
-  return {
-    id: randomUUID(),
-    name: "WordPress",
-    enabled: true,
-    provider: "wordpress",
-    endpoint: "",
-    username: "",
-    appPassword: "",
-    defaultStatus: "draft",
-    contentFormat: "html",
-  };
+  return getProviderDefinition("wordpress").createTarget();
 }
 
 export function createYuqueTarget(): YuqueTargetConfig {
-  return {
-    id: randomUUID(),
-    name: "Yuque",
-    enabled: true,
-    provider: "yuque",
-    baseUrl: "https://www.yuque.com",
-    repo: "",
-    token: "",
-    publicLevel: 0,
-  };
+  return getProviderDefinition("yuque").createTarget();
 }
 
 export function createZhihuTarget(): ZhihuTargetConfig {
-  return {
-    id: randomUUID(),
-    name: "Zhihu",
-    enabled: true,
-    provider: "zhihu",
-    cookie: "",
-    defaultColumnId: "",
-    defaultColumnTitle: "",
-  };
+  return getProviderDefinition("zhihu").createTarget();
 }
 
 export function createCsdnTarget(): CsdnTargetConfig {
-  return {
-    id: randomUUID(),
-    name: "CSDN",
-    enabled: true,
-    provider: "csdn",
-    cookie: "",
-    defaultCategories: [],
-    defaultTags: [],
-  };
+  return getProviderDefinition("csdn").createTarget();
 }
 
 export function createJuejinTarget(): JuejinTargetConfig {
-  return {
-    id: randomUUID(),
-    name: "Juejin",
-    enabled: true,
-    provider: "juejin",
-    cookie: "",
-    defaultCategoryId: "",
-    defaultCategoryName: "",
-    defaultTagIds: [],
-    defaultTagNames: [],
-    defaultBriefContent: "",
-  };
+  return getProviderDefinition("juejin").createTarget();
 }
 
 export function getRecord(records: PublishRecord[], notePath: string, targetId: string): PublishRecord | undefined {
@@ -241,60 +194,6 @@ export function cloneTarget(target: PublishTargetConfig): PublishTargetConfig {
   return JSON.parse(JSON.stringify(target)) as PublishTargetConfig;
 }
 
-function normalizeStringList(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => String(item).trim())
-      .filter(Boolean);
-  }
-
-  if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-}
-
 export function normalizeTarget(target: PublishTargetConfig): PublishTargetConfig {
-  switch (target.provider) {
-    case "wordpress":
-      return {
-        ...target,
-        defaultStatus: target.defaultStatus ?? "draft",
-        contentFormat: (target.contentFormat ?? "html") as PublishContentFormat,
-      };
-    case "yuque":
-      return {
-        ...target,
-        baseUrl: target.baseUrl || "https://www.yuque.com",
-        publicLevel: target.publicLevel ?? 0,
-      };
-    case "zhihu":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultColumnId: target.defaultColumnId || "",
-        defaultColumnTitle: target.defaultColumnTitle || "",
-      };
-    case "csdn":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultCategories: normalizeStringList(target.defaultCategories),
-        defaultTags: normalizeStringList(target.defaultTags),
-      };
-    case "juejin":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultCategoryId: target.defaultCategoryId || "",
-        defaultCategoryName: target.defaultCategoryName || "",
-        defaultTagIds: normalizeStringList(target.defaultTagIds),
-        defaultTagNames: normalizeStringList(target.defaultTagNames),
-        defaultBriefContent: target.defaultBriefContent || "",
-      };
-  }
+  return getProviderDefinition(target.provider).normalizeTarget(target as never) as PublishTargetConfig;
 }

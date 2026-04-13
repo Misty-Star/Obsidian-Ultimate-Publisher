@@ -1,6 +1,8 @@
 export const SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin"] as const;
 
 export type ProviderId = (typeof SUPPORTED_PROVIDER_IDS)[number];
+export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web";
+export type ProviderFamilyId = "rest-api" | "cookie-web";
 
 export function isProviderId(value: unknown): value is ProviderId {
   return typeof value === "string" && (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(value);
