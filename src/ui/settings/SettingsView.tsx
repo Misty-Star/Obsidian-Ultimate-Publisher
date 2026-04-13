@@ -4,7 +4,7 @@ import { messages } from "../../i18n/messages";
 import { DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS, DEFAULT_LLM_SETTINGS } from "../../settings";
 import { FrontmatterAutomationSettings, LlmSettings, ProviderId, UltimatePublisherSettings } from "../../types";
 import { getProviderCatalog } from "./providerCatalog";
-import { buildConfiguredTargetCards, buildMarketplaceCards } from "./settingsViewModel";
+import { buildConfiguredTargetCards } from "./settingsViewModel";
 import { ConfiguredTargetsTab } from "./ConfiguredTargetsTab";
 import { FrontmatterAutomationPanel } from "./FrontmatterAutomationPanel";
 import { LlmSettingsTab } from "./LlmSettingsTab";
@@ -59,10 +59,6 @@ export function SettingsView({
   const providerCatalog = useMemo(() => getProviderCatalog(i18n), [i18n]);
   const configuredTargets = useMemo(
     () => buildConfiguredTargetCards(settings, providerCatalog),
-    [providerCatalog, settings]
-  );
-  const marketplaceProviders = useMemo(
-    () => buildMarketplaceCards(settings, providerCatalog),
     [providerCatalog, settings]
   );
   const headerDescription = resolveTranslation(
@@ -148,7 +144,12 @@ export function SettingsView({
             onDeleteTarget={onDeleteTarget}
           />
         ) : activeTab === "marketplace" ? (
-          <MarketplaceTab i18n={i18n} providers={marketplaceProviders} onAddProvider={onAddProvider} />
+          <MarketplaceTab
+            i18n={i18n}
+            settings={settings}
+            providerCatalog={providerCatalog}
+            onAddProvider={onAddProvider}
+          />
         ) : activeTab === "llm" ? (
           <LlmSettingsTab
             i18n={i18n}

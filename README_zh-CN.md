@@ -68,6 +68,8 @@
    - **认证信息**：API Token、Cookie 等平台相关认证参数
    - **默认设置**：标签、分类等默认值
 
+市场（Marketplace）中的平台会按平台大类分组展示。
+
 ### Frontmatter 元数据
 
 你可以在笔记的 frontmatter 中预填发布元数据：

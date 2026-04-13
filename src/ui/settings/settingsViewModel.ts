@@ -1,4 +1,6 @@
-import { UltimatePublisherSettings } from "../../types";
+import { Translator } from "../../i18n";
+import { messages } from "../../i18n/messages";
+import { ProviderCategory, UltimatePublisherSettings } from "../../types";
 import { ProviderCatalogEntry } from "./providerCatalog";
 
 export interface ConfiguredTargetCardModel {
@@ -18,6 +20,20 @@ export interface MarketplaceCardModel {
   configuredCount: number;
 }
 
+export interface MarketplaceCategoryModel {
+  id: ProviderCategory;
+  label: string;
+}
+
+const MARKETPLACE_CATEGORY_DISPLAY_ORDER: ProviderCategory[] = [
+  "common",
+  "github",
+  "gitlab",
+  "metaweblog",
+  "wordpress",
+  "web",
+];
+
 export function buildConfiguredTargetCards(
   settings: UltimatePublisherSettings,
   catalog: ProviderCatalogEntry[]
@@ -32,6 +48,48 @@ export function buildConfiguredTargetCards(
       enabled: target.enabled,
     };
   });
+}
+
+function resolveTranslation(
+  i18n: Translator,
+  key: string,
+  fallback: { en: string; "zh-CN": string }
+): string {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+
+function resolveMarketplaceCategoryLabel(i18n: Translator, categoryId: ProviderCategory): string {
+  const key = `settings.market.category.${categoryId}`;
+  switch (categoryId) {
+    case "common":
+      return resolveTranslation(i18n, key, { en: "Common", "zh-CN": "常用" });
+    case "github":
+      return resolveTranslation(i18n, key, { en: "GitHub", "zh-CN": "GitHub" });
+    case "gitlab":
+      return resolveTranslation(i18n, key, { en: "GitLab", "zh-CN": "GitLab" });
+    case "metaweblog":
+      return resolveTranslation(i18n, key, { en: "MetaWeblog", "zh-CN": "MetaWeblog" });
+    case "wordpress":
+      return resolveTranslation(i18n, key, { en: "WordPress", "zh-CN": "WordPress" });
+    case "web":
+      return resolveTranslation(i18n, key, { en: "Web", "zh-CN": "网页" });
+  }
+}
+
+export function buildMarketplaceCategories(
+  catalog: ProviderCatalogEntry[],
+  i18n: Translator
+): MarketplaceCategoryModel[] {
+  const categoriesWithProviders = new Set(catalog.map((entry) => entry.category));
+  return MARKETPLACE_CATEGORY_DISPLAY_ORDER.filter((categoryId) => categoriesWithProviders.has(categoryId)).map(
+    (categoryId) => ({
+      id: categoryId,
+      label: resolveMarketplaceCategoryLabel(i18n, categoryId),
+    })
+  );
 }
 
 export function buildMarketplaceCards(
@@ -49,5 +107,16 @@ export function buildMarketplaceCards(
       configured: configuredCount > 0,
       configuredCount,
     };
+  });
+}
+
+export function buildMarketplaceCardsForCategory(
+  settings: UltimatePublisherSettings,
+  catalog: ProviderCatalogEntry[],
+  categoryId: ProviderCategory
+): MarketplaceCardModel[] {
+  return buildMarketplaceCards(settings, catalog).filter((entry) => {
+    const providerEntry = catalog.find((catalogEntry) => catalogEntry.id === entry.id);
+    return providerEntry?.category === categoryId;
   });
 }

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { createI18n } from "../src/i18n";
 import { createWordpressTarget, createYuqueTarget } from "../src/settings";
-import { buildConfiguredTargetCards, buildMarketplaceCards } from "../src/ui/settings/settingsViewModel";
+import {
+  buildConfiguredTargetCards,
+  buildMarketplaceCards,
+  buildMarketplaceCardsForCategory,
+  buildMarketplaceCategories,
+} from "../src/ui/settings/settingsViewModel";
 import { getProviderCatalog } from "../src/ui/settings/providerCatalog";
 import { UltimatePublisherSettings } from "../src/types";
 
@@ -33,6 +39,20 @@ describe("settingsViewModel", () => {
       "csdn",
       "juejin",
     ]);
+  });
+
+  it("builds visible marketplace categories with fixed order", () => {
+    expect(
+      buildMarketplaceCategories(getProviderCatalog(), createI18n("zh-CN")).map((item) => item.id)
+    ).toEqual(["common", "wordpress", "web"]);
+  });
+
+  it("builds cards for the web category", () => {
+    const settings: UltimatePublisherSettings = { targets: [], records: [] };
+
+    expect(
+      buildMarketplaceCardsForCategory(settings, getProviderCatalog(), "web").map((item) => item.id)
+    ).toEqual(["zhihu", "csdn", "juejin"]);
   });
 
   it("marks marketplace providers as configured when any target uses that provider", () => {

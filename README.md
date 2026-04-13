@@ -70,6 +70,8 @@ Publish your Obsidian notes to multiple platforms with one click.
    - **Authentication**: API Token, Cookie, etc. (platform-specific)
    - **Default Settings**: Tags, categories, etc.
 
+Marketplace providers are grouped by category in the Marketplace tab.
+
 ### Frontmatter Metadata
 
 Use note frontmatter to prefill publish metadata:

@@ -32,6 +32,12 @@
   gap: 16px;
 }
 
+.ultimate-publisher-settings-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .ultimate-publisher-settings-header {
   display: grid;
   gap: 8px;
@@ -74,6 +80,27 @@
   border-radius: 12px;
   background: var(--background-secondary);
   padding: 16px;
+}
+
+.ultimate-publisher-marketplace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ultimate-publisher-marketplace-tab {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.ultimate-publisher-marketplace-tab.is-active {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
 }
 
 .ultimate-publisher-llm-tab,

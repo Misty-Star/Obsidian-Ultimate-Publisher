@@ -13,6 +13,18 @@ describe("getProviderCatalog", () => {
     ]);
   });
 
+  it("returns provider definitions with shared categories", () => {
+    expect(
+      getProviderCatalog().map((item) => ({ id: item.id, category: item.category }))
+    ).toEqual([
+      { id: "wordpress", category: "wordpress" },
+      { id: "yuque", category: "common" },
+      { id: "zhihu", category: "web" },
+      { id: "csdn", category: "web" },
+      { id: "juejin", category: "web" },
+    ]);
+  });
+
   it("keeps provider brand names and localizes descriptions", () => {
     const zh = createI18n("zh-CN");
     const catalog = getProviderCatalog(zh);

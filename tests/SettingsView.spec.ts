@@ -2,7 +2,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { createI18n } from "../src/i18n";
-import { DEFAULT_SETTINGS, createWordpressTarget } from "../src/settings";
+import { DEFAULT_SETTINGS, createWordpressTarget, createYuqueTarget } from "../src/settings";
 import { SettingsView } from "../src/ui/settings/SettingsView";
 import { UltimatePublisherSettings } from "../src/types";
 
@@ -43,7 +43,7 @@ describe("SettingsView", () => {
 
   it("renders marketplace providers and configured badges when the marketplace tab is selected", () => {
     const settings: UltimatePublisherSettings = {
-      targets: [{ ...createWordpressTarget(), id: "wp-1", name: "Main Blog" }],
+      targets: [{ ...createYuqueTarget(), id: "yuque-1", name: "Main Docs" }],
       records: [],
     };
 
@@ -60,8 +60,27 @@ describe("SettingsView", () => {
 
     expect(markup).toContain("WordPress");
     expect(markup).toContain("Yuque");
-    expect(markup).toContain("Zhihu");
+    expect(markup).not.toContain("Zhihu");
     expect(markup).toContain("已配置");
+  });
+
+  it("renders marketplace category tabs and the default visible category content", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: { targets: [], records: [] } satisfies UltimatePublisherSettings,
+        initialTab: "marketplace",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("Common");
+    expect(markup).toContain("WordPress");
+    expect(markup).toContain("Web");
+    expect(markup).toContain("Yuque");
+    expect(markup).not.toContain("Zhihu");
   });
 
   it("keeps English labels when locale is en", () => {
