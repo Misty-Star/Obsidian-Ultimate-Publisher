@@ -68,4 +68,11 @@ describe("provider definitions", () => {
     expect(zhihu.skipNormalPublishOptionsLoad).toBe(true);
     expect(typeof wordpress.buildInitialDraft).toBe("function");
   });
+
+  it("exposes runtime provider factories for all built-in providers", () => {
+    for (const providerId of ["wordpress", "yuque", "zhihu", "csdn", "juejin"] as const) {
+      const definition = getProviderDefinition(providerId);
+      expect(typeof definition.createProvider).toBe("function");
+    }
+  });
 });

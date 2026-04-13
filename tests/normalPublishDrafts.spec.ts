@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PublishableNote } from "../src/core/note";
 import { buildNormalPublishSessionState } from "../src/core/normalPublish/drafts";
+import * as providerDefinitions from "../src/providers/definitions";
 import {
   createJuejinTarget,
   createWordpressTarget,
@@ -24,6 +25,24 @@ function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
 }
 
 describe("normal publish drafts", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("delegates initial draft creation through provider definitions", () => {
+    const definitionSpy = vi.spyOn(providerDefinitions, "getProviderDefinition");
+
+    buildNormalPublishSessionState(createNote(), [
+      {
+        ...createWordpressTarget(),
+        id: "wp",
+        defaultStatus: "draft",
+      },
+    ]);
+
+    expect(definitionSpy).toHaveBeenCalledWith("wordpress");
+  });
+
   it("keeps title as the only common field and initializes provider drafts separately", () => {
     const state = buildNormalPublishSessionState(createNote(), [
       {

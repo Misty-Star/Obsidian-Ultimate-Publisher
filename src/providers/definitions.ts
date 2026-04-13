@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { App } from "obsidian";
 import { PublishableNote } from "../core/note";
+import { PublisherProvider } from "../core/providers";
 import { ProviderPublishDraft } from "../core/normalPublish/types";
 import {
   CsdnTargetConfig,
@@ -12,6 +14,11 @@ import {
   YuqueTargetConfig,
   ZhihuTargetConfig,
 } from "../types";
+import { CsdnProvider } from "./csdnProvider";
+import { JuejinProvider } from "./juejinProvider";
+import { WordpressProvider } from "./wordpressProvider";
+import { YuqueProvider } from "./yuqueProvider";
+import { ZhihuProvider } from "./zhihuProvider";
 
 type ProviderTargetById = {
   wordpress: WordpressTargetConfig;
@@ -26,6 +33,7 @@ export interface ProviderDefinition<TId extends ProviderId> {
   name: string;
   category: ProviderCategory;
   family: ProviderFamilyId;
+  createProvider: (app: App) => PublisherProvider<ProviderTargetById[TId]>;
   createTarget: () => ProviderTargetById[TId];
   normalizeTarget: (target: ProviderTargetById[TId]) => ProviderTargetById[TId];
   buildInitialDraft?: (note: PublishableNote, target: ProviderTargetById[TId]) => ProviderPublishDraft;
@@ -65,6 +73,7 @@ const providerDefinitionsById: ProviderDefinitionMap = {
     name: "WordPress",
     category: "wordpress",
     family: "rest-api",
+    createProvider: (app: App) => new WordpressProvider(app),
     createTarget: () => ({
       id: randomUUID(),
       name: "WordPress",
@@ -97,6 +106,7 @@ const providerDefinitionsById: ProviderDefinitionMap = {
     name: "Yuque",
     category: "common",
     family: "rest-api",
+    createProvider: () => new YuqueProvider(),
     createTarget: () => ({
       id: randomUUID(),
       name: "Yuque",
@@ -123,6 +133,7 @@ const providerDefinitionsById: ProviderDefinitionMap = {
     name: "Zhihu",
     category: "web",
     family: "cookie-web",
+    createProvider: (app: App) => new ZhihuProvider(app),
     createTarget: () => ({
       id: randomUUID(),
       name: "Zhihu",
@@ -150,6 +161,7 @@ const providerDefinitionsById: ProviderDefinitionMap = {
     name: "CSDN",
     category: "web",
     family: "cookie-web",
+    createProvider: (app: App) => new CsdnProvider(app),
     createTarget: () => ({
       id: randomUUID(),
       name: "CSDN",
@@ -178,6 +190,7 @@ const providerDefinitionsById: ProviderDefinitionMap = {
     name: "Juejin",
     category: "web",
     family: "cookie-web",
+    createProvider: () => new JuejinProvider(),
     createTarget: () => ({
       id: randomUUID(),
       name: "Juejin",

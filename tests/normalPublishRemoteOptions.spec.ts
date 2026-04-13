@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ensureRemoteOptionsLoaded } from "../src/core/normalPublish/remoteOptions";
 import { buildNormalPublishSessionState } from "../src/core/normalPublish/drafts";
 import { PublishableNote } from "../src/core/note";
+import * as providerDefinitions from "../src/providers/definitions";
 import { createCsdnTarget, createZhihuTarget } from "../src/settings";
 
 function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
@@ -21,6 +22,27 @@ function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
 }
 
 describe("normal publish remote options", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("delegates remote-options decisions to provider definitions", async () => {
+    const definitionSpy = vi.spyOn(providerDefinitions, "getProviderDefinition");
+    const target = {
+      ...createZhihuTarget(),
+      id: "zhihu-target",
+    };
+    const registry = {
+      get: vi.fn(),
+    };
+
+    const initialState = buildNormalPublishSessionState(createNote(), [target]);
+    await ensureRemoteOptionsLoaded(initialState, target, registry as never);
+
+    expect(definitionSpy).toHaveBeenCalledWith("zhihu");
+    expect(registry.get).not.toHaveBeenCalled();
+  });
+
   it("skips zhihu remote options because normal publish no longer exposes a zhihu-specific field", async () => {
     const target = {
       ...createZhihuTarget(),
