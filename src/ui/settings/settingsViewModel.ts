@@ -96,18 +96,7 @@ export function buildMarketplaceCards(
   settings: UltimatePublisherSettings,
   catalog: ProviderCatalogEntry[]
 ): MarketplaceCardModel[] {
-  return catalog.map((entry) => {
-    const configuredCount = settings.targets.filter((target) => target.provider === entry.id).length;
-
-    return {
-      id: entry.id,
-      name: entry.name,
-      description: entry.description,
-      icon: entry.icon,
-      configured: configuredCount > 0,
-      configuredCount,
-    };
-  });
+  return catalog.map((entry) => buildMarketplaceCard(settings, entry));
 }
 
 export function buildMarketplaceCardsForCategory(
@@ -115,8 +104,23 @@ export function buildMarketplaceCardsForCategory(
   catalog: ProviderCatalogEntry[],
   categoryId: ProviderCategory
 ): MarketplaceCardModel[] {
-  return buildMarketplaceCards(settings, catalog).filter((entry) => {
-    const providerEntry = catalog.find((catalogEntry) => catalogEntry.id === entry.id);
-    return providerEntry?.category === categoryId;
-  });
+  return catalog
+    .filter((entry) => entry.category === categoryId)
+    .map((entry) => buildMarketplaceCard(settings, entry));
+}
+
+function buildMarketplaceCard(
+  settings: UltimatePublisherSettings,
+  entry: ProviderCatalogEntry
+): MarketplaceCardModel {
+  const configuredCount = settings.targets.filter((target) => target.provider === entry.id).length;
+
+  return {
+    id: entry.id,
+    name: entry.name,
+    description: entry.description,
+    icon: entry.icon,
+    configured: configuredCount > 0,
+    configuredCount,
+  };
 }

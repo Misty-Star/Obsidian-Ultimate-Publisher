@@ -55,6 +55,32 @@ describe("settingsViewModel", () => {
     ).toEqual(["zhihu", "csdn", "juejin"]);
   });
 
+  it("filters category cards directly from catalog entries without id lookup coupling", () => {
+    const settings: UltimatePublisherSettings = { targets: [], records: [] };
+    const catalog = [
+      {
+        id: "yuque",
+        category: "common",
+        name: "Yuque Common",
+        description: "common",
+        icon: "YQ",
+        createTarget: createYuqueTarget,
+      },
+      {
+        id: "yuque",
+        category: "web",
+        name: "Yuque Web",
+        description: "web",
+        icon: "YW",
+        createTarget: createYuqueTarget,
+      },
+    ] as unknown as ReturnType<typeof getProviderCatalog>;
+
+    expect(buildMarketplaceCardsForCategory(settings, catalog, "web").map((item) => item.name)).toEqual([
+      "Yuque Web",
+    ]);
+  });
+
   it("marks marketplace providers as configured when any target uses that provider", () => {
     const settings: UltimatePublisherSettings = {
       targets: [
