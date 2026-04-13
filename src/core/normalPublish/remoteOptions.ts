@@ -1,20 +1,8 @@
 import { ProviderRegistry } from "../../providers/registry";
+import { getProviderDefinition } from "../../providers/definitions";
 import { PublishTargetConfig } from "../../types";
 import { ProviderRemoteOptions } from "../providers";
 import { NormalPublishSessionState, ProviderRemoteOptionsState } from "./types";
-
-function getManualFallbackFields(target: PublishTargetConfig): string[] {
-  switch (target.provider) {
-    case "wordpress":
-      return ["categories", "tags"];
-    case "csdn":
-      return ["categories", "tags"];
-    case "juejin":
-      return ["categoryId", "tagIds"];
-    default:
-      return [];
-  }
-}
 
 function buildRemoteOptionsState(
   status: ProviderRemoteOptionsState["status"],
@@ -40,7 +28,8 @@ export async function ensureRemoteOptionsLoaded(
     return state;
   }
 
-  if (target.provider === "zhihu") {
+  const definition = getProviderDefinition(target.provider);
+  if (definition.skipNormalPublishOptionsLoad) {
     return {
       ...state,
       remoteOptions: {
@@ -79,7 +68,7 @@ export async function ensureRemoteOptionsLoaded(
           "error",
           {},
           error instanceof Error ? error.message : String(error),
-          getManualFallbackFields(target)
+          definition.getManualFallbackFields?.(target as never) ?? []
         ),
       },
     };
