@@ -195,5 +195,16 @@ export function cloneTarget(target: PublishTargetConfig): PublishTargetConfig {
 }
 
 export function normalizeTarget(target: PublishTargetConfig): PublishTargetConfig {
-  return getProviderDefinition(target.provider).normalizeTarget(target as never) as PublishTargetConfig;
+  switch (target.provider) {
+    case "wordpress":
+      return getProviderDefinition("wordpress").normalizeTarget(target);
+    case "yuque":
+      return getProviderDefinition("yuque").normalizeTarget(target);
+    case "zhihu":
+      return getProviderDefinition("zhihu").normalizeTarget(target);
+    case "csdn":
+      return getProviderDefinition("csdn").normalizeTarget(target);
+    case "juejin":
+      return getProviderDefinition("juejin").normalizeTarget(target);
+  }
 }

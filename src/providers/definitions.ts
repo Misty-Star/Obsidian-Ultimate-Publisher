@@ -33,6 +33,11 @@ export interface ProviderDefinition<TId extends ProviderId> {
   getManualFallbackFields?: (target: ProviderTargetById[TId]) => string[];
 }
 
+type ProviderDefinitionMap = {
+  [TId in ProviderId]: ProviderDefinition<TId>;
+};
+type AnyProviderDefinition = ProviderDefinitionMap[ProviderId];
+
 function cloneStringList(values: string[]): string[] {
   return values.slice();
 }
@@ -54,8 +59,8 @@ function normalizeStringList(value: unknown): string[] {
   return [];
 }
 
-const providerDefinitions = [
-  {
+const providerDefinitionsById: ProviderDefinitionMap = {
+  wordpress: {
     id: "wordpress",
     name: "WordPress",
     category: "wordpress",
@@ -86,8 +91,8 @@ const providerDefinitions = [
       password: "",
     }),
     getManualFallbackFields: () => ["categories", "tags"],
-  } satisfies ProviderDefinition<"wordpress">,
-  {
+  },
+  yuque: {
     id: "yuque",
     name: "Yuque",
     category: "common",
@@ -112,8 +117,8 @@ const providerDefinitions = [
       slug: note.slug,
       publicLevel: target.publicLevel,
     }),
-  } satisfies ProviderDefinition<"yuque">,
-  {
+  },
+  zhihu: {
     id: "zhihu",
     name: "Zhihu",
     category: "web",
@@ -139,8 +144,8 @@ const providerDefinitions = [
       columnTitle: target.defaultColumnTitle ?? "",
     }),
     skipNormalPublishOptionsLoad: true,
-  } satisfies ProviderDefinition<"zhihu">,
-  {
+  },
+  csdn: {
     id: "csdn",
     name: "CSDN",
     category: "web",
@@ -167,8 +172,8 @@ const providerDefinitions = [
       categories: note.categories.length > 0 ? cloneStringList(note.categories) : cloneStringList(target.defaultCategories),
     }),
     getManualFallbackFields: () => ["categories", "tags"],
-  } satisfies ProviderDefinition<"csdn">,
-  {
+  },
+  juejin: {
     id: "juejin",
     name: "Juejin",
     category: "web",
@@ -203,21 +208,15 @@ const providerDefinitions = [
       briefContent: target.defaultBriefContent || note.excerpt,
     }),
     getManualFallbackFields: () => ["categoryId", "tagIds"],
-  } satisfies ProviderDefinition<"juejin">,
-] as const;
+  },
+};
 
-const providerDefinitionById: Record<ProviderId, ProviderDefinition<ProviderId>> = Object.fromEntries(
-  providerDefinitions.map((definition) => [definition.id, definition])
-) as Record<ProviderId, ProviderDefinition<ProviderId>>;
+const providerDisplayOrder: ProviderId[] = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
 
-export function getProviderDefinitions(): ProviderDefinition<ProviderId>[] {
-  return providerDefinitions as unknown as ProviderDefinition<ProviderId>[];
+export function getProviderDefinitions(): AnyProviderDefinition[] {
+  return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
 }
 
-export function getProviderDefinition<TId extends ProviderId>(providerId: TId): ProviderDefinition<TId> {
-  const definition = providerDefinitionById[providerId];
-  if (!definition) {
-    throw new Error(`Unsupported provider: ${providerId}`);
-  }
-  return definition as ProviderDefinition<TId>;
+export function getProviderDefinition<TId extends ProviderId>(providerId: TId): ProviderDefinitionMap[TId] {
+  return providerDefinitionsById[providerId];
 }
