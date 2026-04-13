@@ -2003,7 +2003,7 @@ var require_react = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom.production.js"(exports2) {
     "use strict";
-    var React2 = require_react();
+    var React3 = require_react();
     function formatProdErrorMessage(code) {
       var url = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -2043,7 +2043,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -2197,7 +2197,7 @@ var require_react_dom_development = __commonJS({
         return dispatcher;
       }
       "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-      var React2 = require_react(), Internals = {
+      var React3 = require_react(), Internals = {
         d: {
           f: noop,
           r: function() {
@@ -2215,7 +2215,7 @@ var require_react_dom_development = __commonJS({
         },
         p: 0,
         findDOMNode: null
-      }, REACT_PORTAL_TYPE = Symbol.for("react.portal"), ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+      }, REACT_PORTAL_TYPE = Symbol.for("react.portal"), ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
       "function" === typeof Map && null != Map.prototype && "function" === typeof Map.prototype.forEach && "function" === typeof Set && null != Set.prototype && "function" === typeof Set.prototype.clear && "function" === typeof Set.prototype.forEach || console.error(
         "React depends on Map and Set built-in types. Make sure that you load a polyfill in older browsers. https://reactjs.org/link/react-polyfills"
       );
@@ -2423,7 +2423,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/cjs/react-dom-client.production.js"(exports2) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React2 = require_react();
+    var React3 = require_react();
     var ReactDOM = require_react_dom();
     function formatProdErrorMessage(code) {
       var url = "https://react.dev/errors/" + code;
@@ -2618,7 +2618,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -14064,7 +14064,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React2.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React3.version;
     if ("19.2.4" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -15508,7 +15508,7 @@ var require_react_dom_client_development = __commonJS({
         "number" === type && getActiveElement(node.ownerDocument) === node || node.defaultValue === "" + value || (node.defaultValue = "" + value);
       }
       function validateOptionProps(element, props) {
-        null == props.value && ("object" === typeof props.children && null !== props.children ? React2.Children.forEach(props.children, function(child) {
+        null == props.value && ("object" === typeof props.children && null !== props.children ? React3.Children.forEach(props.children, function(child) {
           null == child || "string" === typeof child || "number" === typeof child || "bigint" === typeof child || didWarnInvalidChild || (didWarnInvalidChild = true, console.error(
             "Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>."
           ));
@@ -31140,14 +31140,14 @@ var require_react_dom_client_development = __commonJS({
         ));
       }
       "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-      var Scheduler = require_scheduler(), React2 = require_react(), ReactDOM = require_react_dom(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = Symbol.for("react.element"), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy");
+      var Scheduler = require_scheduler(), React3 = require_react(), ReactDOM = require_react_dom(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = Symbol.for("react.element"), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy");
       Symbol.for("react.scope");
       var REACT_ACTIVITY_TYPE = Symbol.for("react.activity");
       Symbol.for("react.legacy_hidden");
       Symbol.for("react.tracing_marker");
       var REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel");
       Symbol.for("react.view_transition");
-      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, NotPending = Object.freeze({
+      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, NotPending = Object.freeze({
         pending: false,
         data: null,
         method: null,
@@ -33935,7 +33935,7 @@ var require_react_dom_client_development = __commonJS({
         }
       };
       (function() {
-        var isomorphicReactPackageVersion = React2.version;
+        var isomorphicReactPackageVersion = React3.version;
         if ("19.2.4" !== isomorphicReactPackageVersion)
           throw Error(
             'Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:\n  - react:      ' + (isomorphicReactPackageVersion + "\n  - react-dom:  19.2.4\nLearn more: https://react.dev/warnings/version-mismatch")
@@ -34332,18 +34332,18 @@ var require_react_jsx_runtime_development = __commonJS({
       function isValidElement(object) {
         return "object" === typeof object && null !== object && object.$$typeof === REACT_ELEMENT_TYPE;
       }
-      var React2 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, hasOwnProperty = Object.prototype.hasOwnProperty, isArrayImpl = Array.isArray, createTask = console.createTask ? console.createTask : function() {
+      var React3 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, hasOwnProperty = Object.prototype.hasOwnProperty, isArrayImpl = Array.isArray, createTask = console.createTask ? console.createTask : function() {
         return null;
       };
-      React2 = {
+      React3 = {
         react_stack_bottom_frame: function(callStackForError) {
           return callStackForError();
         }
       };
       var specialPropKeyWarningShown;
       var didWarnAboutElementRef = {};
-      var unknownOwnerDebugStack = React2.react_stack_bottom_frame.bind(
-        React2,
+      var unknownOwnerDebugStack = React3.react_stack_bottom_frame.bind(
+        React3,
         UnknownOwner
       )();
       var unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
@@ -34478,743 +34478,29 @@ function injectPublishFrontmatter(markdown, template) {
 ${markdown}`;
 }
 
-// src/settings.ts
-var import_node_crypto = require("node:crypto");
-var DEFAULT_LLM_SETTINGS = {
-  enabled: false,
-  vendor: "openai",
-  apiKey: "",
-  model: "",
-  endpointOverride: "",
-  temperature: 0.3,
-  timeoutMs: 3e4,
-  maxInputChars: 12e3
-};
-var DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS = {
-  enabled: false,
-  includeOptionComments: true
-};
-function normalizeLlmSettings(value) {
-  return {
-    enabled: Boolean(value?.enabled),
-    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
-    apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
-    model: typeof value?.model === "string" ? value.model : "",
-    endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
-    temperature: typeof value?.temperature === "number" && Number.isFinite(value.temperature) ? value.temperature : DEFAULT_LLM_SETTINGS.temperature,
-    timeoutMs: typeof value?.timeoutMs === "number" && value.timeoutMs > 0 ? value.timeoutMs : DEFAULT_LLM_SETTINGS.timeoutMs,
-    maxInputChars: typeof value?.maxInputChars === "number" && value.maxInputChars > 0 ? value.maxInputChars : DEFAULT_LLM_SETTINGS.maxInputChars
-  };
-}
-function normalizeCachedProviderOption(value) {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const raw = value;
-  if (typeof raw.id !== "string" || typeof raw.label !== "string") {
-    return null;
-  }
-  return {
-    id: raw.id,
-    label: raw.label,
-    description: typeof raw.description === "string" ? raw.description : void 0
-  };
-}
-function normalizeCachedProviderOptionList(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.map((item) => normalizeCachedProviderOption(item)).filter((item) => item !== null);
-}
-function normalizeJuejinProviderOptionCacheEntry(value) {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const raw = value;
-  if (typeof raw.fetchedAt !== "string") {
-    return null;
-  }
-  return {
-    fetchedAt: raw.fetchedAt,
-    categories: normalizeCachedProviderOptionList(raw.categories),
-    tags: normalizeCachedProviderOptionList(raw.tags)
-  };
-}
-function normalizeFrontmatterAutomationSettings(value) {
-  return {
-    enabled: typeof value?.enabled === "boolean" ? value.enabled : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.enabled,
-    includeOptionComments: typeof value?.includeOptionComments === "boolean" ? value.includeOptionComments : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.includeOptionComments
-  };
-}
-function normalizeProviderOptionCache(value) {
-  const rawValue = typeof value === "object" && value !== null ? value : null;
-  const rawJuejinByTargetId = rawValue?.juejinByTargetId;
-  if (typeof rawJuejinByTargetId !== "object" || rawJuejinByTargetId === null) {
-    return {
-      juejinByTargetId: {}
-    };
-  }
-  const juejinByTargetId = {};
-  for (const [targetId, entry] of Object.entries(rawJuejinByTargetId)) {
-    const normalizedEntry = normalizeJuejinProviderOptionCacheEntry(entry);
-    if (normalizedEntry) {
-      juejinByTargetId[targetId] = normalizedEntry;
-    }
-  }
-  return {
-    juejinByTargetId
-  };
-}
-var DEFAULT_SETTINGS = {
-  targets: [],
-  records: [],
-  frontmatterAutomation: { ...DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS },
-  providerOptionCache: {
-    juejinByTargetId: {}
-  },
-  llm: { ...DEFAULT_LLM_SETTINGS }
-};
-function createWordpressTarget() {
-  return {
-    id: (0, import_node_crypto.randomUUID)(),
-    name: "WordPress",
-    enabled: true,
-    provider: "wordpress",
-    endpoint: "",
-    username: "",
-    appPassword: "",
-    defaultStatus: "draft",
-    contentFormat: "html"
-  };
-}
-function createYuqueTarget() {
-  return {
-    id: (0, import_node_crypto.randomUUID)(),
-    name: "Yuque",
-    enabled: true,
-    provider: "yuque",
-    baseUrl: "https://www.yuque.com",
-    repo: "",
-    token: "",
-    publicLevel: 0
-  };
-}
-function createZhihuTarget() {
-  return {
-    id: (0, import_node_crypto.randomUUID)(),
-    name: "Zhihu",
-    enabled: true,
-    provider: "zhihu",
-    cookie: "",
-    defaultColumnId: "",
-    defaultColumnTitle: ""
-  };
-}
-function createCsdnTarget() {
-  return {
-    id: (0, import_node_crypto.randomUUID)(),
-    name: "CSDN",
-    enabled: true,
-    provider: "csdn",
-    cookie: "",
-    defaultCategories: [],
-    defaultTags: []
-  };
-}
-function createJuejinTarget() {
-  return {
-    id: (0, import_node_crypto.randomUUID)(),
-    name: "Juejin",
-    enabled: true,
-    provider: "juejin",
-    cookie: "",
-    defaultCategoryId: "",
-    defaultCategoryName: "",
-    defaultTagIds: [],
-    defaultTagNames: [],
-    defaultBriefContent: ""
-  };
-}
-function getRecord(records, notePath, targetId) {
-  return records.find((record) => record.notePath === notePath && record.targetId === targetId);
-}
-function upsertRecord(records, nextRecord) {
-  const existingIndex = records.findIndex(
-    (record) => record.notePath === nextRecord.notePath && record.targetId === nextRecord.targetId
-  );
-  if (existingIndex === -1) {
-    return [...records, nextRecord];
-  }
-  const next = records.slice();
-  next[existingIndex] = nextRecord;
-  return next;
-}
-function cloneTarget(target) {
-  return JSON.parse(JSON.stringify(target));
-}
-function normalizeStringList(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-function normalizeTarget(target) {
-  switch (target.provider) {
-    case "wordpress":
-      return {
-        ...target,
-        defaultStatus: target.defaultStatus ?? "draft",
-        contentFormat: target.contentFormat ?? "html"
-      };
-    case "yuque":
-      return {
-        ...target,
-        baseUrl: target.baseUrl || "https://www.yuque.com",
-        publicLevel: target.publicLevel ?? 0
-      };
-    case "zhihu":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultColumnId: target.defaultColumnId || "",
-        defaultColumnTitle: target.defaultColumnTitle || ""
-      };
-    case "csdn":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultCategories: normalizeStringList(target.defaultCategories),
-        defaultTags: normalizeStringList(target.defaultTags)
-      };
-    case "juejin":
-      return {
-        ...target,
-        cookie: target.cookie || "",
-        defaultCategoryId: target.defaultCategoryId || "",
-        defaultCategoryName: target.defaultCategoryName || "",
-        defaultTagIds: normalizeStringList(target.defaultTagIds),
-        defaultTagNames: normalizeStringList(target.defaultTagNames),
-        defaultBriefContent: target.defaultBriefContent || ""
-      };
-  }
-}
-
-// src/core/providerOptionCache.ts
-var PROVIDER_OPTION_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
-function toCachedOptions(items) {
-  if (!Array.isArray(items)) {
-    return [];
-  }
-  return items.map((item) => ({
-    id: item.id,
-    label: item.label,
-    description: typeof item.description === "string" ? item.description : void 0
-  }));
-}
-async function loadJuejinOptionSnapshot(args) {
-  const nowMs = typeof args.nowMs === "number" ? args.nowMs : Date.now();
-  const normalizedCache = normalizeProviderOptionCache(args.providerOptionCache);
-  const cachedEntry = normalizedCache.juejinByTargetId[args.targetId];
-  if (cachedEntry) {
-    const parsedFetchedAt = Date.parse(cachedEntry.fetchedAt);
-    const hasFreshCache = !Number.isNaN(parsedFetchedAt) && nowMs - parsedFetchedAt < PROVIDER_OPTION_CACHE_TTL_MS;
-    if (hasFreshCache) {
-      return {
-        source: "cache",
-        categories: cachedEntry.categories,
-        tags: cachedEntry.tags,
-        nextCache: normalizedCache
-      };
-    }
-  }
-  try {
-    const remoteOptions = await args.loadNormalPublishOptions(args.target);
-    const categories = toCachedOptions(remoteOptions.juejinCategories);
-    const tags = toCachedOptions(remoteOptions.juejinTags);
-    const nextCache = {
-      ...normalizedCache,
-      juejinByTargetId: {
-        ...normalizedCache.juejinByTargetId,
-        [args.targetId]: {
-          fetchedAt: new Date(nowMs).toISOString(),
-          categories,
-          tags
-        }
-      }
-    };
-    return {
-      source: "network",
-      categories,
-      tags,
-      nextCache
-    };
-  } catch {
-    if (cachedEntry) {
-      return {
-        source: "stale-cache",
-        categories: cachedEntry.categories,
-        tags: cachedEntry.tags,
-        nextCache: normalizedCache
-      };
-    }
-    return {
-      source: "unavailable",
-      categories: [],
-      tags: [],
-      nextCache: normalizedCache
-    };
-  }
-}
-
-// src/core/normalPublish/drafts.ts
-function createIdleRemoteOptionsState() {
-  return {
-    status: "idle",
-    data: {},
-    manualFallbackFields: []
-  };
-}
-function cloneStringList(values) {
-  return values.slice();
-}
-function buildWordpressDraft(note, target) {
-  return {
-    provider: "wordpress",
-    slug: note.slug,
-    excerpt: note.excerpt,
-    tags: cloneStringList(note.tags),
-    categories: cloneStringList(note.categories),
-    status: target.defaultStatus,
-    password: ""
-  };
-}
-function buildYuqueDraft(note, target) {
-  return {
-    provider: "yuque",
-    slug: note.slug,
-    publicLevel: target.publicLevel
-  };
-}
-function buildZhihuDraft(note, target) {
-  return {
-    provider: "zhihu",
-    columnId: target.defaultColumnId,
-    columnTitle: target.defaultColumnTitle ?? ""
-  };
-}
-function buildCsdnDraft(note, target) {
-  return {
-    provider: "csdn",
-    excerpt: note.excerpt,
-    tags: note.tags.length > 0 ? cloneStringList(note.tags) : cloneStringList(target.defaultTags),
-    categories: note.categories.length > 0 ? cloneStringList(note.categories) : cloneStringList(target.defaultCategories)
-  };
-}
-function buildJuejinDraft(note, target) {
-  return {
-    provider: "juejin",
-    categoryId: target.defaultCategoryId,
-    categoryName: target.defaultCategoryName ?? "",
-    tagIds: cloneStringList(target.defaultTagIds),
-    tagNames: cloneStringList(target.defaultTagNames ?? []),
-    briefContent: target.defaultBriefContent || note.excerpt
-  };
-}
-function buildInitialTargetDraft(target, note) {
-  switch (target.provider) {
-    case "wordpress":
-      return buildWordpressDraft(note, target);
-    case "yuque":
-      return buildYuqueDraft(note, target);
-    case "zhihu":
-      return buildZhihuDraft(note, target);
-    case "csdn":
-      return buildCsdnDraft(note, target);
-    case "juejin":
-      return buildJuejinDraft(note, target);
-    default:
-      throw new Error(`Unsupported provider: ${target.provider}`);
-  }
-}
-function buildNormalPublishSessionState(note, targets) {
-  const enabledTargets = targets.filter((target) => target.enabled);
-  const targetDrafts = {};
-  const remoteOptions = {};
-  const lastErrorByTargetId = {};
-  for (const target of enabledTargets) {
-    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
-    remoteOptions[target.id] = createIdleRemoteOptionsState();
-    lastErrorByTargetId[target.id] = null;
-  }
-  return {
-    selectedTargetId: enabledTargets[0]?.id ?? null,
-    commonDraft: {
-      title: note.title
-    },
-    targetDrafts,
-    remoteOptions,
-    lastErrorByTargetId
-  };
-}
-
-// src/core/note.ts
-var import_obsidian = require("obsidian");
+// src/providers/definitions.ts
 var import_node_crypto2 = require("node:crypto");
-var import_node_path = require("node:path");
 
-// src/core/markdown.ts
-var WIKI_EMBED_REGEX = /!\[\[([^\]]+)\]\]/g;
-var MARKDOWN_IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g;
-function isAbsoluteUrl(value) {
-  return /^(?:[a-z]+:)?\/\//i.test(value) || value.startsWith("data:");
-}
-function stripAlias(target) {
-  return target.split("|")[0].trim();
-}
-function extractAssetReferences(markdown) {
-  const references = [];
-  for (const match of markdown.matchAll(WIKI_EMBED_REGEX)) {
-    const raw = match[1] ?? "";
-    references.push({
-      originalText: match[0],
-      rawTarget: stripAlias(raw),
-      altText: raw.split("|")[1]?.trim() ?? "",
-      source: "wiki-embed"
+// src/providers/csdnProvider.ts
+var import_node_crypto = require("node:crypto");
+var import_obsidian3 = require("obsidian");
+
+// src/core/html.ts
+var import_obsidian = require("obsidian");
+async function renderMarkdownToHtml(app, markdown, sourcePath) {
+  const container = document.createElement("div");
+  const component = new import_obsidian.Component();
+  component.load();
+  try {
+    await import_obsidian.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
+    container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
+      copyButton.remove();
     });
+    return container.innerHTML.trim();
+  } finally {
+    component.unload();
   }
-  for (const match of markdown.matchAll(MARKDOWN_IMAGE_REGEX)) {
-    const target = (match[2] ?? "").trim();
-    if (isAbsoluteUrl(target)) {
-      continue;
-    }
-    references.push({
-      originalText: match[0],
-      rawTarget: target,
-      altText: match[1] ?? "",
-      source: "markdown-image"
-    });
-  }
-  return references;
 }
-function replaceAssetReference(markdown, reference, replacementPath) {
-  const altText = reference.altText.trim();
-  const rewritten = `![${altText}](${replacementPath})`;
-  return markdown.split(reference.originalText).join(rewritten);
-}
-function replaceAssetReferences(markdown, replacements) {
-  return replacements.reduce(
-    (currentMarkdown, replacement) => replaceAssetReference(currentMarkdown, replacement.reference, replacement.replacementPath),
-    markdown
-  );
-}
-
-// src/core/content.ts
-function stripFrontmatter(markdown) {
-  if (!markdown.startsWith("---")) {
-    return markdown;
-  }
-  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").replace(/^\s*\n/, "");
-}
-
-// src/core/note.ts
-var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"]);
-function ensureArray(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-function slugify(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-}
-function pickExcerpt(markdown, frontmatter) {
-  const explicit = typeof frontmatter.description === "string" && frontmatter.description || typeof frontmatter.excerpt === "string" && frontmatter.excerpt || typeof frontmatter.summary === "string" && frontmatter.summary || "";
-  if (explicit) {
-    return explicit;
-  }
-  const collapsed = markdown.replace(/^---[\s\S]*?---\s*/m, "").replace(/!\[\[[^\]]+\]\]/g, "").replace(/!\[[^\]]*]\(([^)]+)\)/g, "").replace(/\[\[([^\]]+)]]/g, "$1").replace(/\[([^\]]+)]\(([^)]+)\)/g, "$1").replace(/[#>*`~-]/g, " ").replace(/\s+/g, " ").trim();
-  return collapsed.slice(0, 200);
-}
-function normalizeTitleLine(value) {
-  return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
-}
-function pickTitle(markdown, frontmatter, fallback) {
-  const frontmatterTitle = typeof frontmatter.title === "string" ? frontmatter.title.trim() : "";
-  if (frontmatterTitle) {
-    return frontmatterTitle;
-  }
-  const lines = markdown.split(/\r?\n/);
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line.startsWith("# ")) {
-      continue;
-    }
-    const title = normalizeTitleLine(line);
-    if (title) {
-      return title;
-    }
-  }
-  return fallback;
-}
-function isImagePath(value) {
-  const normalized = value.split(/[?#]/)[0] ?? value;
-  return IMAGE_EXTENSIONS.has((0, import_node_path.extname)(normalized).toLowerCase());
-}
-function resolveAsset(app, file, reference) {
-  if (!isImagePath(reference.rawTarget)) {
-    return {
-      unresolved: {
-        reference,
-        reason: "unsupported-type"
-      }
-    };
-  }
-  const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
-  if (!(resolved instanceof import_obsidian.TFile)) {
-    return {
-      unresolved: {
-        reference,
-        reason: "missing"
-      }
-    };
-  }
-  if (!isImagePath(resolved.path)) {
-    return {
-      unresolved: {
-        reference,
-        reason: "unsupported-type"
-      }
-    };
-  }
-  return {
-    resolved: {
-      reference,
-      sourcePath: resolved.path,
-      fileName: resolved.name
-    }
-  };
-}
-async function extractPublishableNote(app, file) {
-  const rawMarkdown = await app.vault.cachedRead(file);
-  const cache = app.metadataCache.getFileCache(file);
-  const frontmatter = cache?.frontmatter ?? {};
-  const markdown = stripFrontmatter(rawMarkdown);
-  const references = extractAssetReferences(markdown);
-  const attachments = [];
-  const unresolvedAttachments = [];
-  for (const reference of references) {
-    const result = resolveAsset(app, file, reference);
-    if (result.resolved) {
-      attachments.push(result.resolved);
-    }
-    if (result.unresolved) {
-      unresolvedAttachments.push(result.unresolved);
-    }
-  }
-  const title = pickTitle(markdown, frontmatter, file.basename);
-  const slug = typeof frontmatter.slug === "string" && frontmatter.slug || typeof frontmatter.permalink === "string" && frontmatter.permalink || slugify(file.basename);
-  const tags = ensureArray(frontmatter.tags);
-  const categories = ensureArray(frontmatter.categories ?? frontmatter.category);
-  return {
-    filePath: file.path,
-    title,
-    markdown,
-    frontmatter,
-    attachments,
-    unresolvedAttachments,
-    excerpt: pickExcerpt(markdown, frontmatter),
-    slug,
-    tags,
-    categories,
-    date: typeof frontmatter.date === "string" ? frontmatter.date : void 0
-  };
-}
-function computeContentHash(note) {
-  return (0, import_node_crypto2.createHash)("sha256").update(
-    JSON.stringify({
-      markdown: note.markdown,
-      frontmatter: note.frontmatter,
-      attachments: note.attachments.map((asset) => asset.sourcePath)
-    })
-  ).digest("hex");
-}
-
-// src/core/mediaPipeline.ts
-async function resolveReplacement(provider, note, target, sourcePath) {
-  const asset = note.attachments.find((item) => item.sourcePath === sourcePath);
-  if (!asset) {
-    throw new Error(`Missing attachment for source path: ${sourcePath}`);
-  }
-  const support = provider.getMediaSupport(target);
-  if (support.mode === "native-upload") {
-    if (!provider.uploadAsset) {
-      throw new Error(`${target.name} cannot upload local assets because uploadAsset() is not implemented.`);
-    }
-    return provider.uploadAsset(asset, note, target);
-  }
-  if (support.mode === "local-copy") {
-    if (!provider.copyAsset) {
-      throw new Error(`${target.name} cannot copy local assets because copyAsset() is not implemented.`);
-    }
-    return provider.copyAsset(asset, note, target);
-  }
-  const files = note.attachments.map((item) => item.sourcePath).join(", ");
-  throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
-}
-async function prepareNoteForPublish(note, target, provider) {
-  const missingAttachment = note.unresolvedAttachments.find((asset) => asset.reason === "missing");
-  if (missingAttachment) {
-    throw new Error(`Missing local image asset: ${missingAttachment.reference.rawTarget}`);
-  }
-  if (note.attachments.length === 0) {
-    return {
-      ...note,
-      mediaReplacements: []
-    };
-  }
-  const support = provider.getMediaSupport(target);
-  if (support.mode === "unsupported") {
-    const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
-    throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
-  }
-  const resolvedPaths = /* @__PURE__ */ new Map();
-  const replacements = [];
-  for (const asset of note.attachments) {
-    let replacementPath = resolvedPaths.get(asset.sourcePath);
-    if (!replacementPath) {
-      const result = await resolveReplacement(provider, note, target, asset.sourcePath);
-      replacementPath = result.url;
-      resolvedPaths.set(asset.sourcePath, replacementPath);
-    }
-    replacements.push({
-      reference: asset.reference,
-      replacementPath
-    });
-  }
-  return {
-    ...note,
-    markdown: replaceAssetReferences(note.markdown, replacements),
-    mediaReplacements: [...resolvedPaths.entries()].map(([sourcePath, replacementPath]) => ({
-      sourcePath,
-      replacementPath
-    }))
-  };
-}
-
-// src/core/normalPublish/overrides.ts
-function cloneStringList2(values) {
-  return values.slice();
-}
-function applyNormalPublishContextToNote(note, context) {
-  if (!context) {
-    return note;
-  }
-  const nextNote = {
-    ...note,
-    frontmatter: {
-      ...note.frontmatter
-    },
-    attachments: note.attachments.slice(),
-    unresolvedAttachments: note.unresolvedAttachments.slice(),
-    title: context.common.title || note.title,
-    tags: cloneStringList2(note.tags),
-    categories: cloneStringList2(note.categories)
-  };
-  switch (context.provider.provider) {
-    case "wordpress":
-      nextNote.slug = context.provider.slug;
-      nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList2(context.provider.tags);
-      nextNote.categories = cloneStringList2(context.provider.categories);
-      break;
-    case "yuque":
-      nextNote.slug = context.provider.slug;
-      break;
-    case "csdn":
-      nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList2(context.provider.tags);
-      nextNote.categories = cloneStringList2(context.provider.categories);
-      break;
-    default:
-      break;
-  }
-  return nextNote;
-}
-
-// src/core/publishService.ts
-function mergeProviderOptionCacheIntoSettings(settings, providerOptionCache) {
-  if (!providerOptionCache) {
-    return settings;
-  }
-  const currentCache = normalizeProviderOptionCache(settings.providerOptionCache);
-  const nextCache = normalizeProviderOptionCache(providerOptionCache);
-  return {
-    ...settings,
-    providerOptionCache: {
-      ...currentCache,
-      juejinByTargetId: {
-        ...currentCache.juejinByTargetId,
-        ...nextCache.juejinByTargetId
-      }
-    }
-  };
-}
-var PublishService = class {
-  constructor(app, providers, mediaPipeline = {
-    prepare: prepareNoteForPublish
-  }) {
-    this.app = app;
-    this.providers = providers;
-    this.mediaPipeline = mediaPipeline;
-  }
-  buildProviderRuntime(settings, provider, target) {
-    return {
-      providerOptionCache: settings.providerOptionCache,
-      loadNormalPublishOptions: typeof provider.loadNormalPublishOptions === "function" ? async (currentTarget) => provider.loadNormalPublishOptions(currentTarget) : void 0
-    };
-  }
-  async publishFile(file, target, settings, context) {
-    const provider = this.providers.get(target);
-    await provider.validateConfig(target);
-    const extractedNote = await extractPublishableNote(this.app, file);
-    const note = applyNormalPublishContextToNote(extractedNote, context);
-    const contentHash = computeContentHash(note);
-    const preparedNote = applyNormalPublishContextToNote(
-      await this.mediaPipeline.prepare(note, target, provider),
-      context
-    );
-    const existing = getRecord(settings.records, file.path, target.id);
-    const runtime = this.buildProviderRuntime(settings, provider, target);
-    const result = existing ? await provider.update(existing.remoteId, preparedNote, target, context, runtime) : await provider.publish(preparedNote, target, context, runtime);
-    const previewUrl = result.remoteUrl ?? await provider.getPreviewUrl(result.remoteId, target);
-    const record = {
-      notePath: file.path,
-      provider: target.provider,
-      targetId: target.id,
-      remoteId: result.remoteId,
-      remoteUrl: previewUrl,
-      lastPublishedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      contentHash
-    };
-    return {
-      record,
-      created: !existing,
-      providerOptionCache: result.providerOptionCache
-    };
-  }
-  updateSettings(settings, record, providerOptionCache) {
-    return {
-      ...mergeProviderOptionCacheIntoSettings(settings, providerOptionCache),
-      records: upsertRecord(settings.records, record)
-    };
-  }
-};
 
 // src/core/providers.ts
 var import_obsidian2 = require("obsidian");
@@ -35253,132 +34539,6 @@ function getPublishFailureSettings(error) {
   const candidate = error;
   return candidate.settings;
 }
-
-// src/core/publishWorkflow.ts
-var PublishWorkflow = class {
-  constructor(publishService) {
-    this.publishService = publishService;
-  }
-  async emitProgressSafely(options, event) {
-    try {
-      await options.onProgress?.(event);
-    } catch {
-    }
-  }
-  resolveAction(file, target, settings) {
-    return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
-  }
-  async runSingle(file, target, settings, context) {
-    const action = this.resolveAction(file, target, settings);
-    try {
-      const serviceResult = await this.publishService.publishFile(file, target, settings, context);
-      const nextSettings = this.publishService.updateSettings(
-        settings,
-        serviceResult.record,
-        serviceResult.providerOptionCache
-      );
-      return {
-        action,
-        record: serviceResult.record,
-        settings: nextSettings
-      };
-    } catch (error) {
-      const cachedSettings = getPublishFailureSettings(error);
-      if (cachedSettings) {
-        throw withPublishFailureDetails(error, { settings: cachedSettings });
-      }
-      const providerOptionCache = getPublishFailureProviderOptionCache(error);
-      if (providerOptionCache) {
-        throw withPublishFailureDetails(error, {
-          providerOptionCache,
-          settings: mergeProviderOptionCacheIntoSettings(settings, providerOptionCache)
-        });
-      }
-      throw error;
-    }
-  }
-  async runBatch(file, targets, settings, options = {}) {
-    let currentSettings = settings;
-    const results = [];
-    const totalCount = targets.length;
-    for (const [index, target] of targets.entries()) {
-      const action = this.resolveAction(file, target, currentSettings);
-      const context = options.contextByTargetId?.[target.id];
-      const currentIndex = index + 1;
-      await this.emitProgressSafely(options, {
-        targetId: target.id,
-        targetName: target.name,
-        action,
-        status: "running",
-        currentIndex,
-        totalCount
-      });
-      const startedAt = Date.now();
-      try {
-        const singleResult = await this.runSingle(file, target, currentSettings, context);
-        const durationMs = Date.now() - startedAt;
-        currentSettings = singleResult.settings;
-        results.push({
-          targetId: target.id,
-          targetName: target.name,
-          action: singleResult.action,
-          status: "success",
-          durationMs,
-          remoteUrl: singleResult.record.remoteUrl
-        });
-        await this.emitProgressSafely(options, {
-          targetId: target.id,
-          targetName: target.name,
-          action: singleResult.action,
-          status: "success",
-          currentIndex,
-          totalCount,
-          durationMs,
-          remoteUrl: singleResult.record.remoteUrl
-        });
-      } catch (error) {
-        const cachedSettings = getPublishFailureSettings(error);
-        if (cachedSettings) {
-          currentSettings = cachedSettings;
-        } else {
-          const providerOptionCache = getPublishFailureProviderOptionCache(error);
-          if (providerOptionCache) {
-            currentSettings = mergeProviderOptionCacheIntoSettings(currentSettings, providerOptionCache);
-          }
-        }
-        const normalizedError = error instanceof Error ? error : new Error(String(error));
-        const durationMs = Date.now() - startedAt;
-        results.push({
-          targetId: target.id,
-          targetName: target.name,
-          action,
-          status: "failure",
-          durationMs,
-          error: normalizedError
-        });
-        await this.emitProgressSafely(options, {
-          targetId: target.id,
-          targetName: target.name,
-          action,
-          status: "failure",
-          currentIndex,
-          totalCount,
-          durationMs,
-          error: normalizedError
-        });
-      }
-    }
-    const successCount = results.filter((item) => item.status === "success").length;
-    const failureCount = results.length - successCount;
-    return {
-      results,
-      totalCount,
-      successCount,
-      failureCount,
-      settings: currentSettings
-    };
-  }
-};
 
 // src/core/webPublishConfig.ts
 function readString(value) {
@@ -35500,409 +34660,454 @@ async function resolveJuejinPublishInput(note, target, overrides, runtime) {
   };
 }
 
-// src/i18n/index.ts
-var import_obsidian3 = require("obsidian");
-
-// src/i18n/locales.ts
-function normalizeLocale(input) {
-  if (!input) {
-    return "en";
-  }
-  const value = input.toLowerCase();
-  if (value.startsWith("zh")) {
-    return "zh-CN";
-  }
-  return "en";
+// src/providers/csdnProvider.ts
+function buildHeaders(target) {
+  return {
+    Cookie: target.cookie
+  };
 }
+var CSDN_X_CA_KEY = "203803574";
+var CSDN_APP_SECRET = "9znpamsyl2c7cdrr9sas0le9vbc3r6ba";
+function generateXCaSignature(url, method, accept, nonce, contentType) {
+  const parsedUrl = new URL(url);
+  const path = method === "GET" ? `${parsedUrl.pathname}${parsedUrl.search}` : parsedUrl.pathname;
+  const stringToSign = `${method}
+${accept}
 
-// src/i18n/messages.ts
-var messages = {
-  en: {
-    "menu.publish": "Publish",
-    "menu.dashboard": "Dashboard",
-    "menu.quickPublish": "Quick Publish",
-    "menu.normalPublish": "Normal Publish",
-    "menu.batchPublish": "Batch Publish",
-    "menu.publishSettings": "Publish Settings",
-    "menu.quickPublish.empty.title": "Enable at least one publish target",
-    "menu.quickPublish.empty.help": "No quick publish targets are enabled",
-    "notice.dashboard.openFailed": "Unable to open the publisher dashboard.",
-    "notice.publish.noActiveMarkdown": "Open a Markdown note before publishing.",
-    "notice.publish.noEnabledTargets": "Configure at least one enabled publish target first.",
-    "notice.quickPublish.targetUnavailable": "Enable the selected publish target before using Quick Publish.",
-    "notice.publish.action.published": "published",
-    "notice.publish.action.updated": "updated",
-    "notice.publish.started": 'Publishing "{note}" to {target}...',
-    "notice.publish.succeeded": "Publish succeeded: {target} {action}.",
-    "notice.publish.failed": "Publish failed: {error}",
-    "notice.frontmatter.inserted": "Publish frontmatter template inserted.",
-    "notice.frontmatter.skippedExisting": "Skipped: active note already has frontmatter.",
-    "notice.frontmatter.noActiveMarkdown": "Open a Markdown note before inserting publish frontmatter.",
-    "notice.batch.selectOne": "Select at least one target before running batch publish.",
-    "notice.batch.finished": "Batch publish finished: {successCount} succeeded, {failureCount} failed.",
-    "notice.batch.failed": "Batch publish failed: {error}",
-    "settings.modal.title.addTarget": "Add {provider} Target",
-    "settings.modal.title.editTarget": "Edit {provider} Target",
-    "settings.modal.auth.title": "Authorization",
-    "settings.modal.auth.status.authorized": "Status: Authorized",
-    "settings.modal.auth.status.cookiePending": "Status: Cookie set, validation pending",
-    "settings.modal.auth.status.notAuthorized": "Status: Not authorized",
-    "settings.modal.auth.account": "Account: {name}",
-    "settings.modal.auth.unknownAccount": "Unknown",
-    "settings.modal.auth.lastAuth": "Last auth: {timestamp}",
-    "settings.modal.auth.lastValidated": "Last validated: {timestamp}",
-    "settings.modal.auth.action.authorize": "Browser Authorization",
-    "settings.modal.auth.action.authorizing": "Authorizing...",
-    "settings.modal.auth.action.validate": "Validate",
-    "settings.modal.auth.action.validating": "Validating...",
-    "settings.modal.auth.action.clear": "Clear Authorization",
-    "settings.modal.auth.action.clearing": "Clearing...",
-    "settings.modal.auth.success.authorized": "Browser authorization completed.",
-    "settings.modal.auth.success.validated": "Validation completed.",
-    "settings.modal.auth.success.cleared": "Authorization data cleared.",
-    "settings.modal.action.cancel": "Cancel",
-    "settings.modal.action.save": "Save",
-    "settings.tab.llm": "AI",
-    "settings.tab.other": "Other",
-    "settings.llm.title": "AI Settings",
-    "settings.llm.description": "Configure the shared LLM provider used for title and summary generation.",
-    "settings.llm.enabled": "Enable AI assistance",
-    "settings.llm.vendor": "Vendor",
-    "settings.llm.model": "Model",
-    "settings.llm.apiKey": "API Key",
-    "settings.llm.endpointOverride": "Endpoint Override",
-    "settings.llm.temperature": "Temperature",
-    "settings.llm.timeoutMs": "Timeout (ms)",
-    "settings.llm.maxInputChars": "Max Input Characters",
-    "settings.frontmatter.title": "Frontmatter Automation",
-    "settings.frontmatter.description": "Automatically insert publish frontmatter when creating Markdown notes.",
-    "settings.frontmatter.enabled": "Enable frontmatter automation",
-    "settings.frontmatter.includeOptionComments": "Include option comments",
-    "dashboard.card.configuredTargets.label": "Configured Targets",
-    "dashboard.card.configuredTargets.help": "All saved publish destinations",
-    "dashboard.card.enabledTargets.label": "Enabled Targets",
-    "dashboard.card.enabledTargets.help": "Targets available to publish now",
-    "dashboard.card.lastPublish.label": "Last Publish",
-    "dashboard.card.lastPublish.help": "Most recent publish record",
-    "dashboard.section.targetStatus": "Target Status",
-    "dashboard.section.recentRecords": "Recent Records",
-    "dashboard.section.shortcuts": "Shortcuts",
-    "dashboard.empty.targets": "No publish targets configured yet.",
-    "dashboard.empty.records": "No publish activity recorded yet.",
-    "dashboard.status.neverPublished": "Never published",
-    "dashboard.status.enabled": "Enabled",
-    "dashboard.status.disabled": "Disabled",
-    "dashboard.timestamp.never": "Never",
-    "dashboard.shortcuts.normalPublish": "Normal Publish",
-    "dashboard.shortcuts.batchPublish": "Batch Publish",
-    "dashboard.shortcuts.publishSettings": "Publish Settings",
-    "publish.shared.note": "Note",
-    "publish.shared.path": "Path",
-    "publish.shared.target": "Target",
-    "publish.shared.targets": "Targets",
-    "publish.shared.empty.noEnabledTargets": "No enabled publish targets. Open settings to enable at least one target.",
-    "publish.shared.action.openSettings": "Open Publish Settings",
-    "publish.shared.summary.action.publish": "Publish",
-    "publish.shared.summary.action.update": "Update",
-    "publish.shared.summary.publishNewPost": "Publish new post",
-    "publish.shared.summary.updateExistingPost": "Update existing post",
-    "publish.shared.summary.disabledSuffix": " (disabled)",
-    "publish.shared.error.last": "Last error: {error}",
-    "publish.shared.error.targetUnavailable": "Selected target is not available.",
-    "publish.normal.title": "Normal Publish",
-    "publish.normal.subtitle": "Review one enabled target at a time and publish only the current destination.",
-    "publish.normal.loading": "Loading publish details...",
-    "publish.normal.noteCard.title": "Current Note",
-    "publish.normal.sidebar.description": "Switch targets on the left. Detailed fields stay scoped to the current target only.",
-    "publish.normal.section.common": "Common Fields",
-    "publish.normal.section.details": "Details",
-    "publish.normal.section.currentTarget": "Current target: {target}",
-    "publish.normal.field.title": "Article Title",
-    "publish.normal.field.slug": "Slug",
-    "publish.normal.field.excerpt": "Excerpt",
-    "publish.normal.field.tags": "Tags",
-    "publish.normal.field.categories": "Categories",
-    "publish.normal.field.status": "Status",
-    "publish.normal.field.password": "Password",
-    "publish.normal.field.publicLevel": "Visibility",
-    "publish.normal.field.columnId": "Column ID",
-    "publish.normal.field.categoryId": "Category",
-    "publish.normal.field.tagIds": "Tags",
-    "publish.normal.field.briefContent": "Brief Content",
-    "publish.normal.ai.generate": "Generate",
-    "publish.normal.ai.regenerate": "Regenerate",
-    "publish.normal.ai.optimizeTitle": "Optimize Title",
-    "publish.normal.ai.generating": "Generating...",
-    "publish.normal.ai.notConfigured": "Configure AI in settings before using generation.",
-    "publish.normal.remote.loading": "Loading remote options...",
-    "publish.normal.remote.fallback": "Remote options failed to load. Switched to manual input.",
-    "publish.normal.remote.selectHint": "Remote options are available for this field.",
-    "publish.normal.remote.manualHint": "Remote options are available, but you can still edit the value manually.",
-    "publish.normal.remote.dropdownInputHint": "Click the field to open remote categories, or type manually and press Enter to confirm.",
-    "publish.normal.remote.manualFallbackHint": "Enter the raw ID manually when remote options are unavailable.",
-    "publish.normal.option.status.draft": "Draft",
-    "publish.normal.option.status.publish": "Published",
-    "publish.normal.option.status.private": "Private",
-    "publish.normal.option.status.pending": "Pending Review",
-    "publish.normal.option.visibility.private": "Private",
-    "publish.normal.option.visibility.public": "Public",
-    "publish.normal.summary.selectedAction": "Selected action: {action}",
-    "publish.quickJuejin.title": "Complete Juejin Metadata",
-    "publish.quickJuejin.subtitle": "Quick Publish to Juejin requires category and tags. These values apply only to this publish.",
-    "publish.quickJuejin.action.cancel": "Cancel",
-    "publish.quickJuejin.action.confirm": "Continue Publishing",
-    "publish.batch.title": "Batch Publish",
-    "publish.batch.wizard.step1.title": "Select Targets",
-    "publish.batch.wizard.step2.title": "Edit Fields",
-    "publish.batch.wizard.step1.selectTargets": "Choose which enabled targets should be included in this batch run.",
-    "publish.batch.wizard.step1.selectedCount": "{selectedCount} targets selected.",
-    "publish.batch.wizard.step1.action.next": "Next: Edit Fields",
-    "publish.batch.wizard.step2.commonFields": "Common Fields",
-    "publish.batch.wizard.step2.targetFields": "Target Fields",
-    "publish.batch.wizard.step2.action.prev": "Back: Select Targets",
-    "publish.batch.wizard.step2.action.publish": "Start Publishing",
-    "publish.batch.wizard.step3.title": "Run Batch Publish",
-    "publish.batch.wizard.step3.publishing": "Publishing",
-    "publish.batch.wizard.step3.completed": "Publish Completed",
-    "publish.batch.wizard.step3.summary": "Summary: {successCount} succeeded, {failureCount} failed",
-    "publish.batch.wizard.step3.action.background": "Run in Background",
-    "publish.batch.wizard.step3.action.close": "Close",
-    "publish.batch.wizard.status.waiting": "Waiting",
-    "publish.batch.wizard.status.publishing": "Publishing",
-    "publish.batch.wizard.status.success": "Success",
-    "publish.batch.wizard.status.failed": "Failed",
-    "publish.batch.button.run": "Run Batch Publish",
-    "publish.batch.summary.selected": "Selected {selectedCount} targets ({publishCount} publish, {updateCount} update).",
-    "publish.batch.running": "Batch publish is running sequentially. Please wait...",
-    "publish.batch.error.fatal": "Batch failed before completion: {error}",
-    "publish.batch.results.title": "Batch Results",
-    "publish.batch.results.summary": "Completed {totalCount} targets: {successCount} succeeded, {failureCount} failed.",
-    "publish.batch.results.item.success": "{targetName}: success ({action}){remoteDetail}",
-    "publish.batch.results.item.failed": "{targetName}: failed ({action}) - {error}",
-    "publish.batch.results.unknownError": "Unknown error",
-    "publish.batch.validation.zhihu.columnIdRequired": "Zhihu publish requires a columnId.",
-    "publish.batch.validation.juejin.categoryIdRequired": "Juejin publish requires a categoryId.",
-    "publish.batch.validation.juejin.tagIdsRequired": "Juejin publish requires at least one tagId.",
-    "notice.batch.invalidDraft": "Fix the invalid target draft before starting batch publish.",
-    "i18n.only-en.demo": "English only message"
-  },
-  "zh-CN": {
-    "menu.publish": "\u53D1\u5E03",
-    "menu.dashboard": "\u4EEA\u8868\u76D8",
-    "menu.quickPublish": "\u5FEB\u901F\u53D1\u5E03",
-    "menu.normalPublish": "\u666E\u901A\u53D1\u5E03",
-    "menu.batchPublish": "\u6279\u91CF\u53D1\u5E03",
-    "menu.publishSettings": "\u53D1\u5E03\u8BBE\u7F6E",
-    "menu.quickPublish.empty.title": "\u8BF7\u81F3\u5C11\u542F\u7528\u4E00\u4E2A\u53D1\u5E03\u76EE\u6807",
-    "menu.quickPublish.empty.help": "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684\u5FEB\u901F\u53D1\u5E03\u76EE\u6807",
-    "notice.dashboard.openFailed": "\u65E0\u6CD5\u6253\u5F00\u53D1\u5E03\u4EEA\u8868\u76D8\u3002",
-    "notice.publish.noActiveMarkdown": "\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A Markdown \u7B14\u8BB0\u518D\u53D1\u5E03\u3002",
-    "notice.publish.noEnabledTargets": "\u8BF7\u5148\u914D\u7F6E\u5E76\u542F\u7528\u81F3\u5C11\u4E00\u4E2A\u53D1\u5E03\u76EE\u6807\u3002",
-    "notice.quickPublish.targetUnavailable": "\u8BF7\u5148\u542F\u7528\u6240\u9009\u53D1\u5E03\u76EE\u6807\u540E\u518D\u4F7F\u7528\u5FEB\u901F\u53D1\u5E03\u3002",
-    "notice.publish.action.published": "\u53D1\u5E03",
-    "notice.publish.action.updated": "\u66F4\u65B0",
-    "notice.publish.started": "\u6B63\u5728\u53D1\u5E03\u201C{note}\u201D\u5230 {target}...",
-    "notice.publish.succeeded": "\u53D1\u5E03\u6210\u529F\uFF1A{target} {action}\u3002",
-    "notice.publish.failed": "\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
-    "notice.frontmatter.inserted": "\u5DF2\u63D2\u5165\u53D1\u5E03 frontmatter \u6A21\u677F\u3002",
-    "notice.frontmatter.skippedExisting": "\u5DF2\u8DF3\u8FC7\uFF1A\u5F53\u524D\u7B14\u8BB0\u5DF2\u6709 frontmatter\u3002",
-    "notice.frontmatter.noActiveMarkdown": "\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A Markdown \u7B14\u8BB0\u518D\u63D2\u5165\u53D1\u5E03 frontmatter\u3002",
-    "notice.batch.selectOne": "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E00\u4E2A\u76EE\u6807\u540E\u518D\u6267\u884C\u6279\u91CF\u53D1\u5E03\u3002",
-    "notice.batch.finished": "\u6279\u91CF\u53D1\u5E03\u5B8C\u6210\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
-    "notice.batch.failed": "\u6279\u91CF\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
-    "settings.modal.title.addTarget": "\u6DFB\u52A0 {provider} \u76EE\u6807",
-    "settings.modal.title.editTarget": "\u7F16\u8F91 {provider} \u76EE\u6807",
-    "settings.modal.auth.title": "\u6388\u6743",
-    "settings.modal.auth.status.authorized": "\u72B6\u6001\uFF1A\u5DF2\u6388\u6743",
-    "settings.modal.auth.status.cookiePending": "\u72B6\u6001\uFF1A\u5DF2\u8BBE\u7F6E Cookie\uFF0C\u5F85\u6821\u9A8C",
-    "settings.modal.auth.status.notAuthorized": "\u72B6\u6001\uFF1A\u672A\u6388\u6743",
-    "settings.modal.auth.account": "\u8D26\u53F7\uFF1A{name}",
-    "settings.modal.auth.unknownAccount": "\u672A\u77E5",
-    "settings.modal.auth.lastAuth": "\u4E0A\u6B21\u6388\u6743\uFF1A{timestamp}",
-    "settings.modal.auth.lastValidated": "\u4E0A\u6B21\u6821\u9A8C\uFF1A{timestamp}",
-    "settings.modal.auth.action.authorize": "\u7F51\u9875\u6388\u6743",
-    "settings.modal.auth.action.authorizing": "\u6388\u6743\u4E2D...",
-    "settings.modal.auth.action.validate": "\u6821\u9A8C\u914D\u7F6E",
-    "settings.modal.auth.action.validating": "\u6821\u9A8C\u4E2D...",
-    "settings.modal.auth.action.clear": "\u6E05\u9664\u6388\u6743",
-    "settings.modal.auth.action.clearing": "\u6E05\u9664\u4E2D...",
-    "settings.modal.auth.success.authorized": "\u7F51\u9875\u6388\u6743\u5B8C\u6210\u3002",
-    "settings.modal.auth.success.validated": "\u6821\u9A8C\u5B8C\u6210\u3002",
-    "settings.modal.auth.success.cleared": "\u6388\u6743\u4FE1\u606F\u5DF2\u6E05\u9664\u3002",
-    "settings.modal.action.cancel": "\u53D6\u6D88",
-    "settings.modal.action.save": "\u4FDD\u5B58",
-    "settings.tab.llm": "AI",
-    "settings.tab.other": "\u5176\u4ED6",
-    "settings.llm.title": "AI \u8BBE\u7F6E",
-    "settings.llm.description": "\u914D\u7F6E\u7528\u4E8E\u6807\u9898\u548C\u6458\u8981\u751F\u6210\u7684\u5171\u4EAB LLM Provider\u3002",
-    "settings.llm.enabled": "\u542F\u7528 AI \u8F85\u52A9",
-    "settings.llm.vendor": "\u63D0\u4F9B\u5546",
-    "settings.llm.model": "\u6A21\u578B",
-    "settings.llm.apiKey": "API Key",
-    "settings.llm.endpointOverride": "\u81EA\u5B9A\u4E49 Endpoint",
-    "settings.llm.temperature": "\u6E29\u5EA6",
-    "settings.llm.timeoutMs": "\u8D85\u65F6\uFF08\u6BEB\u79D2\uFF09",
-    "settings.llm.maxInputChars": "\u6700\u5927\u8F93\u5165\u5B57\u7B26\u6570",
-    "settings.frontmatter.title": "Frontmatter \u81EA\u52A8\u5316",
-    "settings.frontmatter.description": "\u521B\u5EFA Markdown \u7B14\u8BB0\u65F6\u81EA\u52A8\u63D2\u5165\u53D1\u5E03 frontmatter \u6A21\u677F\u3002",
-    "settings.frontmatter.enabled": "\u542F\u7528 frontmatter \u81EA\u52A8\u5316",
-    "settings.frontmatter.includeOptionComments": "\u5305\u542B\u53EF\u9009\u9879\u6CE8\u91CA",
-    "dashboard.card.configuredTargets.label": "\u5DF2\u914D\u7F6E\u76EE\u6807",
-    "dashboard.card.configuredTargets.help": "\u6240\u6709\u5DF2\u4FDD\u5B58\u7684\u53D1\u5E03\u76EE\u6807",
-    "dashboard.card.enabledTargets.label": "\u542F\u7528\u76EE\u6807",
-    "dashboard.card.enabledTargets.help": "\u5F53\u524D\u53EF\u76F4\u63A5\u53D1\u5E03\u7684\u76EE\u6807",
-    "dashboard.card.lastPublish.label": "\u6700\u8FD1\u53D1\u5E03",
-    "dashboard.card.lastPublish.help": "\u6700\u65B0\u4E00\u6761\u53D1\u5E03\u8BB0\u5F55",
-    "dashboard.section.targetStatus": "\u76EE\u6807\u72B6\u6001",
-    "dashboard.section.recentRecords": "\u6700\u8FD1\u8BB0\u5F55",
-    "dashboard.section.shortcuts": "\u5FEB\u6377\u64CD\u4F5C",
-    "dashboard.empty.targets": "\u5C1A\u672A\u914D\u7F6E\u4EFB\u4F55\u53D1\u5E03\u76EE\u6807\u3002",
-    "dashboard.empty.records": "\u5C1A\u65E0\u53D1\u5E03\u8BB0\u5F55\u3002",
-    "dashboard.status.neverPublished": "\u4ECE\u672A\u53D1\u5E03",
-    "dashboard.status.enabled": "\u5DF2\u542F\u7528",
-    "dashboard.status.disabled": "\u5DF2\u7981\u7528",
-    "dashboard.timestamp.never": "\u4ECE\u672A",
-    "dashboard.shortcuts.normalPublish": "\u666E\u901A\u53D1\u5E03",
-    "dashboard.shortcuts.batchPublish": "\u6279\u91CF\u53D1\u5E03",
-    "dashboard.shortcuts.publishSettings": "\u53D1\u5E03\u8BBE\u7F6E",
-    "publish.shared.note": "\u7B14\u8BB0",
-    "publish.shared.path": "\u8DEF\u5F84",
-    "publish.shared.target": "\u76EE\u6807",
-    "publish.shared.targets": "\u76EE\u6807\u5217\u8868",
-    "publish.shared.empty.noEnabledTargets": "\u5F53\u524D\u6CA1\u6709\u542F\u7528\u7684\u53D1\u5E03\u76EE\u6807\u3002\u8BF7\u5148\u6253\u5F00\u8BBE\u7F6E\u542F\u7528\u81F3\u5C11\u4E00\u4E2A\u76EE\u6807\u3002",
-    "publish.shared.action.openSettings": "\u6253\u5F00\u53D1\u5E03\u8BBE\u7F6E",
-    "publish.shared.summary.action.publish": "\u53D1\u5E03",
-    "publish.shared.summary.action.update": "\u66F4\u65B0",
-    "publish.shared.summary.publishNewPost": "\u53D1\u5E03\u65B0\u6587\u7AE0",
-    "publish.shared.summary.updateExistingPost": "\u66F4\u65B0\u5DF2\u6709\u6587\u7AE0",
-    "publish.shared.summary.disabledSuffix": "\uFF08\u5DF2\u7981\u7528\uFF09",
-    "publish.shared.error.last": "\u6700\u8FD1\u9519\u8BEF\uFF1A{error}",
-    "publish.shared.error.targetUnavailable": "\u6240\u9009\u76EE\u6807\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
-    "publish.normal.title": "\u666E\u901A\u53D1\u5E03",
-    "publish.normal.subtitle": "\u4E00\u6B21\u53EA\u7F16\u8F91\u4E00\u4E2A\u5DF2\u542F\u7528\u76EE\u6807\uFF0C\u5E76\u53EA\u53D1\u5E03\u5F53\u524D\u9009\u4E2D\u7684\u6E20\u9053\u3002",
-    "publish.normal.loading": "\u6B63\u5728\u52A0\u8F7D\u53D1\u5E03\u8BE6\u60C5...",
-    "publish.normal.noteCard.title": "\u5F53\u524D\u7B14\u8BB0",
-    "publish.normal.sidebar.description": "\u5DE6\u4FA7\u5207\u6362\u76EE\u6807\uFF0C\u53F3\u4FA7\u53EA\u7F16\u8F91\u5F53\u524D\u76EE\u6807\u7684\u6309\u6B21\u8986\u76D6\u5B57\u6BB5\u3002",
-    "publish.normal.section.common": "\u516C\u5171\u5B57\u6BB5",
-    "publish.normal.section.details": "\u8BE6\u7EC6\u8BBE\u7F6E",
-    "publish.normal.section.currentTarget": "\u5F53\u524D\u76EE\u6807\uFF1A{target}",
-    "publish.normal.field.title": "\u6587\u7AE0\u6807\u9898",
-    "publish.normal.field.slug": "\u522B\u540D",
-    "publish.normal.field.excerpt": "\u6458\u8981",
-    "publish.normal.field.tags": "\u6807\u7B7E",
-    "publish.normal.field.categories": "\u5206\u7C7B",
-    "publish.normal.field.status": "\u72B6\u6001",
-    "publish.normal.field.password": "\u5BC6\u7801\u4FDD\u62A4",
-    "publish.normal.field.publicLevel": "\u53EF\u89C1\u7EA7\u522B",
-    "publish.normal.field.columnId": "\u4E13\u680F ID",
-    "publish.normal.field.categoryId": "\u5206\u7C7B",
-    "publish.normal.field.tagIds": "\u6807\u7B7E",
-    "publish.normal.field.briefContent": "\u6458\u8981\u5185\u5BB9",
-    "publish.normal.ai.generate": "\u751F\u6210",
-    "publish.normal.ai.regenerate": "\u91CD\u65B0\u751F\u6210",
-    "publish.normal.ai.optimizeTitle": "\u4F18\u5316\u6807\u9898",
-    "publish.normal.ai.generating": "\u751F\u6210\u4E2D...",
-    "publish.normal.ai.notConfigured": "\u4F7F\u7528\u751F\u6210\u529F\u80FD\u524D\uFF0C\u8BF7\u5148\u5728\u8BBE\u7F6E\u91CC\u5B8C\u6210 AI \u914D\u7F6E\u3002",
-    "publish.normal.remote.loading": "\u6B63\u5728\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879...",
-    "publish.normal.remote.fallback": "\u8FDC\u7AEF\u9009\u9879\u62C9\u53D6\u5931\u8D25\uFF0C\u5DF2\u5207\u6362\u4E3A\u624B\u52A8\u8F93\u5165\u3002",
-    "publish.normal.remote.selectHint": "\u8BE5\u5B57\u6BB5\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF0C\u53EF\u76F4\u63A5\u9009\u62E9\u3002",
-    "publish.normal.remote.manualHint": "\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF1B\u5982\u6709\u9700\u8981\uFF0C\u4ECD\u53EF\u624B\u52A8\u7F16\u8F91\u539F\u59CB\u503C\u3002",
-    "publish.normal.remote.dropdownInputHint": "\u70B9\u51FB\u8F93\u5165\u6846\u5C55\u5F00\u8FDC\u7AEF\u5206\u7C7B\u5217\u8868\uFF1B\u4E5F\u53EF\u624B\u52A8\u8F93\u5165\u5E76\u6309 Enter \u786E\u8BA4\u3002",
-    "publish.normal.remote.manualFallbackHint": "\u5F53\u524D\u65E0\u6CD5\u4F7F\u7528\u8FDC\u7AEF\u9009\u9879\uFF0C\u8BF7\u624B\u52A8\u586B\u5199\u539F\u59CB ID\u3002",
-    "publish.normal.option.status.draft": "\u8349\u7A3F",
-    "publish.normal.option.status.publish": "\u5DF2\u53D1\u5E03",
-    "publish.normal.option.status.private": "\u79C1\u5BC6",
-    "publish.normal.option.status.pending": "\u5F85\u5BA1\u6838",
-    "publish.normal.option.visibility.private": "\u79C1\u5BC6",
-    "publish.normal.option.visibility.public": "\u516C\u5F00",
-    "publish.normal.summary.selectedAction": "\u5F53\u524D\u64CD\u4F5C\uFF1A{action}",
-    "publish.quickJuejin.title": "\u8865\u5168\u6398\u91D1\u53D1\u5E03\u4FE1\u606F",
-    "publish.quickJuejin.subtitle": "\u5FEB\u901F\u53D1\u5E03\u5230\u7A00\u571F\u6398\u91D1\u524D\uFF0C\u9700\u8981\u5148\u586B\u5199\u5206\u7C7B\u548C\u6807\u7B7E\u3002\u672C\u6B21\u586B\u5199\u4EC5\u7528\u4E8E\u5F53\u524D\u8FD9\u6B21\u53D1\u5E03\u3002",
-    "publish.quickJuejin.action.cancel": "\u53D6\u6D88",
-    "publish.quickJuejin.action.confirm": "\u7EE7\u7EED\u53D1\u5E03",
-    "publish.batch.title": "\u6279\u91CF\u53D1\u5E03",
-    "publish.batch.wizard.step1.title": "\u9009\u62E9\u76EE\u6807",
-    "publish.batch.wizard.step2.title": "\u7F16\u8F91\u5B57\u6BB5",
-    "publish.batch.wizard.step1.selectTargets": "\u9009\u62E9\u672C\u6B21\u6279\u91CF\u53D1\u5E03\u8981\u5305\u542B\u7684\u5DF2\u542F\u7528\u76EE\u6807\u3002",
-    "publish.batch.wizard.step1.selectedCount": "\u5DF2\u9009\u62E9 {selectedCount} \u4E2A\u76EE\u6807\u3002",
-    "publish.batch.wizard.step1.action.next": "\u4E0B\u4E00\u6B65\uFF1A\u7F16\u8F91\u5B57\u6BB5",
-    "publish.batch.wizard.step2.commonFields": "\u516C\u5171\u5B57\u6BB5",
-    "publish.batch.wizard.step2.targetFields": "\u76EE\u6807\u7279\u5B9A\u5B57\u6BB5",
-    "publish.batch.wizard.step2.action.prev": "\u4E0A\u4E00\u6B65\uFF1A\u9009\u62E9\u76EE\u6807",
-    "publish.batch.wizard.step2.action.publish": "\u5F00\u59CB\u53D1\u5E03",
-    "publish.batch.wizard.step3.title": "\u6267\u884C\u53D1\u5E03",
-    "publish.batch.wizard.step3.publishing": "\u53D1\u5E03\u4E2D",
-    "publish.batch.wizard.step3.completed": "\u53D1\u5E03\u5B8C\u6210",
-    "publish.batch.wizard.step3.summary": "\u6C47\u603B\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A",
-    "publish.batch.wizard.step3.action.background": "\u540E\u53F0\u8FD0\u884C",
-    "publish.batch.wizard.step3.action.close": "\u5173\u95ED",
-    "publish.batch.wizard.status.waiting": "\u7B49\u5F85\u4E2D",
-    "publish.batch.wizard.status.publishing": "\u53D1\u5E03\u4E2D",
-    "publish.batch.wizard.status.success": "\u6210\u529F",
-    "publish.batch.wizard.status.failed": "\u5931\u8D25",
-    "publish.batch.button.run": "\u6267\u884C\u6279\u91CF\u53D1\u5E03",
-    "publish.batch.summary.selected": "\u5DF2\u9009\u62E9 {selectedCount} \u4E2A\u76EE\u6807\uFF08\u53D1\u5E03 {publishCount} \u4E2A\uFF0C\u66F4\u65B0 {updateCount} \u4E2A\uFF09\u3002",
-    "publish.batch.running": "\u6279\u91CF\u53D1\u5E03\u6B63\u5728\u6309\u987A\u5E8F\u6267\u884C\uFF0C\u8BF7\u7A0D\u5019...",
-    "publish.batch.error.fatal": "\u6279\u91CF\u53D1\u5E03\u672A\u5B8C\u6210\u5373\u5931\u8D25\uFF1A{error}",
-    "publish.batch.results.title": "\u6279\u91CF\u7ED3\u679C",
-    "publish.batch.results.summary": "\u5171\u5B8C\u6210 {totalCount} \u4E2A\u76EE\u6807\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
-    "publish.batch.results.item.success": "{targetName}\uFF1A\u6210\u529F\uFF08{action}\uFF09{remoteDetail}",
-    "publish.batch.results.item.failed": "{targetName}\uFF1A\u5931\u8D25\uFF08{action}\uFF09- {error}",
-    "publish.batch.results.unknownError": "\u672A\u77E5\u9519\u8BEF",
-    "publish.batch.validation.zhihu.columnIdRequired": "\u77E5\u4E4E\u53D1\u5E03\u8981\u6C42\u586B\u5199\u4E13\u680F ID\u3002",
-    "publish.batch.validation.juejin.categoryIdRequired": "\u7A00\u571F\u6398\u91D1\u53D1\u5E03\u8981\u6C42\u586B\u5199\u5206\u7C7B ID\u3002",
-    "publish.batch.validation.juejin.tagIdsRequired": "\u7A00\u571F\u6398\u91D1\u53D1\u5E03\u8981\u6C42\u81F3\u5C11\u586B\u5199\u4E00\u4E2A\u6807\u7B7E ID\u3002",
-    "notice.batch.invalidDraft": "\u8BF7\u5148\u4FEE\u6B63\u65E0\u6548\u7684\u76EE\u6807\u8349\u7A3F\u540E\u518D\u5F00\u59CB\u6279\u91CF\u53D1\u5E03\u3002"
+${contentType}
+
+x-ca-key:${CSDN_X_CA_KEY}
+x-ca-nonce:${nonce}
+${path}`;
+  return (0, import_node_crypto.createHmac)("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
+}
+function buildSignedHeaders(target, url, method, contentType) {
+  const accept = "*/*";
+  const nonce = (0, import_node_crypto.randomUUID)();
+  const signature = generateXCaSignature(url, method, accept, nonce, contentType);
+  return {
+    ...buildHeaders(target),
+    accept,
+    "content-type": contentType,
+    "x-ca-key": CSDN_X_CA_KEY,
+    "x-ca-nonce": nonce,
+    "x-ca-signature": signature,
+    "x-ca-signature-headers": "x-ca-key,x-ca-nonce"
+  };
+}
+function readJsonPayload(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+function readCookieValue(cookieHeader, key) {
+  const pairs = cookieHeader.split(";").map((item) => item.trim()).filter(Boolean);
+  for (const pair of pairs) {
+    const [name, ...rest] = pair.split("=");
+    if (name === key) {
+      return rest.join("=").trim();
+    }
+  }
+  return "";
+}
+function buildPublishPayload(note, html, categories, tags) {
+  return {
+    title: note.title,
+    markdowncontent: note.markdown,
+    content: html,
+    readType: "public",
+    level: 0,
+    tags: tags.join(","),
+    status: 0,
+    categories: categories.join(","),
+    type: "original",
+    original_link: "",
+    authorized_status: false,
+    Description: note.excerpt,
+    not_auto_saved: "1",
+    source: "pc_mdeditor",
+    cover_images: [],
+    cover_type: 1,
+    is_new: 1,
+    vote_id: 0,
+    resource_id: "",
+    pubStatus: "publish"
+  };
+}
+function getResponseMessage(response) {
+  const message = response.msg ?? response.message;
+  return typeof message === "string" && message.trim() ? message.trim() : "unknown error";
+}
+async function requestCsdn(target, url, method = "GET", body) {
+  const contentType = "application/json";
+  const response = await (0, import_obsidian3.requestUrl)({
+    url,
+    method,
+    headers: buildSignedHeaders(target, url, method, contentType),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`CSDN request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload(response);
+}
+function buildPreviewUrl(target, articleId) {
+  const username = readCookieValue(target.cookie, "UserName");
+  if (!username) {
+    return void 0;
+  }
+  return `https://blog.csdn.net/${username}/article/details/${articleId}`;
+}
+var CsdnProvider = class {
+  constructor(app) {
+    this.app = app;
+    this.provider = "csdn";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async loadNormalPublishOptions(target) {
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog/phoenix/console/v1/column/list?type=all"
+    );
+    const columns = [
+      ...response.data?.list?.column ?? [],
+      ...response.data?.list?.pay_column ?? []
+    ];
+    return {
+      csdnCategories: columns.filter((item) => item.id && item.edit_title).map((item) => ({
+        id: String(item.id),
+        label: item.edit_title ?? String(item.id),
+        description: item.column_url
+      })),
+      csdnTags: []
+    };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("CSDN target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const response = await requestCsdn(target, "https://bizapi.csdn.net/blog-console-api/v1/user/info");
+    if (!response.data?.username) {
+      throw new Error("CSDN validation failed: not logged in or cookie expired.");
+    }
+    return {
+      accountId: response.data?.username,
+      accountName: response.data?.username,
+      accountAvatarUrl: response.data?.avatar
+    };
+  }
+  async publish(note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : void 0
+    );
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
+      "POST",
+      buildPublishPayload(note, html, input.categories, input.tags)
+    );
+    if (response.code !== 200 || !response.data?.id) {
+      throw new Error(`CSDN publish failed: ${getResponseMessage(response)}`);
+    }
+    const articleId = String(response.data.id);
+    return {
+      remoteId: articleId,
+      remoteUrl: buildPreviewUrl(target, articleId)
+    };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : void 0
+    );
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
+      "POST",
+      {
+        id: remoteId,
+        title: note.title,
+        markdowncontent: note.markdown,
+        content: html,
+        tags: input.tags.join(","),
+        categories: input.categories.join(","),
+        Description: note.excerpt
+      }
+    );
+    if (response.code !== 200) {
+      throw new Error("CSDN update failed.");
+    }
+    return {
+      remoteId,
+      remoteUrl: buildPreviewUrl(target, remoteId)
+    };
+  }
+  async delete(remoteId, target) {
+    await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog/phoenix/console/v1/article/del",
+      "POST",
+      {
+        articleId: remoteId,
+        deep: false
+      }
+    );
+  }
+  async getPreviewUrl(remoteId, target) {
+    return buildPreviewUrl(target, remoteId);
   }
 };
 
-// src/i18n/index.ts
-function interpolate(template, params) {
-  if (!params) {
-    return template;
-  }
-  return template.replace(/\{(\w+)\}/g, (_match, name) => {
-    if (name in params) {
-      return String(params[name]);
-    }
-    return `{${name}}`;
-  });
-}
-function createI18n(localeInput) {
-  const locale = normalizeLocale(localeInput);
+// src/providers/juejinProvider.ts
+var import_obsidian4 = require("obsidian");
+function buildHeaders2(target) {
   return {
-    locale,
-    t(key, params) {
-      const template = messages[locale][key] ?? messages.en[key] ?? key;
-      return interpolate(template, params);
-    }
+    "Content-Type": "application/json",
+    Cookie: target.cookie
   };
 }
-function createI18nFromObsidianLanguage() {
-  return createI18n((0, import_obsidian3.getLanguage)());
+function readJsonPayload2(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
 }
+function encodeRemoteId(articleId, draftId) {
+  return `${articleId}_${draftId}`;
+}
+function decodeRemoteId(remoteId) {
+  const [articleId, draftId] = remoteId.split("_");
+  return {
+    articleId,
+    draftId
+  };
+}
+async function requestJuejin(target, url, method = "POST", body) {
+  const response = await (0, import_obsidian4.requestUrl)({
+    url,
+    method,
+    headers: buildHeaders2(target),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`Juejin request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload2(response);
+}
+function buildPreviewUrl2(articleId) {
+  return `https://juejin.cn/post/${articleId}`;
+}
+var JuejinProvider = class {
+  constructor() {
+    this.provider = "juejin";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async loadNormalPublishOptions(target) {
+    const categories = await requestJuejin(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_category_list",
+      "POST"
+    );
+    const tags = await requestJuejin(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_tag_list",
+      "POST",
+      {
+        cursor: "0",
+        key_word: "",
+        limit: 500,
+        sort_type: 1
+      }
+    );
+    return {
+      juejinCategories: (categories.data ?? []).filter((item) => item.category_id && item.category?.category_name).map((item) => ({
+        id: String(item.category_id),
+        label: item.category?.category_name ?? String(item.category_id)
+      })),
+      juejinTags: (tags.data ?? []).filter((item) => item.tag_id && item.tag?.tag_name).map((item) => ({
+        id: String(item.tag_id),
+        label: item.tag?.tag_name ?? String(item.tag_id)
+      }))
+    };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("Juejin target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const response = await requestJuejin(
+      target,
+      "https://api.juejin.cn/user_api/v1/user/get",
+      "GET"
+    );
+    if (response.err_no !== 0 || !response.data?.user_id) {
+      throw new Error(`Juejin validation failed: ${response.err_msg ?? "unknown error"}`);
+    }
+    return {
+      accountId: response.data.user_id,
+      accountName: response.data.user_name,
+      accountAvatarUrl: response.data.avatar_large
+    };
+  }
+  async publish(note, target, context, runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const resolved = await resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : void 0,
+      runtime
+    );
+    const input = resolved.input;
+    try {
+      const draftResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/create",
+        "POST",
+        {
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: []
+        }
+      );
+      const draftId = String(draftResponse.data?.id ?? "");
+      if (draftResponse.err_no !== 0 || !draftId) {
+        throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
+      }
+      const publishResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: []
+        }
+      );
+      const articleId = String(publishResponse.data?.article_id ?? "");
+      if (publishResponse.err_no !== 0 || !articleId) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      }
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl2(articleId),
+        providerOptionCache: resolved.providerOptionCache
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
+    }
+  }
+  async update(remoteId, note, target, context, runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const resolved = await resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : void 0,
+      runtime
+    );
+    const input = resolved.input;
+    const { articleId, draftId } = decodeRemoteId(remoteId);
+    try {
+      const draftResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/update",
+        "POST",
+        {
+          id: draftId,
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: []
+        }
+      );
+      if (draftResponse.err_no !== 0) {
+        throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
+      }
+      const publishResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: []
+        }
+      );
+      if (publishResponse.err_no !== 0) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      }
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl2(articleId),
+        providerOptionCache: resolved.providerOptionCache
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
+    }
+  }
+  async delete(remoteId, target) {
+    const { articleId } = decodeRemoteId(remoteId);
+    const response = await requestJuejin(
+      target,
+      "https://api.juejin.cn/content_api/v1/article/delete",
+      "POST",
+      {
+        article_id: articleId
+      }
+    );
+    if (response.err_no !== 0) {
+      throw new Error(`Juejin delete failed: ${response.err_msg ?? "unknown error"}`);
+    }
+  }
+  async getPreviewUrl(remoteId) {
+    const { articleId } = decodeRemoteId(remoteId);
+    return buildPreviewUrl2(articleId);
+  }
+};
 
 // src/providers/wordpressProvider.ts
 var import_obsidian5 = require("obsidian");
-
-// src/core/html.ts
-var import_obsidian4 = require("obsidian");
-async function renderMarkdownToHtml(app, markdown, sourcePath) {
-  const container = document.createElement("div");
-  const component = new import_obsidian4.Component();
-  component.load();
-  try {
-    await import_obsidian4.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
-    container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
-      copyButton.remove();
-    });
-    return container.innerHTML.trim();
-  } finally {
-    component.unload();
-  }
-}
-
-// src/providers/wordpressProvider.ts
 function tryParseJsonPayload(text) {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -35956,13 +35161,13 @@ async function requestJson(target, path, method = "GET", body) {
     `WordPress returned a non-JSON response. This usually means PHP warnings or other output are leaking into the REST API response. Raw response: ${snippet}`
   );
 }
-function slugify2(value) {
+function slugify(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
 }
 async function ensureTermIds(target, taxonomy, names) {
   const ids = [];
   for (const name of names) {
-    const slug = slugify2(name);
+    const slug = slugify(name);
     const existing = await requestJson(target, `/${taxonomy}?search=${encodeURIComponent(name)}`);
     const found = existing.find((item) => item.slug === slug || item.name.toLowerCase() === name.toLowerCase());
     if (found) {
@@ -36179,456 +35384,8 @@ var YuqueProvider = class {
   }
 };
 
-// src/providers/csdnProvider.ts
-var import_node_crypto3 = require("node:crypto");
-var import_obsidian7 = require("obsidian");
-function buildHeaders(target) {
-  return {
-    Cookie: target.cookie
-  };
-}
-var CSDN_X_CA_KEY = "203803574";
-var CSDN_APP_SECRET = "9znpamsyl2c7cdrr9sas0le9vbc3r6ba";
-function generateXCaSignature(url, method, accept, nonce, contentType) {
-  const parsedUrl = new URL(url);
-  const path = method === "GET" ? `${parsedUrl.pathname}${parsedUrl.search}` : parsedUrl.pathname;
-  const stringToSign = `${method}
-${accept}
-
-${contentType}
-
-x-ca-key:${CSDN_X_CA_KEY}
-x-ca-nonce:${nonce}
-${path}`;
-  return (0, import_node_crypto3.createHmac)("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
-}
-function buildSignedHeaders(target, url, method, contentType) {
-  const accept = "*/*";
-  const nonce = (0, import_node_crypto3.randomUUID)();
-  const signature = generateXCaSignature(url, method, accept, nonce, contentType);
-  return {
-    ...buildHeaders(target),
-    accept,
-    "content-type": contentType,
-    "x-ca-key": CSDN_X_CA_KEY,
-    "x-ca-nonce": nonce,
-    "x-ca-signature": signature,
-    "x-ca-signature-headers": "x-ca-key,x-ca-nonce"
-  };
-}
-function readJsonPayload(response) {
-  if (response.json !== void 0) {
-    return response.json;
-  }
-  if (response.text) {
-    return JSON.parse(response.text);
-  }
-  return {};
-}
-function readCookieValue(cookieHeader, key) {
-  const pairs = cookieHeader.split(";").map((item) => item.trim()).filter(Boolean);
-  for (const pair of pairs) {
-    const [name, ...rest] = pair.split("=");
-    if (name === key) {
-      return rest.join("=").trim();
-    }
-  }
-  return "";
-}
-function buildPublishPayload(note, html, categories, tags) {
-  return {
-    title: note.title,
-    markdowncontent: note.markdown,
-    content: html,
-    readType: "public",
-    level: 0,
-    tags: tags.join(","),
-    status: 0,
-    categories: categories.join(","),
-    type: "original",
-    original_link: "",
-    authorized_status: false,
-    Description: note.excerpt,
-    not_auto_saved: "1",
-    source: "pc_mdeditor",
-    cover_images: [],
-    cover_type: 1,
-    is_new: 1,
-    vote_id: 0,
-    resource_id: "",
-    pubStatus: "publish"
-  };
-}
-function getResponseMessage(response) {
-  const message = response.msg ?? response.message;
-  return typeof message === "string" && message.trim() ? message.trim() : "unknown error";
-}
-async function requestCsdn(target, url, method = "GET", body) {
-  const contentType = "application/json";
-  const response = await (0, import_obsidian7.requestUrl)({
-    url,
-    method,
-    headers: buildSignedHeaders(target, url, method, contentType),
-    body: body ? JSON.stringify(body) : void 0,
-    throw: false
-  });
-  if (response.status >= 400) {
-    throw new Error(`CSDN request failed (${response.status}): ${response.text}`);
-  }
-  return readJsonPayload(response);
-}
-function buildPreviewUrl(target, articleId) {
-  const username = readCookieValue(target.cookie, "UserName");
-  if (!username) {
-    return void 0;
-  }
-  return `https://blog.csdn.net/${username}/article/details/${articleId}`;
-}
-var CsdnProvider = class {
-  constructor(app) {
-    this.app = app;
-    this.provider = "csdn";
-  }
-  getMediaSupport(_target) {
-    return { mode: "unsupported" };
-  }
-  async loadNormalPublishOptions(target) {
-    const response = await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog/phoenix/console/v1/column/list?type=all"
-    );
-    const columns = [
-      ...response.data?.list?.column ?? [],
-      ...response.data?.list?.pay_column ?? []
-    ];
-    return {
-      csdnCategories: columns.filter((item) => item.id && item.edit_title).map((item) => ({
-        id: String(item.id),
-        label: item.edit_title ?? String(item.id),
-        description: item.column_url
-      })),
-      csdnTags: []
-    };
-  }
-  async validateConfig(target) {
-    if (!target.cookie) {
-      throw new Error("CSDN target is missing Cookie.");
-    }
-    await this.getAccountSummary(target);
-  }
-  async getAccountSummary(target) {
-    const response = await requestCsdn(target, "https://bizapi.csdn.net/blog-console-api/v1/user/info");
-    if (!response.data?.username) {
-      throw new Error("CSDN validation failed: not logged in or cookie expired.");
-    }
-    return {
-      accountId: response.data?.username,
-      accountName: response.data?.username,
-      accountAvatarUrl: response.data?.avatar
-    };
-  }
-  async publish(note, target, context, _runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(
-      note,
-      target,
-      context?.provider.provider === "csdn" ? context.provider : void 0
-    );
-    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
-    const response = await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
-      "POST",
-      buildPublishPayload(note, html, input.categories, input.tags)
-    );
-    if (response.code !== 200 || !response.data?.id) {
-      throw new Error(`CSDN publish failed: ${getResponseMessage(response)}`);
-    }
-    const articleId = String(response.data.id);
-    return {
-      remoteId: articleId,
-      remoteUrl: buildPreviewUrl(target, articleId)
-    };
-  }
-  async update(remoteId, note, target, context, _runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(
-      note,
-      target,
-      context?.provider.provider === "csdn" ? context.provider : void 0
-    );
-    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
-    const response = await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
-      "POST",
-      {
-        id: remoteId,
-        title: note.title,
-        markdowncontent: note.markdown,
-        content: html,
-        tags: input.tags.join(","),
-        categories: input.categories.join(","),
-        Description: note.excerpt
-      }
-    );
-    if (response.code !== 200) {
-      throw new Error("CSDN update failed.");
-    }
-    return {
-      remoteId,
-      remoteUrl: buildPreviewUrl(target, remoteId)
-    };
-  }
-  async delete(remoteId, target) {
-    await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog/phoenix/console/v1/article/del",
-      "POST",
-      {
-        articleId: remoteId,
-        deep: false
-      }
-    );
-  }
-  async getPreviewUrl(remoteId, target) {
-    return buildPreviewUrl(target, remoteId);
-  }
-};
-
-// src/providers/juejinProvider.ts
-var import_obsidian8 = require("obsidian");
-function buildHeaders2(target) {
-  return {
-    "Content-Type": "application/json",
-    Cookie: target.cookie
-  };
-}
-function readJsonPayload2(response) {
-  if (response.json !== void 0) {
-    return response.json;
-  }
-  if (response.text) {
-    return JSON.parse(response.text);
-  }
-  return {};
-}
-function encodeRemoteId(articleId, draftId) {
-  return `${articleId}_${draftId}`;
-}
-function decodeRemoteId(remoteId) {
-  const [articleId, draftId] = remoteId.split("_");
-  return {
-    articleId,
-    draftId
-  };
-}
-async function requestJuejin(target, url, method = "POST", body) {
-  const response = await (0, import_obsidian8.requestUrl)({
-    url,
-    method,
-    headers: buildHeaders2(target),
-    body: body ? JSON.stringify(body) : void 0,
-    throw: false
-  });
-  if (response.status >= 400) {
-    throw new Error(`Juejin request failed (${response.status}): ${response.text}`);
-  }
-  return readJsonPayload2(response);
-}
-function buildPreviewUrl2(articleId) {
-  return `https://juejin.cn/post/${articleId}`;
-}
-var JuejinProvider = class {
-  constructor() {
-    this.provider = "juejin";
-  }
-  getMediaSupport(_target) {
-    return { mode: "unsupported" };
-  }
-  async loadNormalPublishOptions(target) {
-    const categories = await requestJuejin(
-      target,
-      "https://api.juejin.cn/tag_api/v1/query_category_list",
-      "POST"
-    );
-    const tags = await requestJuejin(
-      target,
-      "https://api.juejin.cn/tag_api/v1/query_tag_list",
-      "POST",
-      {
-        cursor: "0",
-        key_word: "",
-        limit: 500,
-        sort_type: 1
-      }
-    );
-    return {
-      juejinCategories: (categories.data ?? []).filter((item) => item.category_id && item.category?.category_name).map((item) => ({
-        id: String(item.category_id),
-        label: item.category?.category_name ?? String(item.category_id)
-      })),
-      juejinTags: (tags.data ?? []).filter((item) => item.tag_id && item.tag?.tag_name).map((item) => ({
-        id: String(item.tag_id),
-        label: item.tag?.tag_name ?? String(item.tag_id)
-      }))
-    };
-  }
-  async validateConfig(target) {
-    if (!target.cookie) {
-      throw new Error("Juejin target is missing Cookie.");
-    }
-    await this.getAccountSummary(target);
-  }
-  async getAccountSummary(target) {
-    const response = await requestJuejin(
-      target,
-      "https://api.juejin.cn/user_api/v1/user/get",
-      "GET"
-    );
-    if (response.err_no !== 0 || !response.data?.user_id) {
-      throw new Error(`Juejin validation failed: ${response.err_msg ?? "unknown error"}`);
-    }
-    return {
-      accountId: response.data.user_id,
-      accountName: response.data.user_name,
-      accountAvatarUrl: response.data.avatar_large
-    };
-  }
-  async publish(note, target, context, runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const resolved = await resolveJuejinPublishInput(
-      note,
-      target,
-      context?.provider.provider === "juejin" ? context.provider : void 0,
-      runtime
-    );
-    const input = resolved.input;
-    try {
-      const draftResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article_draft/create",
-        "POST",
-        {
-          category_id: input.categoryId,
-          tag_ids: input.tagIds,
-          link_url: "",
-          cover_image: "",
-          title: note.title,
-          brief_content: input.briefContent,
-          edit_type: 10,
-          html_content: "deprecated",
-          mark_content: note.markdown,
-          theme_ids: []
-        }
-      );
-      const draftId = String(draftResponse.data?.id ?? "");
-      if (draftResponse.err_no !== 0 || !draftId) {
-        throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
-      }
-      const publishResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article/publish",
-        "POST",
-        {
-          draft_id: draftId,
-          sync_to_org: false,
-          column_ids: [],
-          theme_ids: []
-        }
-      );
-      const articleId = String(publishResponse.data?.article_id ?? "");
-      if (publishResponse.err_no !== 0 || !articleId) {
-        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
-      }
-      return {
-        remoteId: encodeRemoteId(articleId, draftId),
-        remoteUrl: buildPreviewUrl2(articleId),
-        providerOptionCache: resolved.providerOptionCache
-      };
-    } catch (error) {
-      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
-      throw withPublishFailureDetails(error, { providerOptionCache });
-    }
-  }
-  async update(remoteId, note, target, context, runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const resolved = await resolveJuejinPublishInput(
-      note,
-      target,
-      context?.provider.provider === "juejin" ? context.provider : void 0,
-      runtime
-    );
-    const input = resolved.input;
-    const { articleId, draftId } = decodeRemoteId(remoteId);
-    try {
-      const draftResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article_draft/update",
-        "POST",
-        {
-          id: draftId,
-          category_id: input.categoryId,
-          tag_ids: input.tagIds,
-          link_url: "",
-          cover_image: "",
-          title: note.title,
-          brief_content: input.briefContent,
-          edit_type: 10,
-          html_content: "deprecated",
-          mark_content: note.markdown,
-          theme_ids: []
-        }
-      );
-      if (draftResponse.err_no !== 0) {
-        throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
-      }
-      const publishResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article/publish",
-        "POST",
-        {
-          draft_id: draftId,
-          sync_to_org: false,
-          column_ids: [],
-          theme_ids: []
-        }
-      );
-      if (publishResponse.err_no !== 0) {
-        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
-      }
-      return {
-        remoteId: encodeRemoteId(articleId, draftId),
-        remoteUrl: buildPreviewUrl2(articleId),
-        providerOptionCache: resolved.providerOptionCache
-      };
-    } catch (error) {
-      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
-      throw withPublishFailureDetails(error, { providerOptionCache });
-    }
-  }
-  async delete(remoteId, target) {
-    const { articleId } = decodeRemoteId(remoteId);
-    const response = await requestJuejin(
-      target,
-      "https://api.juejin.cn/content_api/v1/article/delete",
-      "POST",
-      {
-        article_id: articleId
-      }
-    );
-    if (response.err_no !== 0) {
-      throw new Error(`Juejin delete failed: ${response.err_msg ?? "unknown error"}`);
-    }
-  }
-  async getPreviewUrl(remoteId) {
-    const { articleId } = decodeRemoteId(remoteId);
-    return buildPreviewUrl2(articleId);
-  }
-};
-
 // src/providers/zhihuProvider.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 function buildHeaders3(target) {
   return {
     "Content-Type": "application/json",
@@ -36645,7 +35402,7 @@ function readJsonPayload3(response) {
   return {};
 }
 async function requestZhihu(target, url, method = "GET", body) {
-  const response = await (0, import_obsidian9.requestUrl)({
+  const response = await (0, import_obsidian7.requestUrl)({
     url,
     method,
     headers: buildHeaders3(target),
@@ -36792,30 +35549,1305 @@ var ZhihuProvider = class {
   }
 };
 
+// src/providers/definitions.ts
+function cloneStringList(values) {
+  return values.slice();
+}
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+var providerDefinitionsById = {
+  wordpress: {
+    id: "wordpress",
+    name: "WordPress",
+    category: "wordpress",
+    family: "rest-api",
+    createProvider: (app) => new WordpressProvider(app),
+    createTarget: () => ({
+      id: (0, import_node_crypto2.randomUUID)(),
+      name: "WordPress",
+      enabled: true,
+      provider: "wordpress",
+      endpoint: "",
+      username: "",
+      appPassword: "",
+      defaultStatus: "draft",
+      contentFormat: "html"
+    }),
+    normalizeTarget: (target) => ({
+      ...target,
+      defaultStatus: target.defaultStatus ?? "draft",
+      contentFormat: target.contentFormat ?? "html"
+    }),
+    buildInitialDraft: (note, target) => ({
+      provider: "wordpress",
+      slug: note.slug,
+      excerpt: note.excerpt,
+      tags: cloneStringList(note.tags),
+      categories: cloneStringList(note.categories),
+      status: target.defaultStatus,
+      password: ""
+    }),
+    getManualFallbackFields: () => ["categories", "tags"]
+  },
+  yuque: {
+    id: "yuque",
+    name: "Yuque",
+    category: "common",
+    family: "rest-api",
+    createProvider: () => new YuqueProvider(),
+    createTarget: () => ({
+      id: (0, import_node_crypto2.randomUUID)(),
+      name: "Yuque",
+      enabled: true,
+      provider: "yuque",
+      baseUrl: "https://www.yuque.com",
+      repo: "",
+      token: "",
+      publicLevel: 0
+    }),
+    normalizeTarget: (target) => ({
+      ...target,
+      baseUrl: target.baseUrl || "https://www.yuque.com",
+      publicLevel: target.publicLevel ?? 0
+    }),
+    buildInitialDraft: (note, target) => ({
+      provider: "yuque",
+      slug: note.slug,
+      publicLevel: target.publicLevel
+    })
+  },
+  zhihu: {
+    id: "zhihu",
+    name: "Zhihu",
+    category: "web",
+    family: "cookie-web",
+    createProvider: (app) => new ZhihuProvider(app),
+    createTarget: () => ({
+      id: (0, import_node_crypto2.randomUUID)(),
+      name: "Zhihu",
+      enabled: true,
+      provider: "zhihu",
+      cookie: "",
+      defaultColumnId: "",
+      defaultColumnTitle: ""
+    }),
+    normalizeTarget: (target) => ({
+      ...target,
+      cookie: target.cookie || "",
+      defaultColumnId: target.defaultColumnId || "",
+      defaultColumnTitle: target.defaultColumnTitle || ""
+    }),
+    buildInitialDraft: (_note, target) => ({
+      provider: "zhihu",
+      columnId: target.defaultColumnId,
+      columnTitle: target.defaultColumnTitle ?? ""
+    }),
+    skipNormalPublishOptionsLoad: true
+  },
+  csdn: {
+    id: "csdn",
+    name: "CSDN",
+    category: "web",
+    family: "cookie-web",
+    createProvider: (app) => new CsdnProvider(app),
+    createTarget: () => ({
+      id: (0, import_node_crypto2.randomUUID)(),
+      name: "CSDN",
+      enabled: true,
+      provider: "csdn",
+      cookie: "",
+      defaultCategories: [],
+      defaultTags: []
+    }),
+    normalizeTarget: (target) => ({
+      ...target,
+      cookie: target.cookie || "",
+      defaultCategories: normalizeStringList(target.defaultCategories),
+      defaultTags: normalizeStringList(target.defaultTags)
+    }),
+    buildInitialDraft: (note, target) => ({
+      provider: "csdn",
+      excerpt: note.excerpt,
+      tags: note.tags.length > 0 ? cloneStringList(note.tags) : cloneStringList(target.defaultTags),
+      categories: note.categories.length > 0 ? cloneStringList(note.categories) : cloneStringList(target.defaultCategories)
+    }),
+    getManualFallbackFields: () => ["categories", "tags"]
+  },
+  juejin: {
+    id: "juejin",
+    name: "Juejin",
+    category: "web",
+    family: "cookie-web",
+    createProvider: () => new JuejinProvider(),
+    createTarget: () => ({
+      id: (0, import_node_crypto2.randomUUID)(),
+      name: "Juejin",
+      enabled: true,
+      provider: "juejin",
+      cookie: "",
+      defaultCategoryId: "",
+      defaultCategoryName: "",
+      defaultTagIds: [],
+      defaultTagNames: [],
+      defaultBriefContent: ""
+    }),
+    normalizeTarget: (target) => ({
+      ...target,
+      cookie: target.cookie || "",
+      defaultCategoryId: target.defaultCategoryId || "",
+      defaultCategoryName: target.defaultCategoryName || "",
+      defaultTagIds: normalizeStringList(target.defaultTagIds),
+      defaultTagNames: normalizeStringList(target.defaultTagNames),
+      defaultBriefContent: target.defaultBriefContent || ""
+    }),
+    buildInitialDraft: (note, target) => ({
+      provider: "juejin",
+      categoryId: target.defaultCategoryId,
+      categoryName: target.defaultCategoryName ?? "",
+      tagIds: cloneStringList(target.defaultTagIds),
+      tagNames: cloneStringList(target.defaultTagNames ?? []),
+      briefContent: target.defaultBriefContent || note.excerpt
+    }),
+    getManualFallbackFields: () => ["categoryId", "tagIds"]
+  }
+};
+var providerDisplayOrder = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
+function getProviderDefinitions() {
+  return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
+}
+function getProviderDefinition(providerId) {
+  return providerDefinitionsById[providerId];
+}
+
+// src/settings.ts
+var DEFAULT_LLM_SETTINGS = {
+  enabled: false,
+  vendor: "openai",
+  apiKey: "",
+  model: "",
+  endpointOverride: "",
+  temperature: 0.3,
+  timeoutMs: 3e4,
+  maxInputChars: 12e3
+};
+var DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS = {
+  enabled: false,
+  includeOptionComments: true
+};
+function normalizeLlmSettings(value) {
+  return {
+    enabled: Boolean(value?.enabled),
+    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
+    apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
+    model: typeof value?.model === "string" ? value.model : "",
+    endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
+    temperature: typeof value?.temperature === "number" && Number.isFinite(value.temperature) ? value.temperature : DEFAULT_LLM_SETTINGS.temperature,
+    timeoutMs: typeof value?.timeoutMs === "number" && value.timeoutMs > 0 ? value.timeoutMs : DEFAULT_LLM_SETTINGS.timeoutMs,
+    maxInputChars: typeof value?.maxInputChars === "number" && value.maxInputChars > 0 ? value.maxInputChars : DEFAULT_LLM_SETTINGS.maxInputChars
+  };
+}
+function normalizeCachedProviderOption(value) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const raw = value;
+  if (typeof raw.id !== "string" || typeof raw.label !== "string") {
+    return null;
+  }
+  return {
+    id: raw.id,
+    label: raw.label,
+    description: typeof raw.description === "string" ? raw.description : void 0
+  };
+}
+function normalizeCachedProviderOptionList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((item) => normalizeCachedProviderOption(item)).filter((item) => item !== null);
+}
+function normalizeJuejinProviderOptionCacheEntry(value) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const raw = value;
+  if (typeof raw.fetchedAt !== "string") {
+    return null;
+  }
+  return {
+    fetchedAt: raw.fetchedAt,
+    categories: normalizeCachedProviderOptionList(raw.categories),
+    tags: normalizeCachedProviderOptionList(raw.tags)
+  };
+}
+function normalizeFrontmatterAutomationSettings(value) {
+  return {
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.enabled,
+    includeOptionComments: typeof value?.includeOptionComments === "boolean" ? value.includeOptionComments : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.includeOptionComments
+  };
+}
+function normalizeProviderOptionCache(value) {
+  const rawValue = typeof value === "object" && value !== null ? value : null;
+  const rawJuejinByTargetId = rawValue?.juejinByTargetId;
+  if (typeof rawJuejinByTargetId !== "object" || rawJuejinByTargetId === null) {
+    return {
+      juejinByTargetId: {}
+    };
+  }
+  const juejinByTargetId = {};
+  for (const [targetId, entry] of Object.entries(rawJuejinByTargetId)) {
+    const normalizedEntry = normalizeJuejinProviderOptionCacheEntry(entry);
+    if (normalizedEntry) {
+      juejinByTargetId[targetId] = normalizedEntry;
+    }
+  }
+  return {
+    juejinByTargetId
+  };
+}
+var DEFAULT_SETTINGS = {
+  targets: [],
+  records: [],
+  frontmatterAutomation: { ...DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS },
+  providerOptionCache: {
+    juejinByTargetId: {}
+  },
+  llm: { ...DEFAULT_LLM_SETTINGS }
+};
+function getRecord(records, notePath, targetId) {
+  return records.find((record) => record.notePath === notePath && record.targetId === targetId);
+}
+function upsertRecord(records, nextRecord) {
+  const existingIndex = records.findIndex(
+    (record) => record.notePath === nextRecord.notePath && record.targetId === nextRecord.targetId
+  );
+  if (existingIndex === -1) {
+    return [...records, nextRecord];
+  }
+  const next = records.slice();
+  next[existingIndex] = nextRecord;
+  return next;
+}
+function cloneTarget(target) {
+  return JSON.parse(JSON.stringify(target));
+}
+function normalizeTarget(target) {
+  switch (target.provider) {
+    case "wordpress":
+      return getProviderDefinition("wordpress").normalizeTarget(target);
+    case "yuque":
+      return getProviderDefinition("yuque").normalizeTarget(target);
+    case "zhihu":
+      return getProviderDefinition("zhihu").normalizeTarget(target);
+    case "csdn":
+      return getProviderDefinition("csdn").normalizeTarget(target);
+    case "juejin":
+      return getProviderDefinition("juejin").normalizeTarget(target);
+  }
+}
+
+// src/core/providerOptionCache.ts
+var PROVIDER_OPTION_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
+function toCachedOptions(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.map((item) => ({
+    id: item.id,
+    label: item.label,
+    description: typeof item.description === "string" ? item.description : void 0
+  }));
+}
+async function loadJuejinOptionSnapshot(args) {
+  const nowMs = typeof args.nowMs === "number" ? args.nowMs : Date.now();
+  const normalizedCache = normalizeProviderOptionCache(args.providerOptionCache);
+  const cachedEntry = normalizedCache.juejinByTargetId[args.targetId];
+  if (cachedEntry) {
+    const parsedFetchedAt = Date.parse(cachedEntry.fetchedAt);
+    const hasFreshCache = !Number.isNaN(parsedFetchedAt) && nowMs - parsedFetchedAt < PROVIDER_OPTION_CACHE_TTL_MS;
+    if (hasFreshCache) {
+      return {
+        source: "cache",
+        categories: cachedEntry.categories,
+        tags: cachedEntry.tags,
+        nextCache: normalizedCache
+      };
+    }
+  }
+  try {
+    const remoteOptions = await args.loadNormalPublishOptions(args.target);
+    const categories = toCachedOptions(remoteOptions.juejinCategories);
+    const tags = toCachedOptions(remoteOptions.juejinTags);
+    const nextCache = {
+      ...normalizedCache,
+      juejinByTargetId: {
+        ...normalizedCache.juejinByTargetId,
+        [args.targetId]: {
+          fetchedAt: new Date(nowMs).toISOString(),
+          categories,
+          tags
+        }
+      }
+    };
+    return {
+      source: "network",
+      categories,
+      tags,
+      nextCache
+    };
+  } catch {
+    if (cachedEntry) {
+      return {
+        source: "stale-cache",
+        categories: cachedEntry.categories,
+        tags: cachedEntry.tags,
+        nextCache: normalizedCache
+      };
+    }
+    return {
+      source: "unavailable",
+      categories: [],
+      tags: [],
+      nextCache: normalizedCache
+    };
+  }
+}
+
+// src/core/normalPublish/drafts.ts
+function createIdleRemoteOptionsState() {
+  return {
+    status: "idle",
+    data: {},
+    manualFallbackFields: []
+  };
+}
+function buildInitialTargetDraft(target, note) {
+  const definition = getProviderDefinition(target.provider);
+  if (!definition.buildInitialDraft) {
+    throw new Error(`Provider ${target.provider} does not define a normal publish draft builder.`);
+  }
+  return definition.buildInitialDraft(note, target);
+}
+function buildNormalPublishSessionState(note, targets) {
+  const enabledTargets = targets.filter((target) => target.enabled);
+  const targetDrafts = {};
+  const remoteOptions = {};
+  const lastErrorByTargetId = {};
+  for (const target of enabledTargets) {
+    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
+    remoteOptions[target.id] = createIdleRemoteOptionsState();
+    lastErrorByTargetId[target.id] = null;
+  }
+  return {
+    selectedTargetId: enabledTargets[0]?.id ?? null,
+    commonDraft: {
+      title: note.title
+    },
+    targetDrafts,
+    remoteOptions,
+    lastErrorByTargetId
+  };
+}
+
+// src/core/note.ts
+var import_obsidian8 = require("obsidian");
+var import_node_crypto3 = require("node:crypto");
+var import_node_path = require("node:path");
+
+// src/core/markdown.ts
+var WIKI_EMBED_REGEX = /!\[\[([^\]]+)\]\]/g;
+var MARKDOWN_IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g;
+function isAbsoluteUrl(value) {
+  return /^(?:[a-z]+:)?\/\//i.test(value) || value.startsWith("data:");
+}
+function stripAlias(target) {
+  return target.split("|")[0].trim();
+}
+function extractAssetReferences(markdown) {
+  const references = [];
+  for (const match of markdown.matchAll(WIKI_EMBED_REGEX)) {
+    const raw = match[1] ?? "";
+    references.push({
+      originalText: match[0],
+      rawTarget: stripAlias(raw),
+      altText: raw.split("|")[1]?.trim() ?? "",
+      source: "wiki-embed"
+    });
+  }
+  for (const match of markdown.matchAll(MARKDOWN_IMAGE_REGEX)) {
+    const target = (match[2] ?? "").trim();
+    if (isAbsoluteUrl(target)) {
+      continue;
+    }
+    references.push({
+      originalText: match[0],
+      rawTarget: target,
+      altText: match[1] ?? "",
+      source: "markdown-image"
+    });
+  }
+  return references;
+}
+function replaceAssetReference(markdown, reference, replacementPath) {
+  const altText = reference.altText.trim();
+  const rewritten = `![${altText}](${replacementPath})`;
+  return markdown.split(reference.originalText).join(rewritten);
+}
+function replaceAssetReferences(markdown, replacements) {
+  return replacements.reduce(
+    (currentMarkdown, replacement) => replaceAssetReference(currentMarkdown, replacement.reference, replacement.replacementPath),
+    markdown
+  );
+}
+
+// src/core/content.ts
+function stripFrontmatter(markdown) {
+  if (!markdown.startsWith("---")) {
+    return markdown;
+  }
+  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").replace(/^\s*\n/, "");
+}
+
+// src/core/note.ts
+var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"]);
+function ensureArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function slugify2(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+}
+function pickExcerpt(markdown, frontmatter) {
+  const explicit = typeof frontmatter.description === "string" && frontmatter.description || typeof frontmatter.excerpt === "string" && frontmatter.excerpt || typeof frontmatter.summary === "string" && frontmatter.summary || "";
+  if (explicit) {
+    return explicit;
+  }
+  const collapsed = markdown.replace(/^---[\s\S]*?---\s*/m, "").replace(/!\[\[[^\]]+\]\]/g, "").replace(/!\[[^\]]*]\(([^)]+)\)/g, "").replace(/\[\[([^\]]+)]]/g, "$1").replace(/\[([^\]]+)]\(([^)]+)\)/g, "$1").replace(/[#>*`~-]/g, " ").replace(/\s+/g, " ").trim();
+  return collapsed.slice(0, 200);
+}
+function normalizeTitleLine(value) {
+  return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
+}
+function pickTitle(markdown, frontmatter, fallback) {
+  const frontmatterTitle = typeof frontmatter.title === "string" ? frontmatter.title.trim() : "";
+  if (frontmatterTitle) {
+    return frontmatterTitle;
+  }
+  const lines = markdown.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line.startsWith("# ")) {
+      continue;
+    }
+    const title = normalizeTitleLine(line);
+    if (title) {
+      return title;
+    }
+  }
+  return fallback;
+}
+function isImagePath(value) {
+  const normalized = value.split(/[?#]/)[0] ?? value;
+  return IMAGE_EXTENSIONS.has((0, import_node_path.extname)(normalized).toLowerCase());
+}
+function resolveAsset(app, file, reference) {
+  if (!isImagePath(reference.rawTarget)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type"
+      }
+    };
+  }
+  const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
+  if (!(resolved instanceof import_obsidian8.TFile)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "missing"
+      }
+    };
+  }
+  if (!isImagePath(resolved.path)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type"
+      }
+    };
+  }
+  return {
+    resolved: {
+      reference,
+      sourcePath: resolved.path,
+      fileName: resolved.name
+    }
+  };
+}
+async function extractPublishableNote(app, file) {
+  const rawMarkdown = await app.vault.cachedRead(file);
+  const cache = app.metadataCache.getFileCache(file);
+  const frontmatter = cache?.frontmatter ?? {};
+  const markdown = stripFrontmatter(rawMarkdown);
+  const references = extractAssetReferences(markdown);
+  const attachments = [];
+  const unresolvedAttachments = [];
+  for (const reference of references) {
+    const result = resolveAsset(app, file, reference);
+    if (result.resolved) {
+      attachments.push(result.resolved);
+    }
+    if (result.unresolved) {
+      unresolvedAttachments.push(result.unresolved);
+    }
+  }
+  const title = pickTitle(markdown, frontmatter, file.basename);
+  const slug = typeof frontmatter.slug === "string" && frontmatter.slug || typeof frontmatter.permalink === "string" && frontmatter.permalink || slugify2(file.basename);
+  const tags = ensureArray(frontmatter.tags);
+  const categories = ensureArray(frontmatter.categories ?? frontmatter.category);
+  return {
+    filePath: file.path,
+    title,
+    markdown,
+    frontmatter,
+    attachments,
+    unresolvedAttachments,
+    excerpt: pickExcerpt(markdown, frontmatter),
+    slug,
+    tags,
+    categories,
+    date: typeof frontmatter.date === "string" ? frontmatter.date : void 0
+  };
+}
+function computeContentHash(note) {
+  return (0, import_node_crypto3.createHash)("sha256").update(
+    JSON.stringify({
+      markdown: note.markdown,
+      frontmatter: note.frontmatter,
+      attachments: note.attachments.map((asset) => asset.sourcePath)
+    })
+  ).digest("hex");
+}
+
+// src/core/mediaPipeline.ts
+async function resolveReplacement(provider, note, target, sourcePath) {
+  const asset = note.attachments.find((item) => item.sourcePath === sourcePath);
+  if (!asset) {
+    throw new Error(`Missing attachment for source path: ${sourcePath}`);
+  }
+  const support = provider.getMediaSupport(target);
+  if (support.mode === "native-upload") {
+    if (!provider.uploadAsset) {
+      throw new Error(`${target.name} cannot upload local assets because uploadAsset() is not implemented.`);
+    }
+    return provider.uploadAsset(asset, note, target);
+  }
+  if (support.mode === "local-copy") {
+    if (!provider.copyAsset) {
+      throw new Error(`${target.name} cannot copy local assets because copyAsset() is not implemented.`);
+    }
+    return provider.copyAsset(asset, note, target);
+  }
+  const files = note.attachments.map((item) => item.sourcePath).join(", ");
+  throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
+}
+async function prepareNoteForPublish(note, target, provider) {
+  const missingAttachment = note.unresolvedAttachments.find((asset) => asset.reason === "missing");
+  if (missingAttachment) {
+    throw new Error(`Missing local image asset: ${missingAttachment.reference.rawTarget}`);
+  }
+  if (note.attachments.length === 0) {
+    return {
+      ...note,
+      mediaReplacements: []
+    };
+  }
+  const support = provider.getMediaSupport(target);
+  if (support.mode === "unsupported") {
+    const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
+    throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
+  }
+  const resolvedPaths = /* @__PURE__ */ new Map();
+  const replacements = [];
+  for (const asset of note.attachments) {
+    let replacementPath = resolvedPaths.get(asset.sourcePath);
+    if (!replacementPath) {
+      const result = await resolveReplacement(provider, note, target, asset.sourcePath);
+      replacementPath = result.url;
+      resolvedPaths.set(asset.sourcePath, replacementPath);
+    }
+    replacements.push({
+      reference: asset.reference,
+      replacementPath
+    });
+  }
+  return {
+    ...note,
+    markdown: replaceAssetReferences(note.markdown, replacements),
+    mediaReplacements: [...resolvedPaths.entries()].map(([sourcePath, replacementPath]) => ({
+      sourcePath,
+      replacementPath
+    }))
+  };
+}
+
+// src/core/normalPublish/overrides.ts
+function cloneStringList2(values) {
+  return values.slice();
+}
+function applyNormalPublishContextToNote(note, context) {
+  if (!context) {
+    return note;
+  }
+  const nextNote = {
+    ...note,
+    frontmatter: {
+      ...note.frontmatter
+    },
+    attachments: note.attachments.slice(),
+    unresolvedAttachments: note.unresolvedAttachments.slice(),
+    title: context.common.title || note.title,
+    tags: cloneStringList2(note.tags),
+    categories: cloneStringList2(note.categories)
+  };
+  switch (context.provider.provider) {
+    case "wordpress":
+      nextNote.slug = context.provider.slug;
+      nextNote.excerpt = context.provider.excerpt;
+      nextNote.tags = cloneStringList2(context.provider.tags);
+      nextNote.categories = cloneStringList2(context.provider.categories);
+      break;
+    case "yuque":
+      nextNote.slug = context.provider.slug;
+      break;
+    case "csdn":
+      nextNote.excerpt = context.provider.excerpt;
+      nextNote.tags = cloneStringList2(context.provider.tags);
+      nextNote.categories = cloneStringList2(context.provider.categories);
+      break;
+    default:
+      break;
+  }
+  return nextNote;
+}
+
+// src/core/publishService.ts
+function mergeProviderOptionCacheIntoSettings(settings, providerOptionCache) {
+  if (!providerOptionCache) {
+    return settings;
+  }
+  const currentCache = normalizeProviderOptionCache(settings.providerOptionCache);
+  const nextCache = normalizeProviderOptionCache(providerOptionCache);
+  return {
+    ...settings,
+    providerOptionCache: {
+      ...currentCache,
+      juejinByTargetId: {
+        ...currentCache.juejinByTargetId,
+        ...nextCache.juejinByTargetId
+      }
+    }
+  };
+}
+var PublishService = class {
+  constructor(app, providers, mediaPipeline = {
+    prepare: prepareNoteForPublish
+  }) {
+    this.app = app;
+    this.providers = providers;
+    this.mediaPipeline = mediaPipeline;
+  }
+  buildProviderRuntime(settings, provider, target) {
+    return {
+      providerOptionCache: settings.providerOptionCache,
+      loadNormalPublishOptions: typeof provider.loadNormalPublishOptions === "function" ? async (currentTarget) => provider.loadNormalPublishOptions(currentTarget) : void 0
+    };
+  }
+  async publishFile(file, target, settings, context) {
+    const provider = this.providers.get(target);
+    await provider.validateConfig(target);
+    const extractedNote = await extractPublishableNote(this.app, file);
+    const note = applyNormalPublishContextToNote(extractedNote, context);
+    const contentHash = computeContentHash(note);
+    const preparedNote = applyNormalPublishContextToNote(
+      await this.mediaPipeline.prepare(note, target, provider),
+      context
+    );
+    const existing = getRecord(settings.records, file.path, target.id);
+    const runtime = this.buildProviderRuntime(settings, provider, target);
+    const result = existing ? await provider.update(existing.remoteId, preparedNote, target, context, runtime) : await provider.publish(preparedNote, target, context, runtime);
+    const previewUrl = result.remoteUrl ?? await provider.getPreviewUrl(result.remoteId, target);
+    const record = {
+      notePath: file.path,
+      provider: target.provider,
+      targetId: target.id,
+      remoteId: result.remoteId,
+      remoteUrl: previewUrl,
+      lastPublishedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      contentHash
+    };
+    return {
+      record,
+      created: !existing,
+      providerOptionCache: result.providerOptionCache
+    };
+  }
+  updateSettings(settings, record, providerOptionCache) {
+    return {
+      ...mergeProviderOptionCacheIntoSettings(settings, providerOptionCache),
+      records: upsertRecord(settings.records, record)
+    };
+  }
+};
+
+// src/core/publishWorkflow.ts
+var PublishWorkflow = class {
+  constructor(publishService) {
+    this.publishService = publishService;
+  }
+  async emitProgressSafely(options, event) {
+    try {
+      await options.onProgress?.(event);
+    } catch {
+    }
+  }
+  resolveAction(file, target, settings) {
+    return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
+  }
+  async runSingle(file, target, settings, context) {
+    const action = this.resolveAction(file, target, settings);
+    try {
+      const serviceResult = await this.publishService.publishFile(file, target, settings, context);
+      const nextSettings = this.publishService.updateSettings(
+        settings,
+        serviceResult.record,
+        serviceResult.providerOptionCache
+      );
+      return {
+        action,
+        record: serviceResult.record,
+        settings: nextSettings
+      };
+    } catch (error) {
+      const cachedSettings = getPublishFailureSettings(error);
+      if (cachedSettings) {
+        throw withPublishFailureDetails(error, { settings: cachedSettings });
+      }
+      const providerOptionCache = getPublishFailureProviderOptionCache(error);
+      if (providerOptionCache) {
+        throw withPublishFailureDetails(error, {
+          providerOptionCache,
+          settings: mergeProviderOptionCacheIntoSettings(settings, providerOptionCache)
+        });
+      }
+      throw error;
+    }
+  }
+  async runBatch(file, targets, settings, options = {}) {
+    let currentSettings = settings;
+    const results = [];
+    const totalCount = targets.length;
+    for (const [index, target] of targets.entries()) {
+      const action = this.resolveAction(file, target, currentSettings);
+      const context = options.contextByTargetId?.[target.id];
+      const currentIndex = index + 1;
+      await this.emitProgressSafely(options, {
+        targetId: target.id,
+        targetName: target.name,
+        action,
+        status: "running",
+        currentIndex,
+        totalCount
+      });
+      const startedAt = Date.now();
+      try {
+        const singleResult = await this.runSingle(file, target, currentSettings, context);
+        const durationMs = Date.now() - startedAt;
+        currentSettings = singleResult.settings;
+        results.push({
+          targetId: target.id,
+          targetName: target.name,
+          action: singleResult.action,
+          status: "success",
+          durationMs,
+          remoteUrl: singleResult.record.remoteUrl
+        });
+        await this.emitProgressSafely(options, {
+          targetId: target.id,
+          targetName: target.name,
+          action: singleResult.action,
+          status: "success",
+          currentIndex,
+          totalCount,
+          durationMs,
+          remoteUrl: singleResult.record.remoteUrl
+        });
+      } catch (error) {
+        const cachedSettings = getPublishFailureSettings(error);
+        if (cachedSettings) {
+          currentSettings = cachedSettings;
+        } else {
+          const providerOptionCache = getPublishFailureProviderOptionCache(error);
+          if (providerOptionCache) {
+            currentSettings = mergeProviderOptionCacheIntoSettings(currentSettings, providerOptionCache);
+          }
+        }
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        const durationMs = Date.now() - startedAt;
+        results.push({
+          targetId: target.id,
+          targetName: target.name,
+          action,
+          status: "failure",
+          durationMs,
+          error: normalizedError
+        });
+        await this.emitProgressSafely(options, {
+          targetId: target.id,
+          targetName: target.name,
+          action,
+          status: "failure",
+          currentIndex,
+          totalCount,
+          durationMs,
+          error: normalizedError
+        });
+      }
+    }
+    const successCount = results.filter((item) => item.status === "success").length;
+    const failureCount = results.length - successCount;
+    return {
+      results,
+      totalCount,
+      successCount,
+      failureCount,
+      settings: currentSettings
+    };
+  }
+};
+
+// src/i18n/index.ts
+var import_obsidian9 = require("obsidian");
+
+// src/i18n/locales.ts
+function normalizeLocale(input) {
+  if (!input) {
+    return "en";
+  }
+  const value = input.toLowerCase();
+  if (value.startsWith("zh")) {
+    return "zh-CN";
+  }
+  return "en";
+}
+
+// src/i18n/messages.ts
+var messages = {
+  en: {
+    "menu.publish": "Publish",
+    "menu.dashboard": "Dashboard",
+    "menu.quickPublish": "Quick Publish",
+    "menu.normalPublish": "Normal Publish",
+    "menu.batchPublish": "Batch Publish",
+    "menu.publishSettings": "Publish Settings",
+    "menu.quickPublish.empty.title": "Enable at least one publish target",
+    "menu.quickPublish.empty.help": "No quick publish targets are enabled",
+    "notice.dashboard.openFailed": "Unable to open the publisher dashboard.",
+    "notice.publish.noActiveMarkdown": "Open a Markdown note before publishing.",
+    "notice.publish.noEnabledTargets": "Configure at least one enabled publish target first.",
+    "notice.quickPublish.targetUnavailable": "Enable the selected publish target before using Quick Publish.",
+    "notice.publish.action.published": "published",
+    "notice.publish.action.updated": "updated",
+    "notice.publish.started": 'Publishing "{note}" to {target}...',
+    "notice.publish.succeeded": "Publish succeeded: {target} {action}.",
+    "notice.publish.failed": "Publish failed: {error}",
+    "notice.frontmatter.inserted": "Publish frontmatter template inserted.",
+    "notice.frontmatter.skippedExisting": "Skipped: active note already has frontmatter.",
+    "notice.frontmatter.noActiveMarkdown": "Open a Markdown note before inserting publish frontmatter.",
+    "notice.batch.selectOne": "Select at least one target before running batch publish.",
+    "notice.batch.finished": "Batch publish finished: {successCount} succeeded, {failureCount} failed.",
+    "notice.batch.failed": "Batch publish failed: {error}",
+    "settings.modal.title.addTarget": "Add {provider} Target",
+    "settings.modal.title.editTarget": "Edit {provider} Target",
+    "settings.modal.auth.title": "Authorization",
+    "settings.modal.auth.status.authorized": "Status: Authorized",
+    "settings.modal.auth.status.cookiePending": "Status: Cookie set, validation pending",
+    "settings.modal.auth.status.notAuthorized": "Status: Not authorized",
+    "settings.modal.auth.account": "Account: {name}",
+    "settings.modal.auth.unknownAccount": "Unknown",
+    "settings.modal.auth.lastAuth": "Last auth: {timestamp}",
+    "settings.modal.auth.lastValidated": "Last validated: {timestamp}",
+    "settings.modal.auth.action.authorize": "Browser Authorization",
+    "settings.modal.auth.action.authorizing": "Authorizing...",
+    "settings.modal.auth.action.validate": "Validate",
+    "settings.modal.auth.action.validating": "Validating...",
+    "settings.modal.auth.action.clear": "Clear Authorization",
+    "settings.modal.auth.action.clearing": "Clearing...",
+    "settings.modal.auth.success.authorized": "Browser authorization completed.",
+    "settings.modal.auth.success.validated": "Validation completed.",
+    "settings.modal.auth.success.cleared": "Authorization data cleared.",
+    "settings.modal.action.cancel": "Cancel",
+    "settings.modal.action.save": "Save",
+    "settings.tab.llm": "AI",
+    "settings.tab.other": "Other",
+    "settings.llm.title": "AI Settings",
+    "settings.llm.description": "Configure the shared LLM provider used for title and summary generation.",
+    "settings.llm.enabled": "Enable AI assistance",
+    "settings.llm.vendor": "Vendor",
+    "settings.llm.model": "Model",
+    "settings.llm.apiKey": "API Key",
+    "settings.llm.endpointOverride": "Endpoint Override",
+    "settings.llm.temperature": "Temperature",
+    "settings.llm.timeoutMs": "Timeout (ms)",
+    "settings.llm.maxInputChars": "Max Input Characters",
+    "settings.frontmatter.title": "Frontmatter Automation",
+    "settings.frontmatter.description": "Automatically insert publish frontmatter when creating Markdown notes.",
+    "settings.frontmatter.enabled": "Enable frontmatter automation",
+    "settings.frontmatter.includeOptionComments": "Include option comments",
+    "settings.market.category.common": "Common",
+    "settings.market.category.github": "GitHub",
+    "settings.market.category.gitlab": "GitLab",
+    "settings.market.category.metaweblog": "MetaWeblog",
+    "settings.market.category.wordpress": "WordPress",
+    "settings.market.category.web": "Web",
+    "settings.market.category.tablistAria": "Marketplace category tabs",
+    "dashboard.card.configuredTargets.label": "Configured Targets",
+    "dashboard.card.configuredTargets.help": "All saved publish destinations",
+    "dashboard.card.enabledTargets.label": "Enabled Targets",
+    "dashboard.card.enabledTargets.help": "Targets available to publish now",
+    "dashboard.card.lastPublish.label": "Last Publish",
+    "dashboard.card.lastPublish.help": "Most recent publish record",
+    "dashboard.section.targetStatus": "Target Status",
+    "dashboard.section.recentRecords": "Recent Records",
+    "dashboard.section.shortcuts": "Shortcuts",
+    "dashboard.empty.targets": "No publish targets configured yet.",
+    "dashboard.empty.records": "No publish activity recorded yet.",
+    "dashboard.status.neverPublished": "Never published",
+    "dashboard.status.enabled": "Enabled",
+    "dashboard.status.disabled": "Disabled",
+    "dashboard.timestamp.never": "Never",
+    "dashboard.shortcuts.normalPublish": "Normal Publish",
+    "dashboard.shortcuts.batchPublish": "Batch Publish",
+    "dashboard.shortcuts.publishSettings": "Publish Settings",
+    "publish.shared.note": "Note",
+    "publish.shared.path": "Path",
+    "publish.shared.target": "Target",
+    "publish.shared.targets": "Targets",
+    "publish.shared.empty.noEnabledTargets": "No enabled publish targets. Open settings to enable at least one target.",
+    "publish.shared.action.openSettings": "Open Publish Settings",
+    "publish.shared.summary.action.publish": "Publish",
+    "publish.shared.summary.action.update": "Update",
+    "publish.shared.summary.publishNewPost": "Publish new post",
+    "publish.shared.summary.updateExistingPost": "Update existing post",
+    "publish.shared.summary.disabledSuffix": " (disabled)",
+    "publish.shared.error.last": "Last error: {error}",
+    "publish.shared.error.targetUnavailable": "Selected target is not available.",
+    "publish.normal.title": "Normal Publish",
+    "publish.normal.subtitle": "Review one enabled target at a time and publish only the current destination.",
+    "publish.normal.loading": "Loading publish details...",
+    "publish.normal.noteCard.title": "Current Note",
+    "publish.normal.sidebar.description": "Switch targets on the left. Detailed fields stay scoped to the current target only.",
+    "publish.normal.section.common": "Common Fields",
+    "publish.normal.section.details": "Details",
+    "publish.normal.section.currentTarget": "Current target: {target}",
+    "publish.normal.field.title": "Article Title",
+    "publish.normal.field.slug": "Slug",
+    "publish.normal.field.excerpt": "Excerpt",
+    "publish.normal.field.tags": "Tags",
+    "publish.normal.field.categories": "Categories",
+    "publish.normal.field.status": "Status",
+    "publish.normal.field.password": "Password",
+    "publish.normal.field.publicLevel": "Visibility",
+    "publish.normal.field.columnId": "Column ID",
+    "publish.normal.field.categoryId": "Category",
+    "publish.normal.field.tagIds": "Tags",
+    "publish.normal.field.briefContent": "Brief Content",
+    "publish.normal.ai.generate": "Generate",
+    "publish.normal.ai.regenerate": "Regenerate",
+    "publish.normal.ai.optimizeTitle": "Optimize Title",
+    "publish.normal.ai.generating": "Generating...",
+    "publish.normal.ai.notConfigured": "Configure AI in settings before using generation.",
+    "publish.normal.remote.loading": "Loading remote options...",
+    "publish.normal.remote.fallback": "Remote options failed to load. Switched to manual input.",
+    "publish.normal.remote.selectHint": "Remote options are available for this field.",
+    "publish.normal.remote.manualHint": "Remote options are available, but you can still edit the value manually.",
+    "publish.normal.remote.dropdownInputHint": "Click the field to open remote categories, or type manually and press Enter to confirm.",
+    "publish.normal.remote.manualFallbackHint": "Enter the raw ID manually when remote options are unavailable.",
+    "publish.normal.option.status.draft": "Draft",
+    "publish.normal.option.status.publish": "Published",
+    "publish.normal.option.status.private": "Private",
+    "publish.normal.option.status.pending": "Pending Review",
+    "publish.normal.option.visibility.private": "Private",
+    "publish.normal.option.visibility.public": "Public",
+    "publish.normal.summary.selectedAction": "Selected action: {action}",
+    "publish.quickJuejin.title": "Complete Juejin Metadata",
+    "publish.quickJuejin.subtitle": "Quick Publish to Juejin requires category and tags. These values apply only to this publish.",
+    "publish.quickJuejin.action.cancel": "Cancel",
+    "publish.quickJuejin.action.confirm": "Continue Publishing",
+    "publish.batch.title": "Batch Publish",
+    "publish.batch.wizard.step1.title": "Select Targets",
+    "publish.batch.wizard.step2.title": "Edit Fields",
+    "publish.batch.wizard.step1.selectTargets": "Choose which enabled targets should be included in this batch run.",
+    "publish.batch.wizard.step1.selectedCount": "{selectedCount} targets selected.",
+    "publish.batch.wizard.step1.action.next": "Next: Edit Fields",
+    "publish.batch.wizard.step2.commonFields": "Common Fields",
+    "publish.batch.wizard.step2.targetFields": "Target Fields",
+    "publish.batch.wizard.step2.action.prev": "Back: Select Targets",
+    "publish.batch.wizard.step2.action.publish": "Start Publishing",
+    "publish.batch.wizard.step3.title": "Run Batch Publish",
+    "publish.batch.wizard.step3.publishing": "Publishing",
+    "publish.batch.wizard.step3.completed": "Publish Completed",
+    "publish.batch.wizard.step3.summary": "Summary: {successCount} succeeded, {failureCount} failed",
+    "publish.batch.wizard.step3.action.background": "Run in Background",
+    "publish.batch.wizard.step3.action.close": "Close",
+    "publish.batch.wizard.status.waiting": "Waiting",
+    "publish.batch.wizard.status.publishing": "Publishing",
+    "publish.batch.wizard.status.success": "Success",
+    "publish.batch.wizard.status.failed": "Failed",
+    "publish.batch.button.run": "Run Batch Publish",
+    "publish.batch.summary.selected": "Selected {selectedCount} targets ({publishCount} publish, {updateCount} update).",
+    "publish.batch.running": "Batch publish is running sequentially. Please wait...",
+    "publish.batch.error.fatal": "Batch failed before completion: {error}",
+    "publish.batch.results.title": "Batch Results",
+    "publish.batch.results.summary": "Completed {totalCount} targets: {successCount} succeeded, {failureCount} failed.",
+    "publish.batch.results.item.success": "{targetName}: success ({action}){remoteDetail}",
+    "publish.batch.results.item.failed": "{targetName}: failed ({action}) - {error}",
+    "publish.batch.results.unknownError": "Unknown error",
+    "publish.batch.validation.zhihu.columnIdRequired": "Zhihu publish requires a columnId.",
+    "publish.batch.validation.juejin.categoryIdRequired": "Juejin publish requires a categoryId.",
+    "publish.batch.validation.juejin.tagIdsRequired": "Juejin publish requires at least one tagId.",
+    "notice.batch.invalidDraft": "Fix the invalid target draft before starting batch publish.",
+    "i18n.only-en.demo": "English only message"
+  },
+  "zh-CN": {
+    "menu.publish": "\u53D1\u5E03",
+    "menu.dashboard": "\u4EEA\u8868\u76D8",
+    "menu.quickPublish": "\u5FEB\u901F\u53D1\u5E03",
+    "menu.normalPublish": "\u666E\u901A\u53D1\u5E03",
+    "menu.batchPublish": "\u6279\u91CF\u53D1\u5E03",
+    "menu.publishSettings": "\u53D1\u5E03\u8BBE\u7F6E",
+    "menu.quickPublish.empty.title": "\u8BF7\u81F3\u5C11\u542F\u7528\u4E00\u4E2A\u53D1\u5E03\u76EE\u6807",
+    "menu.quickPublish.empty.help": "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684\u5FEB\u901F\u53D1\u5E03\u76EE\u6807",
+    "notice.dashboard.openFailed": "\u65E0\u6CD5\u6253\u5F00\u53D1\u5E03\u4EEA\u8868\u76D8\u3002",
+    "notice.publish.noActiveMarkdown": "\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A Markdown \u7B14\u8BB0\u518D\u53D1\u5E03\u3002",
+    "notice.publish.noEnabledTargets": "\u8BF7\u5148\u914D\u7F6E\u5E76\u542F\u7528\u81F3\u5C11\u4E00\u4E2A\u53D1\u5E03\u76EE\u6807\u3002",
+    "notice.quickPublish.targetUnavailable": "\u8BF7\u5148\u542F\u7528\u6240\u9009\u53D1\u5E03\u76EE\u6807\u540E\u518D\u4F7F\u7528\u5FEB\u901F\u53D1\u5E03\u3002",
+    "notice.publish.action.published": "\u53D1\u5E03",
+    "notice.publish.action.updated": "\u66F4\u65B0",
+    "notice.publish.started": "\u6B63\u5728\u53D1\u5E03\u201C{note}\u201D\u5230 {target}...",
+    "notice.publish.succeeded": "\u53D1\u5E03\u6210\u529F\uFF1A{target} {action}\u3002",
+    "notice.publish.failed": "\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
+    "notice.frontmatter.inserted": "\u5DF2\u63D2\u5165\u53D1\u5E03 frontmatter \u6A21\u677F\u3002",
+    "notice.frontmatter.skippedExisting": "\u5DF2\u8DF3\u8FC7\uFF1A\u5F53\u524D\u7B14\u8BB0\u5DF2\u6709 frontmatter\u3002",
+    "notice.frontmatter.noActiveMarkdown": "\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A Markdown \u7B14\u8BB0\u518D\u63D2\u5165\u53D1\u5E03 frontmatter\u3002",
+    "notice.batch.selectOne": "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E00\u4E2A\u76EE\u6807\u540E\u518D\u6267\u884C\u6279\u91CF\u53D1\u5E03\u3002",
+    "notice.batch.finished": "\u6279\u91CF\u53D1\u5E03\u5B8C\u6210\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
+    "notice.batch.failed": "\u6279\u91CF\u53D1\u5E03\u5931\u8D25\uFF1A{error}",
+    "settings.modal.title.addTarget": "\u6DFB\u52A0 {provider} \u76EE\u6807",
+    "settings.modal.title.editTarget": "\u7F16\u8F91 {provider} \u76EE\u6807",
+    "settings.modal.auth.title": "\u6388\u6743",
+    "settings.modal.auth.status.authorized": "\u72B6\u6001\uFF1A\u5DF2\u6388\u6743",
+    "settings.modal.auth.status.cookiePending": "\u72B6\u6001\uFF1A\u5DF2\u8BBE\u7F6E Cookie\uFF0C\u5F85\u6821\u9A8C",
+    "settings.modal.auth.status.notAuthorized": "\u72B6\u6001\uFF1A\u672A\u6388\u6743",
+    "settings.modal.auth.account": "\u8D26\u53F7\uFF1A{name}",
+    "settings.modal.auth.unknownAccount": "\u672A\u77E5",
+    "settings.modal.auth.lastAuth": "\u4E0A\u6B21\u6388\u6743\uFF1A{timestamp}",
+    "settings.modal.auth.lastValidated": "\u4E0A\u6B21\u6821\u9A8C\uFF1A{timestamp}",
+    "settings.modal.auth.action.authorize": "\u7F51\u9875\u6388\u6743",
+    "settings.modal.auth.action.authorizing": "\u6388\u6743\u4E2D...",
+    "settings.modal.auth.action.validate": "\u6821\u9A8C\u914D\u7F6E",
+    "settings.modal.auth.action.validating": "\u6821\u9A8C\u4E2D...",
+    "settings.modal.auth.action.clear": "\u6E05\u9664\u6388\u6743",
+    "settings.modal.auth.action.clearing": "\u6E05\u9664\u4E2D...",
+    "settings.modal.auth.success.authorized": "\u7F51\u9875\u6388\u6743\u5B8C\u6210\u3002",
+    "settings.modal.auth.success.validated": "\u6821\u9A8C\u5B8C\u6210\u3002",
+    "settings.modal.auth.success.cleared": "\u6388\u6743\u4FE1\u606F\u5DF2\u6E05\u9664\u3002",
+    "settings.modal.action.cancel": "\u53D6\u6D88",
+    "settings.modal.action.save": "\u4FDD\u5B58",
+    "settings.tab.llm": "AI",
+    "settings.tab.other": "\u5176\u4ED6",
+    "settings.llm.title": "AI \u8BBE\u7F6E",
+    "settings.llm.description": "\u914D\u7F6E\u7528\u4E8E\u6807\u9898\u548C\u6458\u8981\u751F\u6210\u7684\u5171\u4EAB LLM Provider\u3002",
+    "settings.llm.enabled": "\u542F\u7528 AI \u8F85\u52A9",
+    "settings.llm.vendor": "\u63D0\u4F9B\u5546",
+    "settings.llm.model": "\u6A21\u578B",
+    "settings.llm.apiKey": "API Key",
+    "settings.llm.endpointOverride": "\u81EA\u5B9A\u4E49 Endpoint",
+    "settings.llm.temperature": "\u6E29\u5EA6",
+    "settings.llm.timeoutMs": "\u8D85\u65F6\uFF08\u6BEB\u79D2\uFF09",
+    "settings.llm.maxInputChars": "\u6700\u5927\u8F93\u5165\u5B57\u7B26\u6570",
+    "settings.frontmatter.title": "Frontmatter \u81EA\u52A8\u5316",
+    "settings.frontmatter.description": "\u521B\u5EFA Markdown \u7B14\u8BB0\u65F6\u81EA\u52A8\u63D2\u5165\u53D1\u5E03 frontmatter \u6A21\u677F\u3002",
+    "settings.frontmatter.enabled": "\u542F\u7528 frontmatter \u81EA\u52A8\u5316",
+    "settings.frontmatter.includeOptionComments": "\u5305\u542B\u53EF\u9009\u9879\u6CE8\u91CA",
+    "settings.market.category.common": "\u5E38\u7528",
+    "settings.market.category.github": "GitHub",
+    "settings.market.category.gitlab": "GitLab",
+    "settings.market.category.metaweblog": "MetaWeblog",
+    "settings.market.category.wordpress": "WordPress",
+    "settings.market.category.web": "\u7F51\u9875",
+    "settings.market.category.tablistAria": "\u5E02\u573A\u5206\u7C7B\u6807\u7B7E",
+    "dashboard.card.configuredTargets.label": "\u5DF2\u914D\u7F6E\u76EE\u6807",
+    "dashboard.card.configuredTargets.help": "\u6240\u6709\u5DF2\u4FDD\u5B58\u7684\u53D1\u5E03\u76EE\u6807",
+    "dashboard.card.enabledTargets.label": "\u542F\u7528\u76EE\u6807",
+    "dashboard.card.enabledTargets.help": "\u5F53\u524D\u53EF\u76F4\u63A5\u53D1\u5E03\u7684\u76EE\u6807",
+    "dashboard.card.lastPublish.label": "\u6700\u8FD1\u53D1\u5E03",
+    "dashboard.card.lastPublish.help": "\u6700\u65B0\u4E00\u6761\u53D1\u5E03\u8BB0\u5F55",
+    "dashboard.section.targetStatus": "\u76EE\u6807\u72B6\u6001",
+    "dashboard.section.recentRecords": "\u6700\u8FD1\u8BB0\u5F55",
+    "dashboard.section.shortcuts": "\u5FEB\u6377\u64CD\u4F5C",
+    "dashboard.empty.targets": "\u5C1A\u672A\u914D\u7F6E\u4EFB\u4F55\u53D1\u5E03\u76EE\u6807\u3002",
+    "dashboard.empty.records": "\u5C1A\u65E0\u53D1\u5E03\u8BB0\u5F55\u3002",
+    "dashboard.status.neverPublished": "\u4ECE\u672A\u53D1\u5E03",
+    "dashboard.status.enabled": "\u5DF2\u542F\u7528",
+    "dashboard.status.disabled": "\u5DF2\u7981\u7528",
+    "dashboard.timestamp.never": "\u4ECE\u672A",
+    "dashboard.shortcuts.normalPublish": "\u666E\u901A\u53D1\u5E03",
+    "dashboard.shortcuts.batchPublish": "\u6279\u91CF\u53D1\u5E03",
+    "dashboard.shortcuts.publishSettings": "\u53D1\u5E03\u8BBE\u7F6E",
+    "publish.shared.note": "\u7B14\u8BB0",
+    "publish.shared.path": "\u8DEF\u5F84",
+    "publish.shared.target": "\u76EE\u6807",
+    "publish.shared.targets": "\u76EE\u6807\u5217\u8868",
+    "publish.shared.empty.noEnabledTargets": "\u5F53\u524D\u6CA1\u6709\u542F\u7528\u7684\u53D1\u5E03\u76EE\u6807\u3002\u8BF7\u5148\u6253\u5F00\u8BBE\u7F6E\u542F\u7528\u81F3\u5C11\u4E00\u4E2A\u76EE\u6807\u3002",
+    "publish.shared.action.openSettings": "\u6253\u5F00\u53D1\u5E03\u8BBE\u7F6E",
+    "publish.shared.summary.action.publish": "\u53D1\u5E03",
+    "publish.shared.summary.action.update": "\u66F4\u65B0",
+    "publish.shared.summary.publishNewPost": "\u53D1\u5E03\u65B0\u6587\u7AE0",
+    "publish.shared.summary.updateExistingPost": "\u66F4\u65B0\u5DF2\u6709\u6587\u7AE0",
+    "publish.shared.summary.disabledSuffix": "\uFF08\u5DF2\u7981\u7528\uFF09",
+    "publish.shared.error.last": "\u6700\u8FD1\u9519\u8BEF\uFF1A{error}",
+    "publish.shared.error.targetUnavailable": "\u6240\u9009\u76EE\u6807\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
+    "publish.normal.title": "\u666E\u901A\u53D1\u5E03",
+    "publish.normal.subtitle": "\u4E00\u6B21\u53EA\u7F16\u8F91\u4E00\u4E2A\u5DF2\u542F\u7528\u76EE\u6807\uFF0C\u5E76\u53EA\u53D1\u5E03\u5F53\u524D\u9009\u4E2D\u7684\u6E20\u9053\u3002",
+    "publish.normal.loading": "\u6B63\u5728\u52A0\u8F7D\u53D1\u5E03\u8BE6\u60C5...",
+    "publish.normal.noteCard.title": "\u5F53\u524D\u7B14\u8BB0",
+    "publish.normal.sidebar.description": "\u5DE6\u4FA7\u5207\u6362\u76EE\u6807\uFF0C\u53F3\u4FA7\u53EA\u7F16\u8F91\u5F53\u524D\u76EE\u6807\u7684\u6309\u6B21\u8986\u76D6\u5B57\u6BB5\u3002",
+    "publish.normal.section.common": "\u516C\u5171\u5B57\u6BB5",
+    "publish.normal.section.details": "\u8BE6\u7EC6\u8BBE\u7F6E",
+    "publish.normal.section.currentTarget": "\u5F53\u524D\u76EE\u6807\uFF1A{target}",
+    "publish.normal.field.title": "\u6587\u7AE0\u6807\u9898",
+    "publish.normal.field.slug": "\u522B\u540D",
+    "publish.normal.field.excerpt": "\u6458\u8981",
+    "publish.normal.field.tags": "\u6807\u7B7E",
+    "publish.normal.field.categories": "\u5206\u7C7B",
+    "publish.normal.field.status": "\u72B6\u6001",
+    "publish.normal.field.password": "\u5BC6\u7801\u4FDD\u62A4",
+    "publish.normal.field.publicLevel": "\u53EF\u89C1\u7EA7\u522B",
+    "publish.normal.field.columnId": "\u4E13\u680F ID",
+    "publish.normal.field.categoryId": "\u5206\u7C7B",
+    "publish.normal.field.tagIds": "\u6807\u7B7E",
+    "publish.normal.field.briefContent": "\u6458\u8981\u5185\u5BB9",
+    "publish.normal.ai.generate": "\u751F\u6210",
+    "publish.normal.ai.regenerate": "\u91CD\u65B0\u751F\u6210",
+    "publish.normal.ai.optimizeTitle": "\u4F18\u5316\u6807\u9898",
+    "publish.normal.ai.generating": "\u751F\u6210\u4E2D...",
+    "publish.normal.ai.notConfigured": "\u4F7F\u7528\u751F\u6210\u529F\u80FD\u524D\uFF0C\u8BF7\u5148\u5728\u8BBE\u7F6E\u91CC\u5B8C\u6210 AI \u914D\u7F6E\u3002",
+    "publish.normal.remote.loading": "\u6B63\u5728\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879...",
+    "publish.normal.remote.fallback": "\u8FDC\u7AEF\u9009\u9879\u62C9\u53D6\u5931\u8D25\uFF0C\u5DF2\u5207\u6362\u4E3A\u624B\u52A8\u8F93\u5165\u3002",
+    "publish.normal.remote.selectHint": "\u8BE5\u5B57\u6BB5\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF0C\u53EF\u76F4\u63A5\u9009\u62E9\u3002",
+    "publish.normal.remote.manualHint": "\u5DF2\u52A0\u8F7D\u8FDC\u7AEF\u9009\u9879\uFF1B\u5982\u6709\u9700\u8981\uFF0C\u4ECD\u53EF\u624B\u52A8\u7F16\u8F91\u539F\u59CB\u503C\u3002",
+    "publish.normal.remote.dropdownInputHint": "\u70B9\u51FB\u8F93\u5165\u6846\u5C55\u5F00\u8FDC\u7AEF\u5206\u7C7B\u5217\u8868\uFF1B\u4E5F\u53EF\u624B\u52A8\u8F93\u5165\u5E76\u6309 Enter \u786E\u8BA4\u3002",
+    "publish.normal.remote.manualFallbackHint": "\u5F53\u524D\u65E0\u6CD5\u4F7F\u7528\u8FDC\u7AEF\u9009\u9879\uFF0C\u8BF7\u624B\u52A8\u586B\u5199\u539F\u59CB ID\u3002",
+    "publish.normal.option.status.draft": "\u8349\u7A3F",
+    "publish.normal.option.status.publish": "\u5DF2\u53D1\u5E03",
+    "publish.normal.option.status.private": "\u79C1\u5BC6",
+    "publish.normal.option.status.pending": "\u5F85\u5BA1\u6838",
+    "publish.normal.option.visibility.private": "\u79C1\u5BC6",
+    "publish.normal.option.visibility.public": "\u516C\u5F00",
+    "publish.normal.summary.selectedAction": "\u5F53\u524D\u64CD\u4F5C\uFF1A{action}",
+    "publish.quickJuejin.title": "\u8865\u5168\u6398\u91D1\u53D1\u5E03\u4FE1\u606F",
+    "publish.quickJuejin.subtitle": "\u5FEB\u901F\u53D1\u5E03\u5230\u7A00\u571F\u6398\u91D1\u524D\uFF0C\u9700\u8981\u5148\u586B\u5199\u5206\u7C7B\u548C\u6807\u7B7E\u3002\u672C\u6B21\u586B\u5199\u4EC5\u7528\u4E8E\u5F53\u524D\u8FD9\u6B21\u53D1\u5E03\u3002",
+    "publish.quickJuejin.action.cancel": "\u53D6\u6D88",
+    "publish.quickJuejin.action.confirm": "\u7EE7\u7EED\u53D1\u5E03",
+    "publish.batch.title": "\u6279\u91CF\u53D1\u5E03",
+    "publish.batch.wizard.step1.title": "\u9009\u62E9\u76EE\u6807",
+    "publish.batch.wizard.step2.title": "\u7F16\u8F91\u5B57\u6BB5",
+    "publish.batch.wizard.step1.selectTargets": "\u9009\u62E9\u672C\u6B21\u6279\u91CF\u53D1\u5E03\u8981\u5305\u542B\u7684\u5DF2\u542F\u7528\u76EE\u6807\u3002",
+    "publish.batch.wizard.step1.selectedCount": "\u5DF2\u9009\u62E9 {selectedCount} \u4E2A\u76EE\u6807\u3002",
+    "publish.batch.wizard.step1.action.next": "\u4E0B\u4E00\u6B65\uFF1A\u7F16\u8F91\u5B57\u6BB5",
+    "publish.batch.wizard.step2.commonFields": "\u516C\u5171\u5B57\u6BB5",
+    "publish.batch.wizard.step2.targetFields": "\u76EE\u6807\u7279\u5B9A\u5B57\u6BB5",
+    "publish.batch.wizard.step2.action.prev": "\u4E0A\u4E00\u6B65\uFF1A\u9009\u62E9\u76EE\u6807",
+    "publish.batch.wizard.step2.action.publish": "\u5F00\u59CB\u53D1\u5E03",
+    "publish.batch.wizard.step3.title": "\u6267\u884C\u53D1\u5E03",
+    "publish.batch.wizard.step3.publishing": "\u53D1\u5E03\u4E2D",
+    "publish.batch.wizard.step3.completed": "\u53D1\u5E03\u5B8C\u6210",
+    "publish.batch.wizard.step3.summary": "\u6C47\u603B\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A",
+    "publish.batch.wizard.step3.action.background": "\u540E\u53F0\u8FD0\u884C",
+    "publish.batch.wizard.step3.action.close": "\u5173\u95ED",
+    "publish.batch.wizard.status.waiting": "\u7B49\u5F85\u4E2D",
+    "publish.batch.wizard.status.publishing": "\u53D1\u5E03\u4E2D",
+    "publish.batch.wizard.status.success": "\u6210\u529F",
+    "publish.batch.wizard.status.failed": "\u5931\u8D25",
+    "publish.batch.button.run": "\u6267\u884C\u6279\u91CF\u53D1\u5E03",
+    "publish.batch.summary.selected": "\u5DF2\u9009\u62E9 {selectedCount} \u4E2A\u76EE\u6807\uFF08\u53D1\u5E03 {publishCount} \u4E2A\uFF0C\u66F4\u65B0 {updateCount} \u4E2A\uFF09\u3002",
+    "publish.batch.running": "\u6279\u91CF\u53D1\u5E03\u6B63\u5728\u6309\u987A\u5E8F\u6267\u884C\uFF0C\u8BF7\u7A0D\u5019...",
+    "publish.batch.error.fatal": "\u6279\u91CF\u53D1\u5E03\u672A\u5B8C\u6210\u5373\u5931\u8D25\uFF1A{error}",
+    "publish.batch.results.title": "\u6279\u91CF\u7ED3\u679C",
+    "publish.batch.results.summary": "\u5171\u5B8C\u6210 {totalCount} \u4E2A\u76EE\u6807\uFF1A\u6210\u529F {successCount} \u4E2A\uFF0C\u5931\u8D25 {failureCount} \u4E2A\u3002",
+    "publish.batch.results.item.success": "{targetName}\uFF1A\u6210\u529F\uFF08{action}\uFF09{remoteDetail}",
+    "publish.batch.results.item.failed": "{targetName}\uFF1A\u5931\u8D25\uFF08{action}\uFF09- {error}",
+    "publish.batch.results.unknownError": "\u672A\u77E5\u9519\u8BEF",
+    "publish.batch.validation.zhihu.columnIdRequired": "\u77E5\u4E4E\u53D1\u5E03\u8981\u6C42\u586B\u5199\u4E13\u680F ID\u3002",
+    "publish.batch.validation.juejin.categoryIdRequired": "\u7A00\u571F\u6398\u91D1\u53D1\u5E03\u8981\u6C42\u586B\u5199\u5206\u7C7B ID\u3002",
+    "publish.batch.validation.juejin.tagIdsRequired": "\u7A00\u571F\u6398\u91D1\u53D1\u5E03\u8981\u6C42\u81F3\u5C11\u586B\u5199\u4E00\u4E2A\u6807\u7B7E ID\u3002",
+    "notice.batch.invalidDraft": "\u8BF7\u5148\u4FEE\u6B63\u65E0\u6548\u7684\u76EE\u6807\u8349\u7A3F\u540E\u518D\u5F00\u59CB\u6279\u91CF\u53D1\u5E03\u3002"
+  }
+};
+
+// src/i18n/index.ts
+function interpolate(template, params) {
+  if (!params) {
+    return template;
+  }
+  return template.replace(/\{(\w+)\}/g, (_match, name) => {
+    if (name in params) {
+      return String(params[name]);
+    }
+    return `{${name}}`;
+  });
+}
+function createI18n(localeInput) {
+  const locale = normalizeLocale(localeInput);
+  return {
+    locale,
+    t(key, params) {
+      const template = messages[locale][key] ?? messages.en[key] ?? key;
+      return interpolate(template, params);
+    }
+  };
+}
+function createI18nFromObsidianLanguage() {
+  return createI18n((0, import_obsidian9.getLanguage)());
+}
+
 // src/providers/registry.ts
 var ProviderRegistry = class {
   constructor(app) {
-    this.yuque = new YuqueProvider();
-    this.juejin = new JuejinProvider();
-    this.wordpress = new WordpressProvider(app);
-    this.csdn = new CsdnProvider(app);
-    this.zhihu = new ZhihuProvider(app);
+    this.app = app;
+    this.providers = /* @__PURE__ */ new Map();
   }
   get(target) {
-    switch (target.provider) {
-      case "wordpress":
-        return this.wordpress;
-      case "yuque":
-        return this.yuque;
-      case "csdn":
-        return this.csdn;
-      case "juejin":
-        return this.juejin;
-      case "zhihu":
-        return this.zhihu;
-      default:
-        throw new Error(`Unsupported provider: ${target.provider}`);
+    const cached = this.providers.get(target.provider);
+    if (cached) {
+      return cached;
     }
+    const provider = getProviderDefinition(target.provider).createProvider(this.app);
+    this.providers.set(target.provider, provider);
+    return provider;
   }
 };
 
@@ -37021,61 +37053,51 @@ var DesktopWebAuthService = class {
 var import_obsidian11 = require("obsidian");
 
 // src/ui/settings/providerCatalog.ts
-var PROVIDER_CATALOG = [
+var PROVIDER_CATALOG_PRESENTATION = [
   {
     id: "wordpress",
-    name: "WordPress",
     descriptionKey: "settings.providers.wordpress.description",
     descriptionFallback: {
       en: "REST API publishing with application password auth.",
       "zh-CN": "\u4F7F\u7528\u5E94\u7528\u5BC6\u7801\u8BA4\u8BC1\uFF0C\u901A\u8FC7 REST API \u53D1\u5E03\u5185\u5BB9\u3002"
     },
-    icon: "WP",
-    createTarget: createWordpressTarget
+    icon: "WP"
   },
   {
     id: "yuque",
-    name: "Yuque",
     descriptionKey: "settings.providers.yuque.description",
     descriptionFallback: {
       en: "Token-based publishing to a Yuque knowledge base.",
       "zh-CN": "\u4F7F\u7528 Token \u5411 Yuque \u77E5\u8BC6\u5E93\u53D1\u5E03\u5185\u5BB9\u3002"
     },
-    icon: "YQ",
-    createTarget: createYuqueTarget
+    icon: "YQ"
   },
   {
     id: "zhihu",
-    name: "Zhihu",
     descriptionKey: "settings.providers.zhihu.description",
     descriptionFallback: {
       en: "Cookie-based desktop web publishing to Zhihu columns.",
       "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 Zhihu \u4E13\u680F\u3002"
     },
-    icon: "ZH",
-    createTarget: createZhihuTarget
+    icon: "ZH"
   },
   {
     id: "csdn",
-    name: "CSDN",
     descriptionKey: "settings.providers.csdn.description",
     descriptionFallback: {
       en: "Cookie-based desktop web publishing to CSDN articles.",
       "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 CSDN \u6587\u7AE0\u3002"
     },
-    icon: "CS",
-    createTarget: createCsdnTarget
+    icon: "CS"
   },
   {
     id: "juejin",
-    name: "Juejin",
     descriptionKey: "settings.providers.juejin.description",
     descriptionFallback: {
       en: "Cookie-based desktop web publishing to Juejin posts.",
       "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 Juejin \u6587\u7AE0\u3002"
     },
-    icon: "JJ",
-    createTarget: createJuejinTarget
+    icon: "JJ"
   }
 ];
 var DEFAULT_I18N = createI18n("en");
@@ -37085,27 +37107,45 @@ function resolveTranslation(i18n, key, fallback) {
   }
   return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
 }
+function buildProviderCatalogSeed() {
+  const presentationById = new Map(
+    PROVIDER_CATALOG_PRESENTATION.map((entry) => [
+      entry.id,
+      {
+        descriptionKey: entry.descriptionKey,
+        descriptionFallback: entry.descriptionFallback,
+        icon: entry.icon
+      }
+    ])
+  );
+  return getProviderDefinitions().map((definition) => {
+    const presentation = presentationById.get(definition.id);
+    if (!presentation) {
+      throw new Error(`Missing provider catalog presentation config for ${definition.id}`);
+    }
+    return {
+      id: definition.id,
+      category: definition.category,
+      name: definition.name,
+      descriptionKey: presentation.descriptionKey,
+      descriptionFallback: presentation.descriptionFallback,
+      icon: presentation.icon,
+      createTarget: definition.createTarget
+    };
+  });
+}
 function localizeProviderCatalogEntry(entry, i18n) {
-  const base = {
+  return {
+    id: entry.id,
+    category: entry.category,
     name: entry.name,
     description: resolveTranslation(i18n, entry.descriptionKey, entry.descriptionFallback),
-    icon: entry.icon
+    icon: entry.icon,
+    createTarget: entry.createTarget
   };
-  switch (entry.id) {
-    case "wordpress":
-      return { id: "wordpress", ...base, createTarget: entry.createTarget };
-    case "yuque":
-      return { id: "yuque", ...base, createTarget: entry.createTarget };
-    case "zhihu":
-      return { id: "zhihu", ...base, createTarget: entry.createTarget };
-    case "csdn":
-      return { id: "csdn", ...base, createTarget: entry.createTarget };
-    case "juejin":
-      return { id: "juejin", ...base, createTarget: entry.createTarget };
-  }
 }
 function getProviderCatalog(i18n = DEFAULT_I18N) {
-  return PROVIDER_CATALOG.map((entry) => localizeProviderCatalogEntry(entry, i18n));
+  return buildProviderCatalogSeed().map((entry) => localizeProviderCatalogEntry(entry, i18n));
 }
 function getProviderCatalogEntry(providerId, i18n = DEFAULT_I18N) {
   return getProviderCatalog(i18n).find((entry) => entry.id === providerId);
@@ -37612,9 +37652,17 @@ var EditTargetModal = class extends import_obsidian11.Modal {
 };
 
 // src/ui/settings/SettingsView.tsx
-var import_react = __toESM(require_react());
+var import_react2 = __toESM(require_react());
 
 // src/ui/settings/settingsViewModel.ts
+var MARKETPLACE_CATEGORY_DISPLAY_ORDER = [
+  "common",
+  "github",
+  "gitlab",
+  "metaweblog",
+  "wordpress",
+  "web"
+];
 function buildConfiguredTargetCards(settings, catalog) {
   return settings.targets.map((target) => {
     const entry = catalog.find((item) => item.id === target.provider);
@@ -37627,42 +37675,75 @@ function buildConfiguredTargetCards(settings, catalog) {
     };
   });
 }
-function buildMarketplaceCards(settings, catalog) {
-  return catalog.map((entry) => {
-    const configuredCount = settings.targets.filter((target) => target.provider === entry.id).length;
-    return {
-      id: entry.id,
-      name: entry.name,
-      description: entry.description,
-      icon: entry.icon,
-      configured: configuredCount > 0,
-      configuredCount
-    };
-  });
-}
-
-// src/ui/settings/TargetCard.tsx
-var import_jsx_runtime = __toESM(require_jsx_runtime());
 function resolveTranslation3(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
   }
   return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
 }
+function resolveMarketplaceCategoryLabel(i18n, categoryId) {
+  const key = `settings.market.category.${categoryId}`;
+  switch (categoryId) {
+    case "common":
+      return resolveTranslation3(i18n, key, { en: "Common", "zh-CN": "\u5E38\u7528" });
+    case "github":
+      return resolveTranslation3(i18n, key, { en: "GitHub", "zh-CN": "GitHub" });
+    case "gitlab":
+      return resolveTranslation3(i18n, key, { en: "GitLab", "zh-CN": "GitLab" });
+    case "metaweblog":
+      return resolveTranslation3(i18n, key, { en: "MetaWeblog", "zh-CN": "MetaWeblog" });
+    case "wordpress":
+      return resolveTranslation3(i18n, key, { en: "WordPress", "zh-CN": "WordPress" });
+    case "web":
+      return resolveTranslation3(i18n, key, { en: "Web", "zh-CN": "\u7F51\u9875" });
+  }
+}
+function buildMarketplaceCategories(catalog, i18n) {
+  const categoriesWithProviders = new Set(catalog.map((entry) => entry.category));
+  return MARKETPLACE_CATEGORY_DISPLAY_ORDER.filter((categoryId) => categoriesWithProviders.has(categoryId)).map(
+    (categoryId) => ({
+      id: categoryId,
+      label: resolveMarketplaceCategoryLabel(i18n, categoryId)
+    })
+  );
+}
+function buildMarketplaceCardsForCategory(settings, catalog, categoryId) {
+  return catalog.filter((entry) => entry.category === categoryId).map((entry) => buildMarketplaceCard(settings, entry));
+}
+function buildMarketplaceCard(settings, entry) {
+  const configuredCount = settings.targets.filter((target) => target.provider === entry.id).length;
+  return {
+    id: entry.id,
+    name: entry.name,
+    description: entry.description,
+    icon: entry.icon,
+    configured: configuredCount > 0,
+    configuredCount
+  };
+}
+
+// src/ui/settings/TargetCard.tsx
+var import_jsx_runtime = __toESM(require_jsx_runtime());
+function resolveTranslation4(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
 function TargetCard({ i18n, target, onEdit, onDelete }) {
-  const enabledAria = resolveTranslation3(i18n, "settings.target.status.enabled", {
+  const enabledAria = resolveTranslation4(i18n, "settings.target.status.enabled", {
     en: "Enabled",
     "zh-CN": "\u5DF2\u542F\u7528"
   });
-  const disabledAria = resolveTranslation3(i18n, "settings.target.status.disabled", {
+  const disabledAria = resolveTranslation4(i18n, "settings.target.status.disabled", {
     en: "Disabled",
     "zh-CN": "\u5DF2\u7981\u7528"
   });
-  const editLabel = resolveTranslation3(i18n, "settings.target.action.edit", {
+  const editLabel = resolveTranslation4(i18n, "settings.target.action.edit", {
     en: "Edit",
     "zh-CN": "\u7F16\u8F91"
   });
-  const deleteLabel = resolveTranslation3(i18n, "settings.target.action.delete", {
+  const deleteLabel = resolveTranslation4(i18n, "settings.target.action.delete", {
     en: "Delete",
     "zh-CN": "\u5220\u9664"
   });
@@ -37689,7 +37770,7 @@ function TargetCard({ i18n, target, onEdit, onDelete }) {
 
 // src/ui/settings/ConfiguredTargetsTab.tsx
 var import_jsx_runtime2 = __toESM(require_jsx_runtime());
-function resolveTranslation4(i18n, key, fallback) {
+function resolveTranslation5(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
   }
@@ -37702,11 +37783,11 @@ function ConfiguredTargetsTab({
   onDeleteTarget
 }) {
   if (targets.length === 0) {
-    const emptyTitle = resolveTranslation4(i18n, "settings.empty.title", {
+    const emptyTitle = resolveTranslation5(i18n, "settings.empty.title", {
       en: "No targets configured yet.",
       "zh-CN": "\u5C1A\u672A\u914D\u7F6E\u4EFB\u4F55\u76EE\u6807\u3002"
     });
-    const emptyDescription = resolveTranslation4(i18n, "settings.empty.description", {
+    const emptyDescription = resolveTranslation5(i18n, "settings.empty.description", {
       en: "Switch to Marketplace tab to add one.",
       "zh-CN": "\u5207\u6362\u5230\u201C\u5E02\u573A\u201D\u6807\u7B7E\u4EE5\u6DFB\u52A0\u76EE\u6807\u3002"
     });
@@ -37845,35 +37926,60 @@ function LlmSettingsTab({ i18n, settings, onChange }) {
   ] });
 }
 
-// src/ui/settings/ProviderCard.tsx
+// src/ui/settings/MarketplaceTab.tsx
+var import_react = __toESM(require_react());
+
+// src/ui/settings/MarketplaceCategoryTabs.tsx
 var import_jsx_runtime5 = __toESM(require_jsx_runtime());
-function resolveTranslation5(i18n, key, fallback) {
+function MarketplaceCategoryTabs({
+  categories,
+  activeCategory,
+  onSelectCategory,
+  ariaLabel
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ultimate-publisher-marketplace-tabs", role: "tablist", "aria-label": ariaLabel, children: categories.map((category) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    "button",
+    {
+      type: "button",
+      role: "tab",
+      className: `ultimate-publisher-marketplace-tab ${activeCategory === category.id ? "is-active" : ""}`.trim(),
+      "aria-selected": activeCategory === category.id,
+      onClick: () => onSelectCategory(category.id),
+      children: category.label
+    },
+    category.id
+  )) });
+}
+
+// src/ui/settings/ProviderCard.tsx
+var import_jsx_runtime6 = __toESM(require_jsx_runtime());
+function resolveTranslation6(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
   }
   return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
 }
 function ProviderCard({ i18n, provider, onAdd }) {
-  const addLabel = resolveTranslation5(i18n, "settings.provider.add", {
+  const addLabel = resolveTranslation6(i18n, "settings.provider.add", {
     en: "Add",
     "zh-CN": "\u6DFB\u52A0"
   });
-  const configuredLabel = resolveTranslation5(i18n, "settings.provider.configured", {
+  const configuredLabel = resolveTranslation6(i18n, "settings.provider.configured", {
     en: "Configured",
     "zh-CN": "\u5DF2\u914D\u7F6E"
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("article", { className: "ultimate-publisher-provider-card", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ultimate-publisher-provider-icon", "aria-hidden": "true", children: provider.icon }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ultimate-publisher-provider-copy", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h3", { children: provider.name }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { children: provider.description })
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("article", { className: "ultimate-publisher-provider-card", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ultimate-publisher-provider-icon", "aria-hidden": "true", children: provider.icon }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ultimate-publisher-provider-copy", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h3", { children: provider.name }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: provider.description })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ultimate-publisher-provider-card-footer", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("button", { type: "button", onClick: () => onAdd(provider.id), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ultimate-publisher-provider-card-footer", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("button", { type: "button", onClick: () => onAdd(provider.id), children: [
         "+ ",
         addLabel
       ] }),
-      provider.configured ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ultimate-publisher-provider-badge", children: [
+      provider.configured ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "ultimate-publisher-provider-badge", children: [
         configuredLabel,
         provider.configuredCount > 1 ? ` (${provider.configuredCount})` : ""
       ] }) : null
@@ -37882,14 +37988,54 @@ function ProviderCard({ i18n, provider, onAdd }) {
 }
 
 // src/ui/settings/MarketplaceTab.tsx
-var import_jsx_runtime6 = __toESM(require_jsx_runtime());
-function MarketplaceTab({ i18n, providers, onAddProvider }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ultimate-publisher-provider-grid", children: providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ProviderCard, { i18n, provider, onAdd: onAddProvider }, provider.id)) });
+var import_jsx_runtime7 = __toESM(require_jsx_runtime());
+function resolveTranslation7(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+function MarketplaceTab({
+  i18n,
+  settings,
+  providerCatalog,
+  onAddProvider
+}) {
+  const categories = (0, import_react.useMemo)(() => buildMarketplaceCategories(providerCatalog, i18n), [providerCatalog, i18n]);
+  const [activeCategory, setActiveCategory] = (0, import_react.useState)(() => categories[0]?.id ?? null);
+  (0, import_react.useEffect)(() => {
+    if (activeCategory && categories.some((category) => category.id === activeCategory)) {
+      return;
+    }
+    setActiveCategory(categories[0]?.id ?? null);
+  }, [activeCategory, categories]);
+  const providers = (0, import_react.useMemo)(() => {
+    if (!activeCategory) {
+      return [];
+    }
+    return buildMarketplaceCardsForCategory(settings, providerCatalog, activeCategory);
+  }, [activeCategory, providerCatalog, settings]);
+  const categoryTabsAriaLabel = resolveTranslation7(i18n, "settings.market.category.tablistAria", {
+    en: "Marketplace category tabs",
+    "zh-CN": "\u5E02\u573A\u5206\u7C7B\u6807\u7B7E"
+  });
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ultimate-publisher-settings-shell", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      MarketplaceCategoryTabs,
+      {
+        categories,
+        activeCategory,
+        onSelectCategory: setActiveCategory,
+        ariaLabel: categoryTabsAriaLabel
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ultimate-publisher-provider-grid", children: providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ProviderCard, { i18n, provider, onAdd: onAddProvider }, provider.id)) })
+  ] });
 }
 
 // src/ui/settings/TabBar.tsx
-var import_jsx_runtime7 = __toESM(require_jsx_runtime());
-function resolveTranslation6(i18n, key, fallback) {
+var import_jsx_runtime8 = __toESM(require_jsx_runtime());
+function resolveTranslation8(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
   }
@@ -37899,38 +38045,38 @@ function TabBar({ i18n, activeTab, onSelectTab }) {
   const tabs = [
     {
       id: "configured",
-      label: resolveTranslation6(i18n, "settings.tab.configured", {
+      label: resolveTranslation8(i18n, "settings.tab.configured", {
         en: "Configured Targets",
         "zh-CN": "\u5DF2\u914D\u7F6E\u76EE\u6807"
       })
     },
     {
       id: "marketplace",
-      label: resolveTranslation6(i18n, "settings.tab.marketplace", {
+      label: resolveTranslation8(i18n, "settings.tab.marketplace", {
         en: "Marketplace",
         "zh-CN": "\u5E02\u573A"
       })
     },
     {
       id: "llm",
-      label: resolveTranslation6(i18n, "settings.tab.llm", {
+      label: resolveTranslation8(i18n, "settings.tab.llm", {
         en: "AI",
         "zh-CN": "AI"
       })
     },
     {
       id: "other",
-      label: resolveTranslation6(i18n, "settings.tab.other", {
+      label: resolveTranslation8(i18n, "settings.tab.other", {
         en: "Other",
         "zh-CN": "\u5176\u4ED6"
       })
     }
   ];
-  const tabAriaLabel = resolveTranslation6(i18n, "settings.tab.aria", {
+  const tabAriaLabel = resolveTranslation8(i18n, "settings.tab.aria", {
     en: "Ultimate Publisher settings tabs",
     "zh-CN": "Ultimate Publisher \u8BBE\u7F6E\u6807\u7B7E\u9875"
   });
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ultimate-publisher-settings-tabs", role: "tablist", "aria-label": tabAriaLabel, children: tabs.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ultimate-publisher-settings-tabs", role: "tablist", "aria-label": tabAriaLabel, children: tabs.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
     "button",
     {
       type: "button",
@@ -37945,9 +38091,9 @@ function TabBar({ i18n, activeTab, onSelectTab }) {
 }
 
 // src/ui/settings/SettingsView.tsx
-var import_jsx_runtime8 = __toESM(require_jsx_runtime());
+var import_jsx_runtime9 = __toESM(require_jsx_runtime());
 var DEFAULT_I18N3 = createI18n("en");
-function resolveTranslation7(i18n, key, fallback) {
+function resolveTranslation9(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
   }
@@ -37963,27 +38109,23 @@ function SettingsView({
   onUpdateLlmSettings,
   onUpdateFrontmatterAutomationSettings
 }) {
-  const [activeTab, setActiveTab] = (0, import_react.useState)(initialTab);
-  const [llmSettings, setLlmSettings] = (0, import_react.useState)(() => ({
+  const [activeTab, setActiveTab] = (0, import_react2.useState)(initialTab);
+  const [llmSettings, setLlmSettings] = (0, import_react2.useState)(() => ({
     ...settings.llm ?? DEFAULT_LLM_SETTINGS
   }));
-  const [frontmatterAutomationSettings, setFrontmatterAutomationSettings] = (0, import_react.useState)(() => ({
+  const [frontmatterAutomationSettings, setFrontmatterAutomationSettings] = (0, import_react2.useState)(() => ({
     ...settings.frontmatterAutomation ?? DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS
   }));
-  const llmSettingsRef = (0, import_react.useRef)(llmSettings);
-  const llmPersistVersionRef = (0, import_react.useRef)(0);
-  const frontmatterAutomationSettingsRef = (0, import_react.useRef)(frontmatterAutomationSettings);
-  const frontmatterPersistVersionRef = (0, import_react.useRef)(0);
-  const providerCatalog = (0, import_react.useMemo)(() => getProviderCatalog(i18n), [i18n]);
-  const configuredTargets = (0, import_react.useMemo)(
+  const llmSettingsRef = (0, import_react2.useRef)(llmSettings);
+  const llmPersistVersionRef = (0, import_react2.useRef)(0);
+  const frontmatterAutomationSettingsRef = (0, import_react2.useRef)(frontmatterAutomationSettings);
+  const frontmatterPersistVersionRef = (0, import_react2.useRef)(0);
+  const providerCatalog = (0, import_react2.useMemo)(() => getProviderCatalog(i18n), [i18n]);
+  const configuredTargets = (0, import_react2.useMemo)(
     () => buildConfiguredTargetCards(settings, providerCatalog),
     [providerCatalog, settings]
   );
-  const marketplaceProviders = (0, import_react.useMemo)(
-    () => buildMarketplaceCards(settings, providerCatalog),
-    [providerCatalog, settings]
-  );
-  const headerDescription = resolveTranslation7(
+  const headerDescription = resolveTranslation9(
     i18n,
     "settings.view.description",
     {
@@ -37991,12 +38133,12 @@ function SettingsView({
       "zh-CN": "\u5148\u914D\u7F6E\u4E00\u4E2A\u6216\u591A\u4E2A\u76EE\u6807\uFF0C\u518D\u901A\u8FC7\u547D\u4EE4\u9762\u677F\u6216\u529F\u80FD\u533A\u83DC\u5355\u53D1\u5E03\u5F53\u524D\u7B14\u8BB0\u3002"
     }
   );
-  (0, import_react.useEffect)(() => {
+  (0, import_react2.useEffect)(() => {
     const nextLlmSettings = { ...settings.llm ?? DEFAULT_LLM_SETTINGS };
     llmSettingsRef.current = nextLlmSettings;
     setLlmSettings(nextLlmSettings);
   }, [settings.llm]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react2.useEffect)(() => {
     const nextFrontmatterAutomationSettings = {
       ...settings.frontmatterAutomation ?? DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS
     };
@@ -38041,13 +38183,13 @@ function SettingsView({
       setFrontmatterAutomationSettings(previous);
     });
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "ultimate-publisher-settings-page", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("header", { className: "ultimate-publisher-settings-header", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h2", { children: "Ultimate Publisher" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: headerDescription })
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "ultimate-publisher-settings-page", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { className: "ultimate-publisher-settings-header", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: "Ultimate Publisher" }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: headerDescription })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(TabBar, { i18n, activeTab, onSelectTab: setActiveTab }),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ultimate-publisher-settings-panel", children: activeTab === "configured" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(TabBar, { i18n, activeTab, onSelectTab: setActiveTab }),
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ultimate-publisher-settings-panel", children: activeTab === "configured" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
       ConfiguredTargetsTab,
       {
         i18n,
@@ -38055,14 +38197,22 @@ function SettingsView({
         onEditTarget,
         onDeleteTarget
       }
-    ) : activeTab === "marketplace" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MarketplaceTab, { i18n, providers: marketplaceProviders, onAddProvider }) : activeTab === "llm" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    ) : activeTab === "marketplace" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      MarketplaceTab,
+      {
+        i18n,
+        settings,
+        providerCatalog,
+        onAddProvider
+      }
+    ) : activeTab === "llm" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
       LlmSettingsTab,
       {
         i18n,
         settings: llmSettings,
         onChange: handleUpdateLlmSettings
       }
-    ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    ) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
       FrontmatterAutomationPanel,
       {
         i18n,
@@ -38074,7 +38224,7 @@ function SettingsView({
 }
 
 // src/ui/settings/renderSettingsRoot.tsx
-var import_jsx_runtime9 = __toESM(require_jsx_runtime());
+var import_jsx_runtime10 = __toESM(require_jsx_runtime());
 function mountSettingsView(containerEl, options) {
   const root = (0, import_client.createRoot)(containerEl);
   const providers = new ProviderRegistry(options.plugin.app);
@@ -38180,7 +38330,7 @@ function mountSettingsView(containerEl, options) {
 }
 function render(root, props) {
   root.render(
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
       SettingsView,
       {
         i18n: props.i18n,
@@ -38367,18 +38517,6 @@ function validateTargetDraft(draft) {
 }
 
 // src/core/normalPublish/remoteOptions.ts
-function getManualFallbackFields(target) {
-  switch (target.provider) {
-    case "wordpress":
-      return ["categories", "tags"];
-    case "csdn":
-      return ["categories", "tags"];
-    case "juejin":
-      return ["categoryId", "tagIds"];
-    default:
-      return [];
-  }
-}
 function buildRemoteOptionsState(status, data, errorMessage, manualFallbackFields = []) {
   return {
     status,
@@ -38392,7 +38530,8 @@ async function ensureRemoteOptionsLoaded(state, target, registry) {
   if (currentState?.status === "loaded") {
     return state;
   }
-  if (target.provider === "zhihu") {
+  const definition = getProviderDefinition(target.provider);
+  if (definition.skipNormalPublishOptionsLoad) {
     return {
       ...state,
       remoteOptions: {
@@ -38429,7 +38568,7 @@ async function ensureRemoteOptionsLoaded(state, target, registry) {
           "error",
           {},
           error instanceof Error ? error.message : String(error),
-          getManualFallbackFields(target)
+          definition.getManualFallbackFields?.(target) ?? []
         )
       }
     };
