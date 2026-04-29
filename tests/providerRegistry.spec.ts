@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const definitionsMock = vi.hoisted(() => ({
@@ -49,5 +50,56 @@ describe("ProviderRegistry", () => {
     expect(second).toBe(providerInstance);
     expect(definitionsMock.getProviderDefinition).toHaveBeenCalledWith("yuque");
     expect(createProvider).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the registry as a thin definition-backed runtime boundary", () => {
+    const registrySource = readFileSync("src/providers/registry.ts", "utf8");
+    const localProviderImports = [...registrySource.matchAll(/from "([^"]+)"/g)]
+      .map((match) => match[1])
+      .filter((specifier) => specifier.startsWith("./") && specifier !== "./definitions");
+
+    expect(registrySource).toContain('import { getProviderDefinition } from "./definitions";');
+    expect(registrySource).toContain("getProviderDefinition(target.provider).createProvider(this.app)");
+    expect(localProviderImports).toEqual([]);
+    expect(registrySource).not.toContain("target.category");
+    expect(registrySource).not.toContain("target.family");
+    expect(registrySource).not.toContain("siteGenerator");
+  });
+
+  it("passes the Obsidian app through to provider factories without inspecting target subtypes", async () => {
+    const providerInstance = {
+      provider: "wordpress",
+      getMediaSupport: vi.fn(),
+      validateConfig: vi.fn(),
+      publish: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      getPreviewUrl: vi.fn(),
+    };
+    const createProvider = vi.fn().mockReturnValue(providerInstance);
+    const app = { vault: {} };
+
+    definitionsMock.getProviderDefinition.mockReturnValue({
+      createProvider,
+    });
+
+    const { ProviderRegistry } = await import("../src/providers/registry");
+    const registry = new ProviderRegistry(app as never);
+    const target = {
+      id: "wordpress-1",
+      name: "WordPress",
+      enabled: true,
+      provider: "wordpress",
+      endpoint: "https://example.com",
+      username: "admin",
+      appPassword: "secret",
+      defaultStatus: "draft",
+      contentFormat: "html",
+      siteGenerator: "hugo",
+    } as const;
+
+    expect(registry.get(target as never)).toBe(providerInstance);
+    expect(definitionsMock.getProviderDefinition).toHaveBeenCalledWith("wordpress");
+    expect(createProvider).toHaveBeenCalledWith(app);
   });
 });
