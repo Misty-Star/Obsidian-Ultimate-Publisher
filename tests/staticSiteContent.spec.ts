@@ -32,7 +32,7 @@ describe("static-site content helpers", () => {
     const markdown = buildStaticSiteMarkdown(createNote({ frontmatter: { custom: "keep-me" } }));
 
     expect(markdown).toContain("custom: keep-me");
-    expect(markdown).toContain("title: My Post");
+    expect(markdown).toContain('title: "My Post"');
     expect(markdown).toContain("# My Post");
   });
 
