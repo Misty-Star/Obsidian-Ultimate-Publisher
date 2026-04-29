@@ -86,6 +86,24 @@ const PROVIDER_CATALOG_PRESENTATION: ProviderCatalogSeedInput[] = [
     },
     icon: "JJ",
   },
+  {
+    id: "github",
+    descriptionKey: "settings.providers.github.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to GitHub-backed static sites such as Hugo.",
+      "zh-CN": "将 Markdown 文章发布到 Hugo 等 GitHub 静态站点仓库。",
+    },
+    icon: "GH",
+  },
+  {
+    id: "gitlab",
+    descriptionKey: "settings.providers.gitlab.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to GitLab-backed static sites such as Hugo.",
+      "zh-CN": "将 Markdown 文章发布到 Hugo 等 GitLab 静态站点仓库。",
+    },
+    icon: "GL",
+  },
 ];
 
 const DEFAULT_I18N = createI18n("en");

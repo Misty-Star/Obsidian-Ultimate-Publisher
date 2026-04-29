@@ -3,6 +3,8 @@ import {
   CachedProviderOption,
   CsdnTargetConfig,
   FrontmatterAutomationSettings,
+  GithubTargetConfig,
+  GitlabTargetConfig,
   JuejinTargetConfig,
   JuejinProviderOptionCacheEntry,
   LlmSettings,
@@ -168,6 +170,14 @@ export function createJuejinTarget(): JuejinTargetConfig {
   return getProviderDefinition("juejin").createTarget();
 }
 
+export function createGithubTarget(): GithubTargetConfig {
+  return getProviderDefinition("github").createTarget();
+}
+
+export function createGitlabTarget(): GitlabTargetConfig {
+  return getProviderDefinition("gitlab").createTarget();
+}
+
 export function getRecord(records: PublishRecord[], notePath: string, targetId: string): PublishRecord | undefined {
   return records.find((record) => record.notePath === notePath && record.targetId === targetId);
 }
@@ -206,5 +216,9 @@ export function normalizeTarget(target: PublishTargetConfig): PublishTargetConfi
       return getProviderDefinition("csdn").normalizeTarget(target);
     case "juejin":
       return getProviderDefinition("juejin").normalizeTarget(target);
+    case "github":
+      return getProviderDefinition("github").normalizeTarget(target);
+    case "gitlab":
+      return getProviderDefinition("gitlab").normalizeTarget(target);
   }
 }

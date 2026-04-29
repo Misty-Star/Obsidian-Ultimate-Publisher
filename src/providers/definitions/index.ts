@@ -3,6 +3,7 @@ import { yuqueDefinition } from "./common";
 import { ProviderDefinitionMap, AnyProviderDefinition } from "./types";
 import { csdnDefinition, juejinDefinition, zhihuDefinition } from "./web";
 import { wordpressDefinition } from "./wordpress";
+import { githubDefinition, gitlabDefinition } from "./staticSite";
 
 const providerDefinitionsById = {
   wordpress: wordpressDefinition,
@@ -10,9 +11,11 @@ const providerDefinitionsById = {
   zhihu: zhihuDefinition,
   csdn: csdnDefinition,
   juejin: juejinDefinition,
+  github: githubDefinition,
+  gitlab: gitlabDefinition,
 } satisfies ProviderDefinitionMap;
 
-const providerDisplayOrder: ProviderId[] = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
+const providerDisplayOrder: ProviderId[] = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"];
 
 export function getProviderDefinitions(): AnyProviderDefinition[] {
   return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
