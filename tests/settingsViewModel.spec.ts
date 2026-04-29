@@ -38,13 +38,15 @@ describe("settingsViewModel", () => {
       "zhihu",
       "csdn",
       "juejin",
+      "github",
+      "gitlab",
     ]);
   });
 
   it("builds visible marketplace categories with fixed order", () => {
     expect(
       buildMarketplaceCategories(getProviderCatalog(), createI18n("zh-CN")).map((item) => item.id)
-    ).toEqual(["common", "wordpress", "web"]);
+    ).toEqual(["common", "github", "gitlab", "wordpress", "web"]);
   });
 
   it("builds cards for the web category", () => {
@@ -102,6 +104,8 @@ describe("settingsViewModel", () => {
       { id: "zhihu", configured: false, configuredCount: 0 },
       { id: "csdn", configured: false, configuredCount: 0 },
       { id: "juejin", configured: false, configuredCount: 0 },
+      { id: "github", configured: false, configuredCount: 0 },
+      { id: "gitlab", configured: false, configuredCount: 0 },
     ]);
   });
 });

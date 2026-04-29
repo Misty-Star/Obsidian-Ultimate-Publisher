@@ -1,8 +1,8 @@
-export const SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin"] as const;
+export const SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"] as const;
 
 export type ProviderId = (typeof SUPPORTED_PROVIDER_IDS)[number];
 export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web";
-export type ProviderFamilyId = "rest-api" | "cookie-web";
+export type ProviderFamilyId = "rest-api" | "cookie-web" | "github-static-site" | "gitlab-static-site";
 
 export function isProviderId(value: unknown): value is ProviderId {
   return typeof value === "string" && (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(value);
@@ -78,12 +78,40 @@ export interface JuejinTargetConfig extends WebAuthTargetBase {
   defaultBriefContent: string;
 }
 
+export type StaticSiteGenerator = "hugo" | "hexo" | "jekyll" | "vuepress" | "vuepress2" | "vitepress" | "quartz";
+
+export interface GithubTargetConfig extends BaseTargetConfig {
+  provider: "github";
+  siteGenerator: StaticSiteGenerator;
+  owner: string;
+  repo: string;
+  branch: string;
+  contentRoot: string;
+  token: string;
+  commitMessageTemplate: string;
+  previewBaseUrl?: string;
+}
+
+export interface GitlabTargetConfig extends BaseTargetConfig {
+  provider: "gitlab";
+  siteGenerator: StaticSiteGenerator;
+  baseUrl: string;
+  projectIdOrPath: string;
+  branch: string;
+  contentRoot: string;
+  token: string;
+  commitMessageTemplate: string;
+  previewBaseUrl?: string;
+}
+
 export type PublishTargetConfig =
   | WordpressTargetConfig
   | YuqueTargetConfig
   | ZhihuTargetConfig
   | CsdnTargetConfig
-  | JuejinTargetConfig;
+  | JuejinTargetConfig
+  | GithubTargetConfig
+  | GitlabTargetConfig;
 
 export type LlmVendor = "openai" | "openai-compatible" | "anthropic" | "gemini";
 

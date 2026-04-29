@@ -41,6 +41,13 @@ const FIELD_LABEL_ZH: Partial<Record<ProviderSettingsFieldKey, string>> = {
   defaultCategoryId: "默认分类 ID",
   defaultTagIds: "默认标签 ID",
   defaultBriefContent: "默认摘要",
+  siteGenerator: "站点生成器",
+  owner: "所有者",
+  branch: "分支",
+  contentRoot: "内容根目录",
+  commitMessageTemplate: "提交消息模板",
+  previewBaseUrl: "预览基础 URL",
+  projectIdOrPath: "项目 ID 或路径",
 };
 
 const FIELD_DESCRIPTION_ZH: Partial<Record<ProviderSettingsFieldKey, string>> = {
@@ -52,6 +59,11 @@ const FIELD_DESCRIPTION_ZH: Partial<Record<ProviderSettingsFieldKey, string>> = 
   defaultCategories: "用逗号分隔分类名。",
   defaultTags: "用逗号分隔标签名。",
   defaultTagIds: "用逗号分隔标签 ID。",
+  contentRoot: "示例: content/posts",
+  commitMessageTemplate: "支持 {{title}} 和 {{path}} 占位符。",
+  previewBaseUrl: "可选的已发布站点基础 URL。",
+  baseUrl: "示例: https://gitlab.com",
+  projectIdOrPath: "示例: group/project",
 };
 
 const FIELD_OPTION_LABEL_ZH: Partial<Record<ProviderSettingsFieldKey, Record<string, string>>> = {
@@ -68,6 +80,15 @@ const FIELD_OPTION_LABEL_ZH: Partial<Record<ProviderSettingsFieldKey, Record<str
   publicLevel: {
     "0": "私有",
     "1": "公开",
+  },
+  siteGenerator: {
+    hugo: "Hugo",
+    hexo: "Hexo",
+    jekyll: "Jekyll",
+    vuepress: "VuePress",
+    vuepress2: "VuePress 2",
+    vitepress: "VitePress",
+    quartz: "Quartz",
   },
 };
 

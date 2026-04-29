@@ -10,6 +10,8 @@ describe("getProviderCatalog", () => {
       "zhihu",
       "csdn",
       "juejin",
+      "github",
+      "gitlab",
     ]);
   });
 
@@ -22,6 +24,8 @@ describe("getProviderCatalog", () => {
       { id: "zhihu", category: "web" },
       { id: "csdn", category: "web" },
       { id: "juejin", category: "web" },
+      { id: "github", category: "github" },
+      { id: "gitlab", category: "gitlab" },
     ]);
   });
 

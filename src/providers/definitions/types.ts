@@ -15,6 +15,8 @@ import { Translator } from "../../i18n";
 import {
   CsdnTargetConfig,
   JuejinTargetConfig,
+  GithubTargetConfig,
+  GitlabTargetConfig,
   ProviderCategory,
   ProviderFamilyId,
   ProviderId,
@@ -30,6 +32,8 @@ export type ProviderTargetById = {
   zhihu: ZhihuTargetConfig;
   csdn: CsdnTargetConfig;
   juejin: JuejinTargetConfig;
+  github: GithubTargetConfig;
+  gitlab: GitlabTargetConfig;
 };
 
 export type ProviderDraftById = {
@@ -38,6 +42,8 @@ export type ProviderDraftById = {
   zhihu: ZhihuPublishDraft;
   csdn: CsdnPublishDraft;
   juejin: JuejinPublishDraft;
+  github: never;
+  gitlab: never;
 };
 
 export type ProviderCapabilityFlag =
@@ -79,7 +85,14 @@ export type ProviderSettingsFieldKey =
   | "defaultTags"
   | "defaultCategoryId"
   | "defaultTagIds"
-  | "defaultBriefContent";
+  | "defaultBriefContent"
+  | "siteGenerator"
+  | "owner"
+  | "branch"
+  | "contentRoot"
+  | "commitMessageTemplate"
+  | "previewBaseUrl"
+  | "projectIdOrPath";
 
 export type ProviderSettingsFieldType = "toggle" | "text" | "password" | "dropdown";
 

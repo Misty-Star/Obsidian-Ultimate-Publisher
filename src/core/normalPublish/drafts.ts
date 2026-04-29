@@ -27,7 +27,7 @@ export function buildNormalPublishSessionState(
   note: PublishableNote,
   targets: PublishTargetConfig[]
 ): NormalPublishSessionState {
-  const enabledTargets = targets.filter((target) => target.enabled);
+  const enabledTargets = targets.filter((target) => target.enabled && getProviderDefinition(target.provider).capabilities.normalPublish);
   const targetDrafts: Record<string, ProviderPublishDraft> = {};
   const remoteOptions: Record<string, ProviderRemoteOptionsState> = {};
   const lastErrorByTargetId: Record<string, string | null> = {};

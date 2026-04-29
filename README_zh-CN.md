@@ -97,6 +97,15 @@ juejinTags: [Obsidian, Efficiency]
 ---
 ```
 
+
+## Provider 架构
+
+Ultimate Publisher 保持 provider 身份扁平且稳定：每个目标只持久化一个 `target.provider`，例如 `wordpress`、`github` 或 `gitlab`。Marketplace 分类（`common`、`wordpress`、`github`、`gitlab`、`web` 等）只是从 provider definition 派生出来的 UI 分组元数据，不是运行时持久化层级。
+
+Provider definition 负责声明 family、capability、设置表单、Marketplace 卡片、Normal Publish 集成和运行时 provider factory。对于静态站点 provider，按托管家族使用一个共享 provider id（`github` 或 `gitlab`），并把静态站点生成器子类型（`hugo`、`hexo`、`jekyll`、`vuepress`、`vuepress2`、`vitepress` 或 `quartz`）放在目标配置里。只有当认证方式、API 或持久化边界确实不同，才新增 provider id；默认不要为每个静态站点生成器创建单独 provider id。
+
+当前 GitHub/GitLab 静态站点目标通过仓库内容 API 支持以 Hugo 风格内容路径发布和更新 Markdown 文件。静态站点目标暂不暴露媒体上传和删除能力。
+
 ## 📝 使用场景
 
 - **技术博客作者** - 一次编写，同步发布到多个技术平台

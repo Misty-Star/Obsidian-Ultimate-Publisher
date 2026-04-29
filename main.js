@@ -34395,7 +34395,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian22 = require("obsidian");
+var import_obsidian24 = require("obsidian");
 
 // src/core/frontmatterTemplate.ts
 var OPTION_COMMENT_LIMIT = 20;
@@ -35001,7 +35001,14 @@ var FIELD_LABEL_ZH = {
   defaultTags: "\u9ED8\u8BA4\u6807\u7B7E",
   defaultCategoryId: "\u9ED8\u8BA4\u5206\u7C7B ID",
   defaultTagIds: "\u9ED8\u8BA4\u6807\u7B7E ID",
-  defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981"
+  defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981",
+  siteGenerator: "\u7AD9\u70B9\u751F\u6210\u5668",
+  owner: "\u6240\u6709\u8005",
+  branch: "\u5206\u652F",
+  contentRoot: "\u5185\u5BB9\u6839\u76EE\u5F55",
+  commitMessageTemplate: "\u63D0\u4EA4\u6D88\u606F\u6A21\u677F",
+  previewBaseUrl: "\u9884\u89C8\u57FA\u7840 URL",
+  projectIdOrPath: "\u9879\u76EE ID \u6216\u8DEF\u5F84"
 };
 var FIELD_DESCRIPTION_ZH = {
   cookie: "\u5982\u679C\u6D4F\u89C8\u5668\u6388\u6743\u5931\u8D25\uFF0C\u53EF\u624B\u52A8\u7C98\u8D34 Cookie\u3002",
@@ -35011,7 +35018,12 @@ var FIELD_DESCRIPTION_ZH = {
   publicLevel: "0 = \u79C1\u6709, 1 = \u516C\u5F00",
   defaultCategories: "\u7528\u9017\u53F7\u5206\u9694\u5206\u7C7B\u540D\u3002",
   defaultTags: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E\u540D\u3002",
-  defaultTagIds: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E ID\u3002"
+  defaultTagIds: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E ID\u3002",
+  contentRoot: "\u793A\u4F8B: content/posts",
+  commitMessageTemplate: "\u652F\u6301 {{title}} \u548C {{path}} \u5360\u4F4D\u7B26\u3002",
+  previewBaseUrl: "\u53EF\u9009\u7684\u5DF2\u53D1\u5E03\u7AD9\u70B9\u57FA\u7840 URL\u3002",
+  baseUrl: "\u793A\u4F8B: https://gitlab.com",
+  projectIdOrPath: "\u793A\u4F8B: group/project"
 };
 var FIELD_OPTION_LABEL_ZH = {
   defaultStatus: {
@@ -35027,6 +35039,15 @@ var FIELD_OPTION_LABEL_ZH = {
   publicLevel: {
     "0": "\u79C1\u6709",
     "1": "\u516C\u5F00"
+  },
+  siteGenerator: {
+    hugo: "Hugo",
+    hexo: "Hexo",
+    jekyll: "Jekyll",
+    vuepress: "VuePress",
+    vuepress2: "VuePress 2",
+    vitepress: "VitePress",
+    quartz: "Quartz"
   }
 };
 function resolveTranslation(i18n, key, fallback) {
@@ -36537,15 +36558,546 @@ var wordpressDefinition = {
   getManualFallbackFields: wordpressNormalPublish.getManualFallbackFields
 };
 
+// src/providers/definitions/staticSite.ts
+var import_node_crypto5 = require("node:crypto");
+
+// src/providers/githubProvider.ts
+var import_obsidian8 = require("obsidian");
+
+// src/core/staticSite/content.ts
+function trimSlashes(value) {
+  return value.replace(/^\/+|\/+$/g, "");
+}
+function sanitizePathSegment(value, fallback) {
+  const sanitized = value.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "").replace(/\.\.+/g, ".").replace(/[<>:"|?*\u0000-\u001F]/g, "-");
+  return sanitized || fallback;
+}
+function normalizeContentRoot(contentRoot) {
+  return trimSlashes(contentRoot || "content/posts");
+}
+function ensureMarkdownExtension(path) {
+  return /\.mdx?$/i.test(path) ? path : `${path}.md`;
+}
+function buildStaticSiteContentPath(note, options) {
+  const root = normalizeContentRoot(options.contentRoot);
+  const slug = sanitizePathSegment(note.slug || note.filePath.replace(/\.md$/i, ""), "post");
+  switch (options.generator) {
+    case "hugo":
+    case "hexo":
+    case "jekyll":
+    case "vuepress":
+    case "vuepress2":
+    case "vitepress":
+    case "quartz":
+      return ensureMarkdownExtension(`${root}/${slug}`);
+  }
+}
+function formatYamlScalar(value) {
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (value === null) {
+    return "null";
+  }
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:@-]+$/.test(text)) {
+    return text;
+  }
+  return JSON.stringify(text);
+}
+function serializeYamlValue(value) {
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return ["[]"];
+    }
+    return value.flatMap((item) => serializeYamlValue(item).map((line, index) => index === 0 ? `- ${line}` : `  ${line}`));
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value);
+    if (entries.length === 0) {
+      return ["{}"];
+    }
+    return entries.flatMap(([key, nested]) => {
+      const nestedLines = serializeYamlValue(nested);
+      return [`${key}:`, ...nestedLines.map((line) => `  ${line}`)];
+    });
+  }
+  return [formatYamlScalar(value)];
+}
+function buildStaticSiteMarkdown(note) {
+  const frontmatter = {
+    ...note.frontmatter,
+    title: typeof note.frontmatter.title === "string" && note.frontmatter.title.trim() ? note.frontmatter.title : note.title
+  };
+  if (note.date && !frontmatter.date) {
+    frontmatter.date = note.date;
+  }
+  const lines = Object.entries(frontmatter).flatMap(([key, value]) => {
+    const serialized = serializeYamlValue(value);
+    if (serialized.length === 1 && !serialized[0].startsWith("- ") && !serialized[0].includes("\n")) {
+      return [`${key}: ${serialized[0]}`];
+    }
+    return [`${key}:`, ...serialized.map((line) => `  ${line}`)];
+  });
+  return `---
+${lines.join("\n")}
+---
+
+${note.markdown.trimStart()}`;
+}
+function renderCommitMessage(template, note, path) {
+  const resolved = (template || "Publish {{title}}").replace(/{{\s*title\s*}}/g, note.title).replace(/{{\s*path\s*}}/g, path);
+  return resolved.trim() || `Publish ${note.title}`;
+}
+function buildPreviewUrl4(previewBaseUrl, contentPath) {
+  if (!previewBaseUrl?.trim()) {
+    return void 0;
+  }
+  const withoutExtension = contentPath.replace(/(^|\/)index\.md$/i, "$1").replace(/\.mdx?$/i, "");
+  return `${previewBaseUrl.replace(/\/+$/, "")}/${withoutExtension.replace(/^\/+/, "")}/`;
+}
+
+// src/providers/githubProvider.ts
+function trimTrailingSlash3(value) {
+  return value.replace(/\/+$/, "");
+}
+function parseJson(text) {
+  if (!text.trim()) {
+    return void 0;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return void 0;
+  }
+}
+function encodeBase64(value) {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(value, "utf8").toString("base64");
+  }
+  return btoa(unescape(encodeURIComponent(value)));
+}
+function encodePath(path) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+function githubApiUrl(target, path) {
+  return `${trimTrailingSlash3("https://api.github.com")}/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}${path}`;
+}
+function getContentInfo(payload) {
+  return {
+    path: payload.content?.path ?? payload.path,
+    sha: payload.content?.sha ?? payload.sha,
+    htmlUrl: payload.content?.html_url ?? payload.html_url
+  };
+}
+async function requestGithub(target, path, method = "GET", body) {
+  const response = await (0, import_obsidian8.requestUrl)({
+    url: githubApiUrl(target, path),
+    method,
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${target.token}`,
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    },
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  const payload = response.json ?? parseJson(response.text ?? "");
+  if (response.status >= 400) {
+    const message = typeof payload === "object" && payload && "message" in payload ? String(payload.message) : response.text;
+    throw new Error(`GitHub request failed (${response.status}): ${message}`);
+  }
+  return payload;
+}
+async function getExistingSha(target, path) {
+  const response = await requestGithub(
+    target,
+    `/contents/${encodePath(path)}?ref=${encodeURIComponent(target.branch)}`
+  );
+  return getContentInfo(response).sha;
+}
+function buildPayload3(note, target, path, sha) {
+  return {
+    message: renderCommitMessage(target.commitMessageTemplate, note, path),
+    content: encodeBase64(buildStaticSiteMarkdown(note)),
+    branch: target.branch,
+    ...sha ? { sha } : {}
+  };
+}
+var GithubProvider = class {
+  constructor() {
+    this.provider = "github";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.owner || !target.repo || !target.branch || !target.token) {
+      throw new Error("GitHub target is missing owner, repo, branch, or token.");
+    }
+    await requestGithub(target, "");
+  }
+  async publish(note, target, _context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const path = buildStaticSiteContentPath(note, {
+      generator: target.siteGenerator,
+      contentRoot: target.contentRoot
+    });
+    const result = await requestGithub(
+      target,
+      `/contents/${encodePath(path)}`,
+      "PUT",
+      buildPayload3(note, target, path)
+    );
+    const info = getContentInfo(result);
+    return {
+      remoteId: info.path ?? path,
+      remoteUrl: buildPreviewUrl4(target.previewBaseUrl, info.path ?? path) ?? info.htmlUrl
+    };
+  }
+  async update(remoteId, note, target, _context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const path = remoteId || buildStaticSiteContentPath(note, { generator: target.siteGenerator, contentRoot: target.contentRoot });
+    const sha = await getExistingSha(target, path);
+    if (!sha) {
+      throw new Error(`GitHub update could not find existing file sha for ${path}.`);
+    }
+    const result = await requestGithub(
+      target,
+      `/contents/${encodePath(path)}`,
+      "PUT",
+      buildPayload3(note, target, path, sha)
+    );
+    const info = getContentInfo(result);
+    return {
+      remoteId: info.path ?? path,
+      remoteUrl: buildPreviewUrl4(target.previewBaseUrl, info.path ?? path) ?? info.htmlUrl
+    };
+  }
+  async delete(_remoteId, _target) {
+    throw new Error("GitHub static-site delete is not supported yet.");
+  }
+  async getPreviewUrl(remoteId, target) {
+    return buildPreviewUrl4(target.previewBaseUrl, remoteId);
+  }
+};
+
+// src/providers/gitlabProvider.ts
+var import_obsidian9 = require("obsidian");
+function trimTrailingSlash4(value) {
+  return value.replace(/\/+$/, "");
+}
+function parseJson2(text) {
+  if (!text.trim()) return void 0;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return void 0;
+  }
+}
+function apiBase(target) {
+  return `${trimTrailingSlash4(target.baseUrl || "https://gitlab.com")}/api/v4`;
+}
+function encodeFilePath(path) {
+  return encodeURIComponent(path);
+}
+async function requestGitlab(target, path, method = "GET", body) {
+  const response = await (0, import_obsidian9.requestUrl)({
+    url: `${apiBase(target)}${path}`,
+    method,
+    headers: {
+      "PRIVATE-TOKEN": target.token,
+      "Content-Type": "application/json"
+    },
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  const payload = response.json ?? parseJson2(response.text ?? "");
+  if (response.status >= 400) {
+    const message = typeof payload === "object" && payload && "message" in payload ? String(payload.message) : response.text;
+    throw new Error(`GitLab request failed (${response.status}): ${message}`);
+  }
+  return payload;
+}
+function projectPath(target) {
+  return `/projects/${encodeURIComponent(target.projectIdOrPath)}`;
+}
+function buildPayload4(note, target, path) {
+  return {
+    branch: target.branch,
+    commit_message: renderCommitMessage(target.commitMessageTemplate, note, path),
+    content: buildStaticSiteMarkdown(note)
+  };
+}
+var GitlabProvider = class {
+  constructor() {
+    this.provider = "gitlab";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.baseUrl || !target.projectIdOrPath || !target.branch || !target.token) {
+      throw new Error("GitLab target is missing baseUrl, projectIdOrPath, branch, or token.");
+    }
+    await requestGitlab(target, projectPath(target));
+  }
+  async publish(note, target, _context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const path = buildStaticSiteContentPath(note, { generator: target.siteGenerator, contentRoot: target.contentRoot });
+    await requestGitlab(target, `${projectPath(target)}/repository/files/${encodeFilePath(path)}`, "POST", buildPayload4(note, target, path));
+    return { remoteId: path, remoteUrl: buildPreviewUrl4(target.previewBaseUrl, path) };
+  }
+  async update(remoteId, note, target, _context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const path = remoteId || buildStaticSiteContentPath(note, { generator: target.siteGenerator, contentRoot: target.contentRoot });
+    await requestGitlab(target, `${projectPath(target)}/repository/files/${encodeFilePath(path)}`, "PUT", buildPayload4(note, target, path));
+    return { remoteId: path, remoteUrl: buildPreviewUrl4(target.previewBaseUrl, path) };
+  }
+  async delete(_remoteId, _target) {
+    throw new Error("GitLab static-site delete is not supported yet.");
+  }
+  async getPreviewUrl(remoteId, target) {
+    return buildPreviewUrl4(target.previewBaseUrl, remoteId);
+  }
+};
+
+// src/providers/definitions/staticSite.ts
+var STATIC_SITE_GENERATOR_OPTIONS = [
+  { value: "hugo", label: "Hugo" },
+  { value: "hexo", label: "Hexo" },
+  { value: "jekyll", label: "Jekyll" },
+  { value: "vuepress", label: "VuePress" },
+  { value: "vuepress2", label: "VuePress 2" },
+  { value: "vitepress", label: "VitePress" },
+  { value: "quartz", label: "Quartz" }
+];
+var SHARED_STATIC_SITE_FIELDS = [
+  { key: "siteGenerator", label: "Site generator", type: "dropdown", options: STATIC_SITE_GENERATOR_OPTIONS },
+  { key: "branch", label: "Branch", type: "text" },
+  { key: "contentRoot", label: "Content root", description: "Example: content/posts", type: "text" },
+  { key: "token", label: "Token", type: "password" },
+  {
+    key: "commitMessageTemplate",
+    label: "Commit message template",
+    description: "Supports {{title}} and {{path}} placeholders.",
+    type: "text"
+  },
+  { key: "previewBaseUrl", label: "Preview base URL", description: "Optional published site base URL.", type: "text" }
+];
+var GITHUB_FIELDS = [
+  { key: "owner", label: "Owner", type: "text" },
+  { key: "repo", label: "Repo", type: "text" },
+  ...SHARED_STATIC_SITE_FIELDS
+];
+var GITLAB_FIELDS = [
+  { key: "baseUrl", label: "Base URL", description: "Example: https://gitlab.com", type: "text" },
+  { key: "projectIdOrPath", label: "Project ID or path", description: "Example: group/project", type: "text" },
+  ...SHARED_STATIC_SITE_FIELDS
+];
+function normalizeGenerator(value) {
+  return STATIC_SITE_GENERATOR_OPTIONS.some((option) => option.value === value) ? value : "hugo";
+}
+var githubSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...GITHUB_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "siteGenerator":
+        return target.siteGenerator;
+      case "owner":
+        return target.owner;
+      case "repo":
+        return target.repo;
+      case "branch":
+        return target.branch;
+      case "contentRoot":
+        return target.contentRoot;
+      case "token":
+        return target.token;
+      case "commitMessageTemplate":
+        return target.commitMessageTemplate;
+      case "previewBaseUrl":
+        return target.previewBaseUrl ?? "";
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "siteGenerator":
+        target.siteGenerator = normalizeGenerator(value);
+        return target;
+      case "owner":
+        target.owner = String(value).trim();
+        return target;
+      case "repo":
+        target.repo = String(value).trim();
+        return target;
+      case "branch":
+        target.branch = String(value).trim() || "main";
+        return target;
+      case "contentRoot":
+        target.contentRoot = String(value).trim() || "content/posts";
+        return target;
+      case "token":
+        target.token = String(value).trim();
+        return target;
+      case "commitMessageTemplate":
+        target.commitMessageTemplate = String(value).trim() || "Publish {{title}}";
+        return target;
+      case "previewBaseUrl":
+        target.previewBaseUrl = String(value).trim();
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var gitlabSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...GITLAB_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "siteGenerator":
+        return target.siteGenerator;
+      case "baseUrl":
+        return target.baseUrl;
+      case "projectIdOrPath":
+        return target.projectIdOrPath;
+      case "branch":
+        return target.branch;
+      case "contentRoot":
+        return target.contentRoot;
+      case "token":
+        return target.token;
+      case "commitMessageTemplate":
+        return target.commitMessageTemplate;
+      case "previewBaseUrl":
+        return target.previewBaseUrl ?? "";
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "siteGenerator":
+        target.siteGenerator = normalizeGenerator(value);
+        return target;
+      case "baseUrl":
+        target.baseUrl = String(value).trim() || "https://gitlab.com";
+        return target;
+      case "projectIdOrPath":
+        target.projectIdOrPath = String(value).trim();
+        return target;
+      case "branch":
+        target.branch = String(value).trim() || "main";
+        return target;
+      case "contentRoot":
+        target.contentRoot = String(value).trim() || "content/posts";
+        return target;
+      case "token":
+        target.token = String(value).trim();
+        return target;
+      case "commitMessageTemplate":
+        target.commitMessageTemplate = String(value).trim() || "Publish {{title}}";
+        return target;
+      case "previewBaseUrl":
+        target.previewBaseUrl = String(value).trim();
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var githubDefinition = {
+  id: "github",
+  name: "GitHub Static Sites",
+  category: "github",
+  family: "github-static-site",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true
+  },
+  createProvider: () => new GithubProvider(),
+  createTarget: () => ({
+    id: (0, import_node_crypto5.randomUUID)(),
+    name: "GitHub Static Sites",
+    enabled: true,
+    provider: "github",
+    siteGenerator: "hugo",
+    owner: "",
+    repo: "",
+    branch: "main",
+    contentRoot: "content/posts",
+    token: "",
+    commitMessageTemplate: "Publish {{title}}",
+    previewBaseUrl: ""
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    siteGenerator: normalizeGenerator(target.siteGenerator),
+    branch: target.branch || "main",
+    contentRoot: target.contentRoot || "content/posts",
+    commitMessageTemplate: target.commitMessageTemplate || "Publish {{title}}",
+    previewBaseUrl: target.previewBaseUrl || ""
+  }),
+  settingsForm: githubSettingsForm
+};
+var gitlabDefinition = {
+  id: "gitlab",
+  name: "GitLab Static Sites",
+  category: "gitlab",
+  family: "gitlab-static-site",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true
+  },
+  createProvider: () => new GitlabProvider(),
+  createTarget: () => ({
+    id: (0, import_node_crypto5.randomUUID)(),
+    name: "GitLab Static Sites",
+    enabled: true,
+    provider: "gitlab",
+    siteGenerator: "hugo",
+    baseUrl: "https://gitlab.com",
+    projectIdOrPath: "",
+    branch: "main",
+    contentRoot: "content/posts",
+    token: "",
+    commitMessageTemplate: "Publish {{title}}",
+    previewBaseUrl: ""
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    siteGenerator: normalizeGenerator(target.siteGenerator),
+    baseUrl: target.baseUrl || "https://gitlab.com",
+    branch: target.branch || "main",
+    contentRoot: target.contentRoot || "content/posts",
+    commitMessageTemplate: target.commitMessageTemplate || "Publish {{title}}",
+    previewBaseUrl: target.previewBaseUrl || ""
+  }),
+  settingsForm: gitlabSettingsForm
+};
+
 // src/providers/definitions/index.ts
 var providerDefinitionsById = {
   wordpress: wordpressDefinition,
   yuque: yuqueDefinition,
   zhihu: zhihuDefinition,
   csdn: csdnDefinition,
-  juejin: juejinDefinition
+  juejin: juejinDefinition,
+  github: githubDefinition,
+  gitlab: gitlabDefinition
 };
-var providerDisplayOrder = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
+var providerDisplayOrder = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"];
 function getProviderDefinitions() {
   return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
 }
@@ -36677,6 +37229,10 @@ function normalizeTarget(target) {
       return getProviderDefinition("csdn").normalizeTarget(target);
     case "juejin":
       return getProviderDefinition("juejin").normalizeTarget(target);
+    case "github":
+      return getProviderDefinition("github").normalizeTarget(target);
+    case "gitlab":
+      return getProviderDefinition("gitlab").normalizeTarget(target);
   }
 }
 
@@ -36763,7 +37319,7 @@ function buildInitialTargetDraft(target, note) {
   return definition.normalPublish.buildInitialDraft(note, target);
 }
 function buildNormalPublishSessionState(note, targets) {
-  const enabledTargets = targets.filter((target) => target.enabled);
+  const enabledTargets = targets.filter((target) => target.enabled && getProviderDefinition(target.provider).capabilities.normalPublish);
   const targetDrafts = {};
   const remoteOptions = {};
   const lastErrorByTargetId = {};
@@ -36784,8 +37340,8 @@ function buildNormalPublishSessionState(note, targets) {
 }
 
 // src/core/note.ts
-var import_obsidian8 = require("obsidian");
-var import_node_crypto5 = require("node:crypto");
+var import_obsidian10 = require("obsidian");
+var import_node_crypto6 = require("node:crypto");
 var import_node_path = require("node:path");
 
 // src/core/markdown.ts
@@ -36899,7 +37455,7 @@ function resolveAsset(app, file, reference) {
     };
   }
   const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
-  if (!(resolved instanceof import_obsidian8.TFile)) {
+  if (!(resolved instanceof import_obsidian10.TFile)) {
     return {
       unresolved: {
         reference,
@@ -36959,7 +37515,7 @@ async function extractPublishableNote(app, file) {
   };
 }
 function computeContentHash(note) {
-  return (0, import_node_crypto5.createHash)("sha256").update(
+  return (0, import_node_crypto6.createHash)("sha256").update(
     JSON.stringify({
       markdown: note.markdown,
       frontmatter: note.frontmatter,
@@ -37249,7 +37805,7 @@ var PublishWorkflow = class {
 };
 
 // src/i18n/index.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 
 // src/i18n/locales.ts
 function normalizeLocale(input) {
@@ -37286,7 +37842,7 @@ function createI18n(localeInput) {
   };
 }
 function createI18nFromObsidianLanguage() {
-  return createI18n((0, import_obsidian9.getLanguage)());
+  return createI18n((0, import_obsidian11.getLanguage)());
 }
 
 // src/providers/registry.ts
@@ -37307,14 +37863,14 @@ var ProviderRegistry = class {
 };
 
 // src/types.ts
-var SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
+var SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"];
 function isProviderId(value) {
   return typeof value === "string" && SUPPORTED_PROVIDER_IDS.includes(value);
 }
 
 // src/ui/PublishTargetModal.ts
-var import_obsidian10 = require("obsidian");
-var PublishTargetModal = class extends import_obsidian10.SuggestModal {
+var import_obsidian12 = require("obsidian");
+var PublishTargetModal = class extends import_obsidian12.SuggestModal {
   constructor(app, targets, onChooseTarget) {
     super(app);
     this.targets = targets;
@@ -37340,7 +37896,7 @@ var PublishTargetModal = class extends import_obsidian10.SuggestModal {
 };
 
 // src/ui/UltimatePublisherSettingTab.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 
 // src/ui/settings/renderSettingsRoot.tsx
 var import_client = __toESM(require_client());
@@ -37505,7 +38061,7 @@ var DesktopWebAuthService = class {
 };
 
 // src/ui/settings/EditTargetModal.ts
-var import_obsidian11 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 
 // src/ui/settings/providerCatalog.ts
 var PROVIDER_CATALOG_PRESENTATION = [
@@ -37553,6 +38109,24 @@ var PROVIDER_CATALOG_PRESENTATION = [
       "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 Juejin \u6587\u7AE0\u3002"
     },
     icon: "JJ"
+  },
+  {
+    id: "github",
+    descriptionKey: "settings.providers.github.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to GitHub-backed static sites such as Hugo.",
+      "zh-CN": "\u5C06 Markdown \u6587\u7AE0\u53D1\u5E03\u5230 Hugo \u7B49 GitHub \u9759\u6001\u7AD9\u70B9\u4ED3\u5E93\u3002"
+    },
+    icon: "GH"
+  },
+  {
+    id: "gitlab",
+    descriptionKey: "settings.providers.gitlab.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to GitLab-backed static sites such as Hugo.",
+      "zh-CN": "\u5C06 Markdown \u6587\u7AE0\u53D1\u5E03\u5230 Hugo \u7B49 GitLab \u9759\u6001\u7AD9\u70B9\u4ED3\u5E93\u3002"
+    },
+    icon: "GL"
   }
 ];
 var DEFAULT_I18N = createI18n("en");
@@ -37669,7 +38243,7 @@ function clearWebAuthTarget(target) {
 }
 
 // src/ui/settings/EditTargetModal.ts
-var EditTargetModal = class extends import_obsidian11.Modal {
+var EditTargetModal = class extends import_obsidian13.Modal {
   constructor(app, options) {
     super(app);
     this.options = options;
@@ -37689,7 +38263,7 @@ var EditTargetModal = class extends import_obsidian11.Modal {
       text: this.options.mode === "create" ? i18n.t("settings.modal.title.addTarget", { provider: providerName }) : i18n.t("settings.modal.title.editTarget", { provider: providerName })
     });
     for (const field of getModalFieldDefinitions(this.draft, i18n)) {
-      const setting = new import_obsidian11.Setting(contentEl).setName(field.label);
+      const setting = new import_obsidian13.Setting(contentEl).setName(field.label);
       if (field.description) {
         setting.setDesc(field.description);
       }
@@ -38513,7 +39087,7 @@ function render(root, props) {
 }
 
 // src/ui/UltimatePublisherSettingTab.ts
-var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingTab {
+var UltimatePublisherSettingTab = class extends import_obsidian14.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
@@ -38533,7 +39107,7 @@ var UltimatePublisherSettingTab = class extends import_obsidian12.PluginSettingT
 };
 
 // src/ui/modals/BatchPublishModal.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 
 // src/core/batchPublish/state.ts
 function cloneStringList3(values) {
@@ -39190,7 +39764,7 @@ var VALIDATION_MESSAGE_KEY_BY_TEXT = {
   "Juejin publish requires a categoryId.": "publish.batch.validation.juejin.categoryIdRequired",
   "Juejin publish requires at least one tagId.": "publish.batch.validation.juejin.tagIdsRequired"
 };
-var BatchPublishModal = class extends import_obsidian13.Modal {
+var BatchPublishModal = class extends import_obsidian15.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote) {
     super(plugin.app);
     this.plugin = plugin;
@@ -39693,7 +40267,7 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
     }
     const selectedTargets = this.getSelectedTargets();
     if (selectedTargets.length === 0) {
-      new import_obsidian13.Notice(i18n.t("notice.batch.selectOne"), 6e3);
+      new import_obsidian15.Notice(i18n.t("notice.batch.selectOne"), 6e3);
       return;
     }
     const validationErrors = selectedTargets.reduce((acc, target) => {
@@ -39717,7 +40291,7 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
     };
     this.requestRender();
     if (hasValidationError) {
-      new import_obsidian13.Notice(i18n.t("notice.batch.invalidDraft"), 8e3);
+      new import_obsidian15.Notice(i18n.t("notice.batch.invalidDraft"), 8e3);
       return;
     }
     this.isPublishing = true;
@@ -39744,7 +40318,7 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
           }
         };
       }
-      new import_obsidian13.Notice(
+      new import_obsidian15.Notice(
         i18n.t("notice.batch.finished", {
           successCount: result.successCount,
           failureCount: result.failureCount
@@ -39763,7 +40337,7 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
           }
         };
       }
-      new import_obsidian13.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
+      new import_obsidian15.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
     } finally {
       this.isPublishing = false;
       this.requestRender();
@@ -39806,7 +40380,7 @@ var BatchPublishModal = class extends import_obsidian13.Modal {
 };
 
 // src/ui/modals/JuejinQuickPublishMetadataModal.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 function cloneDraft(draft) {
   return {
     ...draft,
@@ -39836,7 +40410,7 @@ function readStringArray2(value) {
 function normalizeOptionLabel2(value) {
   return value.trim().toLocaleLowerCase();
 }
-var JuejinQuickPublishMetadataModal = class extends import_obsidian14.Modal {
+var JuejinQuickPublishMetadataModal = class extends import_obsidian16.Modal {
   constructor(app, target, note, initialDraft, providerRegistry = new ProviderRegistry(app)) {
     super(app);
     this.target = target;
@@ -40020,13 +40594,13 @@ var JuejinQuickPublishMetadataModal = class extends import_obsidian14.Modal {
 };
 
 // src/ui/modals/NormalPublishModal.ts
-var import_obsidian20 = require("obsidian");
+var import_obsidian22 = require("obsidian");
 
 // src/core/llm/service.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian21 = require("obsidian");
 
 // src/core/llm/providers/anthropicProvider.ts
-var import_obsidian15 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/core/llm/types.ts
 var LlmHttpError = class extends Error {
@@ -40038,7 +40612,7 @@ var LlmHttpError = class extends Error {
 
 // src/core/llm/providers/anthropicProvider.ts
 var AnthropicLlmProvider = class {
-  constructor(request = import_obsidian15.requestUrl) {
+  constructor(request = import_obsidian17.requestUrl) {
     this.request = request;
     this.vendor = "anthropic";
   }
@@ -40077,9 +40651,9 @@ var AnthropicLlmProvider = class {
 };
 
 // src/core/llm/providers/geminiProvider.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian18 = require("obsidian");
 var GeminiLlmProvider = class {
-  constructor(request = import_obsidian16.requestUrl) {
+  constructor(request = import_obsidian18.requestUrl) {
     this.request = request;
     this.vendor = "gemini";
   }
@@ -40117,7 +40691,7 @@ var GeminiLlmProvider = class {
 };
 
 // src/core/llm/providers/openaiProvider.ts
-var import_obsidian17 = require("obsidian");
+var import_obsidian19 = require("obsidian");
 function resolveBaseUrl(endpointOverride) {
   const base = (endpointOverride || "https://api.openai.com/v1").replace(/\/+$/, "");
   return `${base}/responses`;
@@ -40130,7 +40704,7 @@ function extractResponsesText(payload) {
   return responsePayload.output?.flatMap((item) => item.content ?? []).filter((item) => item.type === "output_text" && typeof item.text === "string").map((item) => item.text ?? "").join("").trim() ?? "";
 }
 var OpenAiLlmProvider = class {
-  constructor(request = import_obsidian17.requestUrl) {
+  constructor(request = import_obsidian19.requestUrl) {
     this.request = request;
     this.vendor = "openai";
   }
@@ -40175,7 +40749,7 @@ var OpenAiLlmProvider = class {
 };
 
 // src/core/llm/providers/openaiCompatibleProvider.ts
-var import_obsidian18 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 function resolveChatCompletionsUrl(endpointOverride) {
   const base = (endpointOverride || "https://api.openai.com/v1/chat/completions").replace(/\/+$/, "");
   return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
@@ -40196,7 +40770,7 @@ function extractChatCompletionText(payload) {
   return "";
 }
 var OpenAiCompatibleLlmProvider = class {
-  constructor(request = import_obsidian18.requestUrl) {
+  constructor(request = import_obsidian20.requestUrl) {
     this.request = request;
     this.vendor = "openai-compatible";
   }
@@ -40288,7 +40862,7 @@ function mapLlmError(error) {
   return error instanceof Error ? error : new Error(String(error));
 }
 var LlmService = class {
-  constructor(request = import_obsidian19.requestUrl) {
+  constructor(request = import_obsidian21.requestUrl) {
     this.openai = new OpenAiLlmProvider(request);
     this.openaiCompatible = new OpenAiCompatibleLlmProvider(request);
     this.anthropic = new AnthropicLlmProvider(request);
@@ -40453,7 +41027,7 @@ function deriveNoteTargetSummaries(settings, notePath) {
 // src/ui/modals/NormalPublishModal.ts
 var NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
 var NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
-var NormalPublishModal = class extends import_obsidian20.Modal {
+var NormalPublishModal = class extends import_obsidian22.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote, llmService = new LlmService()) {
     super(plugin.app);
     this.plugin = plugin;
@@ -40725,7 +41299,7 @@ var NormalPublishModal = class extends import_obsidian20.Modal {
       const validationError = validateTargetDraft(draft);
       if (validationError) {
         this.setSelectedTargetError(validationError);
-        new import_obsidian20.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
+        new import_obsidian22.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
         await this.render();
         return;
       }
@@ -40743,7 +41317,7 @@ var NormalPublishModal = class extends import_obsidian20.Modal {
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
       const actionLabel = result.action === "update" ? i18n.t("notice.publish.action.updated") : i18n.t("notice.publish.action.published");
-      new import_obsidian20.Notice(
+      new import_obsidian22.Notice(
         i18n.t("notice.publish.succeeded", {
           target: target.name,
           action: actionLabel
@@ -40755,7 +41329,7 @@ var NormalPublishModal = class extends import_obsidian20.Modal {
       await pluginWithFailurePersistence.persistPublishFailureState?.(error);
       const message = error instanceof Error ? error.message : String(error);
       this.setSelectedTargetError(message);
-      new import_obsidian20.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian22.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -40950,7 +41524,7 @@ var NormalPublishModal = class extends import_obsidian20.Modal {
       if (!target || !target.enabled) {
         const message = i18n.t("publish.shared.error.targetUnavailable");
         this.setSelectedTargetError(message);
-        new import_obsidian20.Notice(message, 6e3);
+        new import_obsidian22.Notice(message, 6e3);
         void this.render();
         return;
       }
@@ -41062,7 +41636,7 @@ function buildQuickPublishChildren(enabledTargets, i18n) {
 }
 
 // src/ui/views/PublisherDashboardView.ts
-var import_obsidian21 = require("obsidian");
+var import_obsidian23 = require("obsidian");
 var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
 function formatTimestamp(timestamp, i18n) {
   if (!timestamp) {
@@ -41074,7 +41648,7 @@ function formatTimestamp(timestamp, i18n) {
   }
   return parsed.toLocaleString();
 }
-var PublisherDashboardView = class extends import_obsidian21.ItemView {
+var PublisherDashboardView = class extends import_obsidian23.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -41232,7 +41806,7 @@ function normalizeLoadedRecord(record, targetIds) {
     contentHash: record.contentHash
   };
 }
-var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
+var UltimatePublisherPlugin = class extends import_obsidian24.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -41265,7 +41839,7 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
       }
     });
     this.registerEvent(this.app.vault.on?.("create", (file) => {
-      if (file instanceof import_obsidian22.TFile) {
+      if (file instanceof import_obsidian24.TFile) {
         void this.handleCreatedMarkdownFile(file);
       }
     }));
@@ -41394,7 +41968,7 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new import_obsidian22.Notice(this.i18n.t("notice.dashboard.openFailed"));
+      new import_obsidian24.Notice(this.i18n.t("notice.dashboard.openFailed"));
       return;
     }
     await leaf.setViewState({
@@ -41409,7 +41983,7 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
   openNormalPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new NormalPublishModal(this, file, this.publishWorkflow).open();
@@ -41417,7 +41991,7 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
   openBatchPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new BatchPublishModal(this, file, this.publishWorkflow).open();
@@ -41425,12 +41999,12 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
   async runQuickPublishForTarget(targetId) {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new import_obsidian22.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
+      new import_obsidian24.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
       return;
     }
     let quickPublishContext;
@@ -41439,7 +42013,7 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
     } catch (error) {
       await this.persistPublishFailureState(error);
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
     if (quickPublishContext === null) {
@@ -41455,12 +42029,12 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
       return;
     }
     if (targets.length === 1) {
@@ -41474,20 +42048,20 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
   async insertPublishFrontmatterForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian22.Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
+      new import_obsidian24.Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
       return;
     }
     const result = await this.insertPublishFrontmatterIfNeeded(file);
     if (result === "skipped-existing") {
-      new import_obsidian22.Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
+      new import_obsidian24.Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
       return;
     }
     if (result === "inserted") {
-      new import_obsidian22.Notice(this.i18n.t("notice.frontmatter.inserted"));
+      new import_obsidian24.Notice(this.i18n.t("notice.frontmatter.inserted"));
     }
   }
   async handleCreatedMarkdownFile(file) {
-    if (!(file instanceof import_obsidian22.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian24.TFile) || file.extension !== "md") {
       return;
     }
     const automationSettings = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
@@ -41581,15 +42155,15 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
     }
   }
   getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian22.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian24.MarkdownView);
     const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian22.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian24.TFile) || file.extension !== "md") {
       return null;
     }
     return file;
   }
   showPublisherMenu(items, position) {
-    const menu = new import_obsidian22.Menu();
+    const menu = new import_obsidian24.Menu();
     menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -41712,17 +42286,17 @@ var UltimatePublisherPlugin = class extends import_obsidian22.Plugin {
     };
   }
   async publishToTarget(file, target, context) {
-    new import_obsidian22.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
+    new import_obsidian24.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
     try {
       const result = await this.publishWorkflow.runSingle(file, target, this.settings, context);
       this.settings = result.settings;
       await this.saveSettings();
       const actionLabel = result.action === "update" ? this.i18n.t("notice.publish.action.updated") : this.i18n.t("notice.publish.action.published");
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
       await this.persistPublishFailureState(error);
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian22.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian24.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
   }
