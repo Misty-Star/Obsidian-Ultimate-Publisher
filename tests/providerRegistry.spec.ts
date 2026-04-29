@@ -54,10 +54,13 @@ describe("ProviderRegistry", () => {
 
   it("keeps the registry as a thin definition-backed runtime boundary", () => {
     const registrySource = readFileSync("src/providers/registry.ts", "utf8");
+    const localProviderImports = [...registrySource.matchAll(/from "([^"]+)"/g)]
+      .map((match) => match[1])
+      .filter((specifier) => specifier.startsWith("./") && specifier !== "./definitions");
 
     expect(registrySource).toContain('import { getProviderDefinition } from "./definitions";');
     expect(registrySource).toContain("getProviderDefinition(target.provider).createProvider(this.app)");
-    expect(registrySource).not.toMatch(/\\.\\/.*Provider/);
+    expect(localProviderImports).toEqual([]);
     expect(registrySource).not.toContain("target.category");
     expect(registrySource).not.toContain("target.family");
     expect(registrySource).not.toContain("siteGenerator");
