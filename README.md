@@ -104,12 +104,14 @@ juejinTags: [Obsidian, Efficiency]
 ---
 ```
 
-Notes on frontmatter support:
 
-- `slug` is used by WordPress and Yuque.
-- `tags`, `categories`, and `description` are used where the selected provider exposes matching publish fields, such as WordPress/CSDN tags and categories or Juejin brief content.
-- `juejinCategory` and `juejinTags` are human-readable names. They are resolved against Juejin's available options when publishing; use the normal publish dialog if you need to select exact IDs.
-- Local Obsidian images are currently uploaded only for WordPress targets. For other providers, use already-hosted remote image URLs in the note.
+## Provider architecture
+
+Ultimate Publisher keeps provider identity flat and stable: a target stores one `target.provider` value such as `wordpress`, `github`, or `gitlab`. Marketplace categories (`common`, `wordpress`, `github`, `gitlab`, `web`, etc.) are UI grouping metadata derived from provider definitions, not persisted runtime hierarchy.
+
+Provider definitions own the family and capability metadata used by settings, Marketplace cards, normal publish integration, and runtime provider factories. For static-site providers, use one shared provider id per hosting family (`github` or `gitlab`) and store the static-site generator subtype (`hugo`, `hexo`, `jekyll`, `vuepress`, `vuepress2`, `vitepress`, or `quartz`) inside the target config. Add a new provider id only when the runtime authentication/API/persistence boundary is genuinely different; do not create one id per static-site generator by default.
+
+The current GitHub/GitLab static-site targets support publishing and updating Markdown files for Hugo-style content paths through the repository contents APIs. Media upload and delete are intentionally not exposed for these static-site targets yet.
 
 ## 📝 Use Cases
 
