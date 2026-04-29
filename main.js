@@ -34478,32 +34478,14 @@ function injectPublishFrontmatter(markdown, template) {
 ${markdown}`;
 }
 
-// src/providers/definitions.ts
-var import_node_crypto2 = require("node:crypto");
-
-// src/providers/csdnProvider.ts
+// src/providers/definitions/common.ts
 var import_node_crypto = require("node:crypto");
-var import_obsidian3 = require("obsidian");
 
-// src/core/html.ts
-var import_obsidian = require("obsidian");
-async function renderMarkdownToHtml(app, markdown, sourcePath) {
-  const container = document.createElement("div");
-  const component = new import_obsidian.Component();
-  component.load();
-  try {
-    await import_obsidian.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
-    container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
-      copyButton.remove();
-    });
-    return container.innerHTML.trim();
-  } finally {
-    component.unload();
-  }
-}
+// src/providers/yuqueProvider.ts
+var import_obsidian2 = require("obsidian");
 
 // src/core/providers.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian = require("obsidian");
 function assertRemoteAssetsSupported(note, targetName) {
   if (note.attachments.length === 0) {
     return;
@@ -34540,767 +34522,15 @@ function getPublishFailureSettings(error) {
   return candidate.settings;
 }
 
-// src/core/webPublishConfig.ts
-function readString(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
-function readStringArray(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-function pickFirstNonEmptyArray(...values) {
-  for (const value of values) {
-    const items = readStringArray(value);
-    if (items.length > 0) {
-      return items;
-    }
-  }
-  return [];
-}
-function resolveZhihuPublishInput(note, target, overrides) {
-  const columnId = readString(overrides?.columnId) || target.defaultColumnId;
-  return {
-    columnId: columnId || void 0
-  };
-}
-function resolveCsdnPublishInput(note, target, overrides) {
-  const categories = pickFirstNonEmptyArray(
-    overrides?.categories,
-    note.categories,
-    target.defaultCategories
-  );
-  const tags = pickFirstNonEmptyArray(
-    overrides?.tags,
-    note.tags,
-    target.defaultTags
-  );
-  return {
-    categories,
-    tags
-  };
-}
-function normalizeOptionLabel(value) {
-  return value.trim().toLocaleLowerCase();
-}
-function resolveNamedJuejinOptionId(kind, name, options) {
-  const normalizedName = normalizeOptionLabel(name);
-  const matches = options.filter((option) => normalizeOptionLabel(option.label) === normalizedName);
-  if (matches.length === 0) {
-    throw new Error(`Juejin ${kind} "${name}" did not match any available option.`);
-  }
-  if (matches.length > 1) {
-    throw new Error(`Juejin ${kind} "${name}" matched multiple available options.`);
-  }
-  return matches[0].id;
-}
-async function resolveJuejinPublishInput(note, target, overrides, runtime) {
-  const frontmatterCategoryName = readString(note.frontmatter["juejinCategory"]);
-  const frontmatterTagNames = readStringArray(note.frontmatter["juejinTags"]);
-  const briefContent = readString(overrides?.briefContent) || readString(note.frontmatter["description"]) || target.defaultBriefContent || note.excerpt;
-  const overrideCategoryId = readString(overrides?.categoryId);
-  const overrideTagIds = readStringArray(overrides?.tagIds);
-  const shouldResolveCategoryName = !overrideCategoryId && Boolean(frontmatterCategoryName);
-  const shouldResolveTagNames = overrideTagIds.length === 0 && frontmatterTagNames.length > 0;
-  let categoryId = overrideCategoryId;
-  let tagIds = overrideTagIds;
-  let providerOptionCache;
-  if (shouldResolveCategoryName || shouldResolveTagNames) {
-    const snapshot = await loadJuejinOptionSnapshot({
-      targetId: target.id,
-      target,
-      providerOptionCache: runtime?.providerOptionCache,
-      loadNormalPublishOptions: runtime?.loadNormalPublishOptions ?? (async () => {
-        throw new Error("Juejin options are unavailable.");
-      }),
-      nowMs: runtime?.nowMs
-    });
-    if (snapshot.source === "unavailable") {
-      if (shouldResolveCategoryName) {
-        throw new Error(`Juejin options are unavailable, so category "${frontmatterCategoryName}" could not be resolved.`);
-      }
-      throw new Error(`Juejin options are unavailable, so tag "${frontmatterTagNames[0]}" could not be resolved.`);
-    }
-    try {
-      if (shouldResolveCategoryName) {
-        categoryId = resolveNamedJuejinOptionId("category", frontmatterCategoryName, snapshot.categories);
-      }
-      if (shouldResolveTagNames) {
-        tagIds = frontmatterTagNames.map((name) => resolveNamedJuejinOptionId("tag", name, snapshot.tags));
-      }
-    } catch (error) {
-      if (snapshot.source === "network") {
-        throw withPublishFailureDetails(error, { providerOptionCache: snapshot.nextCache });
-      }
-      throw error;
-    }
-    if (snapshot.source === "network") {
-      providerOptionCache = snapshot.nextCache;
-    }
-  }
-  categoryId = categoryId || target.defaultCategoryId;
-  tagIds = tagIds.length > 0 ? tagIds : target.defaultTagIds;
-  if (!categoryId) {
-    throw new Error("Juejin publish requires a categoryId.");
-  }
-  if (tagIds.length === 0) {
-    throw new Error("Juejin publish requires at least one tagId.");
-  }
-  return {
-    input: {
-      categoryId,
-      tagIds,
-      briefContent
-    },
-    providerOptionCache
-  };
-}
-
-// src/providers/csdnProvider.ts
-function buildHeaders(target) {
-  return {
-    Cookie: target.cookie
-  };
-}
-var CSDN_X_CA_KEY = "203803574";
-var CSDN_APP_SECRET = "9znpamsyl2c7cdrr9sas0le9vbc3r6ba";
-function generateXCaSignature(url, method, accept, nonce, contentType) {
-  const parsedUrl = new URL(url);
-  const path = method === "GET" ? `${parsedUrl.pathname}${parsedUrl.search}` : parsedUrl.pathname;
-  const stringToSign = `${method}
-${accept}
-
-${contentType}
-
-x-ca-key:${CSDN_X_CA_KEY}
-x-ca-nonce:${nonce}
-${path}`;
-  return (0, import_node_crypto.createHmac)("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
-}
-function buildSignedHeaders(target, url, method, contentType) {
-  const accept = "*/*";
-  const nonce = (0, import_node_crypto.randomUUID)();
-  const signature = generateXCaSignature(url, method, accept, nonce, contentType);
-  return {
-    ...buildHeaders(target),
-    accept,
-    "content-type": contentType,
-    "x-ca-key": CSDN_X_CA_KEY,
-    "x-ca-nonce": nonce,
-    "x-ca-signature": signature,
-    "x-ca-signature-headers": "x-ca-key,x-ca-nonce"
-  };
-}
-function readJsonPayload(response) {
-  if (response.json !== void 0) {
-    return response.json;
-  }
-  if (response.text) {
-    return JSON.parse(response.text);
-  }
-  return {};
-}
-function readCookieValue(cookieHeader, key) {
-  const pairs = cookieHeader.split(";").map((item) => item.trim()).filter(Boolean);
-  for (const pair of pairs) {
-    const [name, ...rest] = pair.split("=");
-    if (name === key) {
-      return rest.join("=").trim();
-    }
-  }
-  return "";
-}
-function buildPublishPayload(note, html, categories, tags) {
-  return {
-    title: note.title,
-    markdowncontent: note.markdown,
-    content: html,
-    readType: "public",
-    level: 0,
-    tags: tags.join(","),
-    status: 0,
-    categories: categories.join(","),
-    type: "original",
-    original_link: "",
-    authorized_status: false,
-    Description: note.excerpt,
-    not_auto_saved: "1",
-    source: "pc_mdeditor",
-    cover_images: [],
-    cover_type: 1,
-    is_new: 1,
-    vote_id: 0,
-    resource_id: "",
-    pubStatus: "publish"
-  };
-}
-function getResponseMessage(response) {
-  const message = response.msg ?? response.message;
-  return typeof message === "string" && message.trim() ? message.trim() : "unknown error";
-}
-async function requestCsdn(target, url, method = "GET", body) {
-  const contentType = "application/json";
-  const response = await (0, import_obsidian3.requestUrl)({
-    url,
-    method,
-    headers: buildSignedHeaders(target, url, method, contentType),
-    body: body ? JSON.stringify(body) : void 0,
-    throw: false
-  });
-  if (response.status >= 400) {
-    throw new Error(`CSDN request failed (${response.status}): ${response.text}`);
-  }
-  return readJsonPayload(response);
-}
-function buildPreviewUrl(target, articleId) {
-  const username = readCookieValue(target.cookie, "UserName");
-  if (!username) {
-    return void 0;
-  }
-  return `https://blog.csdn.net/${username}/article/details/${articleId}`;
-}
-var CsdnProvider = class {
-  constructor(app) {
-    this.app = app;
-    this.provider = "csdn";
-  }
-  getMediaSupport(_target) {
-    return { mode: "unsupported" };
-  }
-  async loadNormalPublishOptions(target) {
-    const response = await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog/phoenix/console/v1/column/list?type=all"
-    );
-    const columns = [
-      ...response.data?.list?.column ?? [],
-      ...response.data?.list?.pay_column ?? []
-    ];
-    return {
-      csdnCategories: columns.filter((item) => item.id && item.edit_title).map((item) => ({
-        id: String(item.id),
-        label: item.edit_title ?? String(item.id),
-        description: item.column_url
-      })),
-      csdnTags: []
-    };
-  }
-  async validateConfig(target) {
-    if (!target.cookie) {
-      throw new Error("CSDN target is missing Cookie.");
-    }
-    await this.getAccountSummary(target);
-  }
-  async getAccountSummary(target) {
-    const response = await requestCsdn(target, "https://bizapi.csdn.net/blog-console-api/v1/user/info");
-    if (!response.data?.username) {
-      throw new Error("CSDN validation failed: not logged in or cookie expired.");
-    }
-    return {
-      accountId: response.data?.username,
-      accountName: response.data?.username,
-      accountAvatarUrl: response.data?.avatar
-    };
-  }
-  async publish(note, target, context, _runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(
-      note,
-      target,
-      context?.provider.provider === "csdn" ? context.provider : void 0
-    );
-    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
-    const response = await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
-      "POST",
-      buildPublishPayload(note, html, input.categories, input.tags)
-    );
-    if (response.code !== 200 || !response.data?.id) {
-      throw new Error(`CSDN publish failed: ${getResponseMessage(response)}`);
-    }
-    const articleId = String(response.data.id);
-    return {
-      remoteId: articleId,
-      remoteUrl: buildPreviewUrl(target, articleId)
-    };
-  }
-  async update(remoteId, note, target, context, _runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const input = resolveCsdnPublishInput(
-      note,
-      target,
-      context?.provider.provider === "csdn" ? context.provider : void 0
-    );
-    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
-    const response = await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
-      "POST",
-      {
-        id: remoteId,
-        title: note.title,
-        markdowncontent: note.markdown,
-        content: html,
-        tags: input.tags.join(","),
-        categories: input.categories.join(","),
-        Description: note.excerpt
-      }
-    );
-    if (response.code !== 200) {
-      throw new Error("CSDN update failed.");
-    }
-    return {
-      remoteId,
-      remoteUrl: buildPreviewUrl(target, remoteId)
-    };
-  }
-  async delete(remoteId, target) {
-    await requestCsdn(
-      target,
-      "https://bizapi.csdn.net/blog/phoenix/console/v1/article/del",
-      "POST",
-      {
-        articleId: remoteId,
-        deep: false
-      }
-    );
-  }
-  async getPreviewUrl(remoteId, target) {
-    return buildPreviewUrl(target, remoteId);
-  }
-};
-
-// src/providers/juejinProvider.ts
-var import_obsidian4 = require("obsidian");
-function buildHeaders2(target) {
-  return {
-    "Content-Type": "application/json",
-    Cookie: target.cookie
-  };
-}
-function readJsonPayload2(response) {
-  if (response.json !== void 0) {
-    return response.json;
-  }
-  if (response.text) {
-    return JSON.parse(response.text);
-  }
-  return {};
-}
-function encodeRemoteId(articleId, draftId) {
-  return `${articleId}_${draftId}`;
-}
-function decodeRemoteId(remoteId) {
-  const [articleId, draftId] = remoteId.split("_");
-  return {
-    articleId,
-    draftId
-  };
-}
-async function requestJuejin(target, url, method = "POST", body) {
-  const response = await (0, import_obsidian4.requestUrl)({
-    url,
-    method,
-    headers: buildHeaders2(target),
-    body: body ? JSON.stringify(body) : void 0,
-    throw: false
-  });
-  if (response.status >= 400) {
-    throw new Error(`Juejin request failed (${response.status}): ${response.text}`);
-  }
-  return readJsonPayload2(response);
-}
-function buildPreviewUrl2(articleId) {
-  return `https://juejin.cn/post/${articleId}`;
-}
-var JuejinProvider = class {
-  constructor() {
-    this.provider = "juejin";
-  }
-  getMediaSupport(_target) {
-    return { mode: "unsupported" };
-  }
-  async loadNormalPublishOptions(target) {
-    const categories = await requestJuejin(
-      target,
-      "https://api.juejin.cn/tag_api/v1/query_category_list",
-      "POST"
-    );
-    const tags = await requestJuejin(
-      target,
-      "https://api.juejin.cn/tag_api/v1/query_tag_list",
-      "POST",
-      {
-        cursor: "0",
-        key_word: "",
-        limit: 500,
-        sort_type: 1
-      }
-    );
-    return {
-      juejinCategories: (categories.data ?? []).filter((item) => item.category_id && item.category?.category_name).map((item) => ({
-        id: String(item.category_id),
-        label: item.category?.category_name ?? String(item.category_id)
-      })),
-      juejinTags: (tags.data ?? []).filter((item) => item.tag_id && item.tag?.tag_name).map((item) => ({
-        id: String(item.tag_id),
-        label: item.tag?.tag_name ?? String(item.tag_id)
-      }))
-    };
-  }
-  async validateConfig(target) {
-    if (!target.cookie) {
-      throw new Error("Juejin target is missing Cookie.");
-    }
-    await this.getAccountSummary(target);
-  }
-  async getAccountSummary(target) {
-    const response = await requestJuejin(
-      target,
-      "https://api.juejin.cn/user_api/v1/user/get",
-      "GET"
-    );
-    if (response.err_no !== 0 || !response.data?.user_id) {
-      throw new Error(`Juejin validation failed: ${response.err_msg ?? "unknown error"}`);
-    }
-    return {
-      accountId: response.data.user_id,
-      accountName: response.data.user_name,
-      accountAvatarUrl: response.data.avatar_large
-    };
-  }
-  async publish(note, target, context, runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const resolved = await resolveJuejinPublishInput(
-      note,
-      target,
-      context?.provider.provider === "juejin" ? context.provider : void 0,
-      runtime
-    );
-    const input = resolved.input;
-    try {
-      const draftResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article_draft/create",
-        "POST",
-        {
-          category_id: input.categoryId,
-          tag_ids: input.tagIds,
-          link_url: "",
-          cover_image: "",
-          title: note.title,
-          brief_content: input.briefContent,
-          edit_type: 10,
-          html_content: "deprecated",
-          mark_content: note.markdown,
-          theme_ids: []
-        }
-      );
-      const draftId = String(draftResponse.data?.id ?? "");
-      if (draftResponse.err_no !== 0 || !draftId) {
-        throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
-      }
-      const publishResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article/publish",
-        "POST",
-        {
-          draft_id: draftId,
-          sync_to_org: false,
-          column_ids: [],
-          theme_ids: []
-        }
-      );
-      const articleId = String(publishResponse.data?.article_id ?? "");
-      if (publishResponse.err_no !== 0 || !articleId) {
-        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
-      }
-      return {
-        remoteId: encodeRemoteId(articleId, draftId),
-        remoteUrl: buildPreviewUrl2(articleId),
-        providerOptionCache: resolved.providerOptionCache
-      };
-    } catch (error) {
-      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
-      throw withPublishFailureDetails(error, { providerOptionCache });
-    }
-  }
-  async update(remoteId, note, target, context, runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const resolved = await resolveJuejinPublishInput(
-      note,
-      target,
-      context?.provider.provider === "juejin" ? context.provider : void 0,
-      runtime
-    );
-    const input = resolved.input;
-    const { articleId, draftId } = decodeRemoteId(remoteId);
-    try {
-      const draftResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article_draft/update",
-        "POST",
-        {
-          id: draftId,
-          category_id: input.categoryId,
-          tag_ids: input.tagIds,
-          link_url: "",
-          cover_image: "",
-          title: note.title,
-          brief_content: input.briefContent,
-          edit_type: 10,
-          html_content: "deprecated",
-          mark_content: note.markdown,
-          theme_ids: []
-        }
-      );
-      if (draftResponse.err_no !== 0) {
-        throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
-      }
-      const publishResponse = await requestJuejin(
-        target,
-        "https://api.juejin.cn/content_api/v1/article/publish",
-        "POST",
-        {
-          draft_id: draftId,
-          sync_to_org: false,
-          column_ids: [],
-          theme_ids: []
-        }
-      );
-      if (publishResponse.err_no !== 0) {
-        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
-      }
-      return {
-        remoteId: encodeRemoteId(articleId, draftId),
-        remoteUrl: buildPreviewUrl2(articleId),
-        providerOptionCache: resolved.providerOptionCache
-      };
-    } catch (error) {
-      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
-      throw withPublishFailureDetails(error, { providerOptionCache });
-    }
-  }
-  async delete(remoteId, target) {
-    const { articleId } = decodeRemoteId(remoteId);
-    const response = await requestJuejin(
-      target,
-      "https://api.juejin.cn/content_api/v1/article/delete",
-      "POST",
-      {
-        article_id: articleId
-      }
-    );
-    if (response.err_no !== 0) {
-      throw new Error(`Juejin delete failed: ${response.err_msg ?? "unknown error"}`);
-    }
-  }
-  async getPreviewUrl(remoteId) {
-    const { articleId } = decodeRemoteId(remoteId);
-    return buildPreviewUrl2(articleId);
-  }
-};
-
-// src/providers/wordpressProvider.ts
-var import_obsidian5 = require("obsidian");
-function tryParseJsonPayload(text) {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return null;
-  }
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const objectIndex = trimmed.indexOf("{");
-    const arrayIndex = trimmed.indexOf("[");
-    const startIndex = objectIndex === -1 ? arrayIndex : arrayIndex === -1 ? objectIndex : Math.min(objectIndex, arrayIndex);
-    if (startIndex <= 0) {
-      return null;
-    }
-    try {
-      return JSON.parse(trimmed.slice(startIndex));
-    } catch {
-      return null;
-    }
-  }
-}
+// src/providers/yuqueProvider.ts
 function trimTrailingSlash(value) {
   return value.replace(/\/+$/, "");
 }
-function makeAuthHeader(target) {
-  return `Basic ${Buffer.from(`${target.username}:${target.appPassword}`).toString("base64")}`;
-}
-function normalizeEndpoint(target) {
-  return `${trimTrailingSlash(target.endpoint)}/wp-json/wp/v2`;
-}
-async function requestJson(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian5.requestUrl)({
-    url: `${normalizeEndpoint(target)}${path}`,
-    method,
-    headers: {
-      Authorization: makeAuthHeader(target),
-      "Content-Type": "application/json"
-    },
-    body: body ? JSON.stringify(body) : void 0,
-    throw: false
-  });
-  if (response.status >= 400) {
-    throw new Error(`WordPress request failed (${response.status}): ${response.text}`);
-  }
-  const parsed = tryParseJsonPayload(response.text);
-  if (parsed !== null) {
-    return parsed;
-  }
-  const snippet = response.text.replace(/\s+/g, " ").slice(0, 400);
-  throw new Error(
-    `WordPress returned a non-JSON response. This usually means PHP warnings or other output are leaking into the REST API response. Raw response: ${snippet}`
-  );
-}
-function slugify(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-}
-async function ensureTermIds(target, taxonomy, names) {
-  const ids = [];
-  for (const name of names) {
-    const slug = slugify(name);
-    const existing = await requestJson(target, `/${taxonomy}?search=${encodeURIComponent(name)}`);
-    const found = existing.find((item) => item.slug === slug || item.name.toLowerCase() === name.toLowerCase());
-    if (found) {
-      ids.push(found.id);
-      continue;
-    }
-    const created = await requestJson(target, `/${taxonomy}`, "POST", {
-      name,
-      slug
-    });
-    ids.push(created.id);
-  }
-  return ids;
-}
-async function buildPayload(note, target, context) {
-  const providerContext = context?.provider.provider === "wordpress" ? context.provider : void 0;
-  const content = target.contentFormat === "html" ? note.html ?? note.markdown : note.markdown;
-  const payload = {
-    title: context?.common.title || note.title,
-    content,
-    excerpt: providerContext?.excerpt ?? note.excerpt,
-    slug: providerContext?.slug ?? note.slug,
-    status: providerContext?.status ?? note.frontmatter.status ?? target.defaultStatus,
-    categories: await ensureTermIds(target, "categories", providerContext?.categories ?? note.categories),
-    tags: await ensureTermIds(target, "tags", providerContext?.tags ?? note.tags)
-  };
-  if (providerContext?.password) {
-    payload.password = providerContext.password;
-  }
-  return payload;
-}
-var WordpressProvider = class {
-  constructor(app) {
-    this.app = app;
-    this.provider = "wordpress";
-  }
-  getMediaSupport(_target) {
-    return { mode: "native-upload" };
-  }
-  async loadNormalPublishOptions(target) {
-    const categories = await requestJson(target, "/categories?per_page=100");
-    const tags = await requestJson(target, "/tags?per_page=100");
-    const toOption = (item) => ({
-      id: String(item.id),
-      label: item.name,
-      description: item.slug
-    });
-    return {
-      wordpressCategories: categories.map(toOption),
-      wordpressTags: tags.map(toOption)
-    };
-  }
-  async validateConfig(target) {
-    if (!target.endpoint || !target.username || !target.appPassword) {
-      throw new Error("WordPress target is missing endpoint, username, or application password.");
-    }
-    await requestJson(target, "/users/me");
-  }
-  async publish(note, target, context, _runtime) {
-    const response = await requestJson(
-      target,
-      "/posts",
-      "POST",
-      await buildPayload(await this.prepareNote(note), target, context)
-    );
-    return {
-      remoteId: String(response.id),
-      remoteUrl: response.link
-    };
-  }
-  async update(remoteId, note, target, context, _runtime) {
-    const preparedNote = await this.prepareNote(note);
-    const response = await requestJson(
-      target,
-      `/posts/${encodeURIComponent(remoteId)}`,
-      "POST",
-      await buildPayload(preparedNote, target, context)
-    );
-    return {
-      remoteId: String(response.id),
-      remoteUrl: response.link
-    };
-  }
-  async delete(remoteId, target) {
-    await requestJson(target, `/posts/${encodeURIComponent(remoteId)}?force=true`, "DELETE");
-  }
-  async getPreviewUrl(remoteId, target) {
-    const response = await requestJson(target, `/posts/${encodeURIComponent(remoteId)}`);
-    return response.link;
-  }
-  async uploadAsset(asset, _note, target) {
-    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian5.normalizePath)(asset.sourcePath));
-    const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
-    const response = await (0, import_obsidian5.requestUrl)({
-      url: `${normalizeEndpoint(target)}/media`,
-      method: "POST",
-      headers: {
-        Authorization: makeAuthHeader(target),
-        "Content-Disposition": `attachment; filename="${asset.fileName}"`,
-        "Content-Type": "application/octet-stream"
-      },
-      body,
-      throw: false
-    });
-    if (response.status >= 400) {
-      throw new Error(`WordPress media upload failed for ${asset.fileName} (${response.status}): ${response.text}`);
-    }
-    const payload = tryParseJsonPayload(response.text);
-    const url = payload?.source_url ?? payload?.guid?.rendered;
-    if (!url) {
-      throw new Error(`WordPress media upload failed for ${asset.fileName}: ${response.text}`);
-    }
-    return { url };
-  }
-  async prepareNote(note) {
-    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
-    return {
-      ...note,
-      html
-    };
-  }
-};
-
-// src/providers/yuqueProvider.ts
-var import_obsidian6 = require("obsidian");
-function trimTrailingSlash2(value) {
-  return value.replace(/\/+$/, "");
-}
 function normalizeBaseUrl(baseUrl) {
-  return trimTrailingSlash2(baseUrl || "https://www.yuque.com");
+  return trimTrailingSlash(baseUrl || "https://www.yuque.com");
 }
 async function requestYuque(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian6.requestUrl)({
+  const response = await (0, import_obsidian2.requestUrl)({
     url: `${normalizeBaseUrl(target.baseUrl)}${path}`,
     method,
     headers: {
@@ -35319,7 +34549,7 @@ async function requestYuque(target, path, method = "GET", body) {
   }
   return payload;
 }
-function buildPayload2(note, target, context) {
+function buildPayload(note, target, context) {
   const providerContext = context?.provider.provider === "yuque" ? context.provider : void 0;
   return {
     title: context?.common.title || note.title,
@@ -35351,7 +34581,7 @@ var YuqueProvider = class {
       target,
       `/api/v2/repos/${encodeURIComponent(target.repo)}/docs`,
       "POST",
-      buildPayload2(note, target, context)
+      buildPayload(note, target, context)
     );
     const remoteId = String(doc.id ?? doc.slug ?? note.slug);
     return {
@@ -35365,7 +34595,7 @@ var YuqueProvider = class {
       target,
       `/api/v2/repos/${encodeURIComponent(target.repo)}/docs/${encodeURIComponent(remoteId)}`,
       "PUT",
-      buildPayload2(note, target, context)
+      buildPayload(note, target, context)
     );
     return {
       remoteId: String(doc.id ?? remoteId),
@@ -35383,1075 +34613,6 @@ var YuqueProvider = class {
     return getDocUrl(doc);
   }
 };
-
-// src/providers/zhihuProvider.ts
-var import_obsidian7 = require("obsidian");
-function buildHeaders3(target) {
-  return {
-    "Content-Type": "application/json",
-    Cookie: target.cookie
-  };
-}
-function readJsonPayload3(response) {
-  if (response.json !== void 0) {
-    return response.json;
-  }
-  if (response.text) {
-    return JSON.parse(response.text);
-  }
-  return {};
-}
-async function requestZhihu(target, url, method = "GET", body) {
-  const response = await (0, import_obsidian7.requestUrl)({
-    url,
-    method,
-    headers: buildHeaders3(target),
-    body: body ? JSON.stringify(body) : void 0,
-    throw: false
-  });
-  if (response.status >= 400) {
-    throw new Error(`Zhihu request failed (${response.status}): ${response.text}`);
-  }
-  return readJsonPayload3(response);
-}
-function buildPreviewUrl3(articleId) {
-  return `https://zhuanlan.zhihu.com/p/${articleId}`;
-}
-var ZhihuProvider = class {
-  constructor(app) {
-    this.app = app;
-    this.provider = "zhihu";
-  }
-  getMediaSupport(_target) {
-    return { mode: "unsupported" };
-  }
-  async loadNormalPublishOptions(target) {
-    const response = await requestZhihu(
-      target,
-      "https://www.zhihu.com/api/v4/members/self/column-contributions?include=data%5B*%5D.column.intro%2Cfollowers%2Carticles_count%2Cvoteup_count%2Citems_count&offset=0&limit=20"
-    );
-    return {
-      zhihuColumns: (response.data ?? []).map((item) => item.column).filter((column) => Boolean(column?.id && column?.title)).map((column) => ({
-        id: String(column.id),
-        label: column.title ?? String(column.id),
-        description: column.url
-      }))
-    };
-  }
-  async validateConfig(target) {
-    if (!target.cookie) {
-      throw new Error("Zhihu target is missing Cookie.");
-    }
-    await this.getAccountSummary(target);
-  }
-  async getAccountSummary(target) {
-    const account = await requestZhihu(
-      target,
-      "https://www.zhihu.com/api/v4/me?include=account_status%2Cis_bind_phone%2Cis_force_renamed%2Cemail%2Crenamed_fullname"
-    );
-    if (!account.uid) {
-      throw new Error("Zhihu validation failed: not logged in or cookie expired.");
-    }
-    return {
-      accountId: account.uid ? String(account.uid) : void 0,
-      accountName: account.name,
-      accountAvatarUrl: account.avatar_url
-    };
-  }
-  async publish(note, target, context, _runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    const { columnId } = resolveZhihuPublishInput(
-      note,
-      target,
-      context?.provider.provider === "zhihu" ? context.provider : void 0
-    );
-    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
-    const draft = await requestZhihu(
-      target,
-      "https://zhuanlan.zhihu.com/api/articles/drafts",
-      "POST",
-      {
-        title: note.title,
-        content: html
-      }
-    );
-    const articleId = String(draft.id ?? "");
-    if (!articleId) {
-      throw new Error("Zhihu publish failed: draft id missing.");
-    }
-    await requestZhihu(
-      target,
-      `https://zhuanlan.zhihu.com/api/articles/${articleId}/publish`,
-      "PUT",
-      {
-        column: null,
-        commentPermission: "anyone",
-        disclaimer_type: "none",
-        disclaimer_status: "close",
-        table_of_contents_enabled: false,
-        commercial_report_info: { commercial_types: [] },
-        commercial_zhitask_bind_info: null
-      }
-    );
-    if (columnId) {
-      await requestZhihu(
-        target,
-        `https://www.zhihu.com/api/v4/columns/${encodeURIComponent(columnId)}/items`,
-        "POST",
-        {
-          type: "article",
-          id: articleId
-        }
-      );
-    }
-    return {
-      remoteId: articleId,
-      remoteUrl: buildPreviewUrl3(articleId)
-    };
-  }
-  async update(remoteId, note, target, context, _runtime) {
-    assertRemoteAssetsSupported(note, target.name);
-    void context;
-    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
-    await requestZhihu(
-      target,
-      `https://zhuanlan.zhihu.com/api/articles/${encodeURIComponent(remoteId)}/draft`,
-      "PATCH",
-      {
-        title: note.title,
-        content: html,
-        table_of_contents: false,
-        delta_time: 10
-      }
-    );
-    await requestZhihu(
-      target,
-      `https://zhuanlan.zhihu.com/api/articles/${encodeURIComponent(remoteId)}/publish`,
-      "PUT",
-      {
-        disclaimer_type: "none",
-        disclaimer_status: "close",
-        table_of_contents_enabled: false,
-        commercial_report_info: { commercial_types: [] },
-        commercial_zhitask_bind_info: null
-      }
-    );
-    return {
-      remoteId,
-      remoteUrl: buildPreviewUrl3(remoteId)
-    };
-  }
-  async delete(remoteId, target) {
-    await requestZhihu(target, `https://www.zhihu.com/api/v4/articles/${encodeURIComponent(remoteId)}`, "DELETE");
-  }
-  async getPreviewUrl(remoteId) {
-    return buildPreviewUrl3(remoteId);
-  }
-};
-
-// src/providers/definitions.ts
-function cloneStringList(values) {
-  return values.slice();
-}
-function normalizeStringList(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-var providerDefinitionsById = {
-  wordpress: {
-    id: "wordpress",
-    name: "WordPress",
-    category: "wordpress",
-    family: "rest-api",
-    createProvider: (app) => new WordpressProvider(app),
-    createTarget: () => ({
-      id: (0, import_node_crypto2.randomUUID)(),
-      name: "WordPress",
-      enabled: true,
-      provider: "wordpress",
-      endpoint: "",
-      username: "",
-      appPassword: "",
-      defaultStatus: "draft",
-      contentFormat: "html"
-    }),
-    normalizeTarget: (target) => ({
-      ...target,
-      defaultStatus: target.defaultStatus ?? "draft",
-      contentFormat: target.contentFormat ?? "html"
-    }),
-    buildInitialDraft: (note, target) => ({
-      provider: "wordpress",
-      slug: note.slug,
-      excerpt: note.excerpt,
-      tags: cloneStringList(note.tags),
-      categories: cloneStringList(note.categories),
-      status: target.defaultStatus,
-      password: ""
-    }),
-    getManualFallbackFields: () => ["categories", "tags"]
-  },
-  yuque: {
-    id: "yuque",
-    name: "Yuque",
-    category: "common",
-    family: "rest-api",
-    createProvider: () => new YuqueProvider(),
-    createTarget: () => ({
-      id: (0, import_node_crypto2.randomUUID)(),
-      name: "Yuque",
-      enabled: true,
-      provider: "yuque",
-      baseUrl: "https://www.yuque.com",
-      repo: "",
-      token: "",
-      publicLevel: 0
-    }),
-    normalizeTarget: (target) => ({
-      ...target,
-      baseUrl: target.baseUrl || "https://www.yuque.com",
-      publicLevel: target.publicLevel ?? 0
-    }),
-    buildInitialDraft: (note, target) => ({
-      provider: "yuque",
-      slug: note.slug,
-      publicLevel: target.publicLevel
-    })
-  },
-  zhihu: {
-    id: "zhihu",
-    name: "Zhihu",
-    category: "web",
-    family: "cookie-web",
-    createProvider: (app) => new ZhihuProvider(app),
-    createTarget: () => ({
-      id: (0, import_node_crypto2.randomUUID)(),
-      name: "Zhihu",
-      enabled: true,
-      provider: "zhihu",
-      cookie: "",
-      defaultColumnId: "",
-      defaultColumnTitle: ""
-    }),
-    normalizeTarget: (target) => ({
-      ...target,
-      cookie: target.cookie || "",
-      defaultColumnId: target.defaultColumnId || "",
-      defaultColumnTitle: target.defaultColumnTitle || ""
-    }),
-    buildInitialDraft: (_note, target) => ({
-      provider: "zhihu",
-      columnId: target.defaultColumnId,
-      columnTitle: target.defaultColumnTitle ?? ""
-    }),
-    skipNormalPublishOptionsLoad: true
-  },
-  csdn: {
-    id: "csdn",
-    name: "CSDN",
-    category: "web",
-    family: "cookie-web",
-    createProvider: (app) => new CsdnProvider(app),
-    createTarget: () => ({
-      id: (0, import_node_crypto2.randomUUID)(),
-      name: "CSDN",
-      enabled: true,
-      provider: "csdn",
-      cookie: "",
-      defaultCategories: [],
-      defaultTags: []
-    }),
-    normalizeTarget: (target) => ({
-      ...target,
-      cookie: target.cookie || "",
-      defaultCategories: normalizeStringList(target.defaultCategories),
-      defaultTags: normalizeStringList(target.defaultTags)
-    }),
-    buildInitialDraft: (note, target) => ({
-      provider: "csdn",
-      excerpt: note.excerpt,
-      tags: note.tags.length > 0 ? cloneStringList(note.tags) : cloneStringList(target.defaultTags),
-      categories: note.categories.length > 0 ? cloneStringList(note.categories) : cloneStringList(target.defaultCategories)
-    }),
-    getManualFallbackFields: () => ["categories", "tags"]
-  },
-  juejin: {
-    id: "juejin",
-    name: "Juejin",
-    category: "web",
-    family: "cookie-web",
-    createProvider: () => new JuejinProvider(),
-    createTarget: () => ({
-      id: (0, import_node_crypto2.randomUUID)(),
-      name: "Juejin",
-      enabled: true,
-      provider: "juejin",
-      cookie: "",
-      defaultCategoryId: "",
-      defaultCategoryName: "",
-      defaultTagIds: [],
-      defaultTagNames: [],
-      defaultBriefContent: ""
-    }),
-    normalizeTarget: (target) => ({
-      ...target,
-      cookie: target.cookie || "",
-      defaultCategoryId: target.defaultCategoryId || "",
-      defaultCategoryName: target.defaultCategoryName || "",
-      defaultTagIds: normalizeStringList(target.defaultTagIds),
-      defaultTagNames: normalizeStringList(target.defaultTagNames),
-      defaultBriefContent: target.defaultBriefContent || ""
-    }),
-    buildInitialDraft: (note, target) => ({
-      provider: "juejin",
-      categoryId: target.defaultCategoryId,
-      categoryName: target.defaultCategoryName ?? "",
-      tagIds: cloneStringList(target.defaultTagIds),
-      tagNames: cloneStringList(target.defaultTagNames ?? []),
-      briefContent: target.defaultBriefContent || note.excerpt
-    }),
-    getManualFallbackFields: () => ["categoryId", "tagIds"]
-  }
-};
-var providerDisplayOrder = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
-function getProviderDefinitions() {
-  return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
-}
-function getProviderDefinition(providerId) {
-  return providerDefinitionsById[providerId];
-}
-
-// src/settings.ts
-var DEFAULT_LLM_SETTINGS = {
-  enabled: false,
-  vendor: "openai",
-  apiKey: "",
-  model: "",
-  endpointOverride: "",
-  temperature: 0.3,
-  timeoutMs: 3e4,
-  maxInputChars: 12e3
-};
-var DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS = {
-  enabled: false,
-  includeOptionComments: true
-};
-function normalizeLlmSettings(value) {
-  return {
-    enabled: Boolean(value?.enabled),
-    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
-    apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
-    model: typeof value?.model === "string" ? value.model : "",
-    endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
-    temperature: typeof value?.temperature === "number" && Number.isFinite(value.temperature) ? value.temperature : DEFAULT_LLM_SETTINGS.temperature,
-    timeoutMs: typeof value?.timeoutMs === "number" && value.timeoutMs > 0 ? value.timeoutMs : DEFAULT_LLM_SETTINGS.timeoutMs,
-    maxInputChars: typeof value?.maxInputChars === "number" && value.maxInputChars > 0 ? value.maxInputChars : DEFAULT_LLM_SETTINGS.maxInputChars
-  };
-}
-function normalizeCachedProviderOption(value) {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const raw = value;
-  if (typeof raw.id !== "string" || typeof raw.label !== "string") {
-    return null;
-  }
-  return {
-    id: raw.id,
-    label: raw.label,
-    description: typeof raw.description === "string" ? raw.description : void 0
-  };
-}
-function normalizeCachedProviderOptionList(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.map((item) => normalizeCachedProviderOption(item)).filter((item) => item !== null);
-}
-function normalizeJuejinProviderOptionCacheEntry(value) {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const raw = value;
-  if (typeof raw.fetchedAt !== "string") {
-    return null;
-  }
-  return {
-    fetchedAt: raw.fetchedAt,
-    categories: normalizeCachedProviderOptionList(raw.categories),
-    tags: normalizeCachedProviderOptionList(raw.tags)
-  };
-}
-function normalizeFrontmatterAutomationSettings(value) {
-  return {
-    enabled: typeof value?.enabled === "boolean" ? value.enabled : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.enabled,
-    includeOptionComments: typeof value?.includeOptionComments === "boolean" ? value.includeOptionComments : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.includeOptionComments
-  };
-}
-function normalizeProviderOptionCache(value) {
-  const rawValue = typeof value === "object" && value !== null ? value : null;
-  const rawJuejinByTargetId = rawValue?.juejinByTargetId;
-  if (typeof rawJuejinByTargetId !== "object" || rawJuejinByTargetId === null) {
-    return {
-      juejinByTargetId: {}
-    };
-  }
-  const juejinByTargetId = {};
-  for (const [targetId, entry] of Object.entries(rawJuejinByTargetId)) {
-    const normalizedEntry = normalizeJuejinProviderOptionCacheEntry(entry);
-    if (normalizedEntry) {
-      juejinByTargetId[targetId] = normalizedEntry;
-    }
-  }
-  return {
-    juejinByTargetId
-  };
-}
-var DEFAULT_SETTINGS = {
-  targets: [],
-  records: [],
-  frontmatterAutomation: { ...DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS },
-  providerOptionCache: {
-    juejinByTargetId: {}
-  },
-  llm: { ...DEFAULT_LLM_SETTINGS }
-};
-function getRecord(records, notePath, targetId) {
-  return records.find((record) => record.notePath === notePath && record.targetId === targetId);
-}
-function upsertRecord(records, nextRecord) {
-  const existingIndex = records.findIndex(
-    (record) => record.notePath === nextRecord.notePath && record.targetId === nextRecord.targetId
-  );
-  if (existingIndex === -1) {
-    return [...records, nextRecord];
-  }
-  const next = records.slice();
-  next[existingIndex] = nextRecord;
-  return next;
-}
-function cloneTarget(target) {
-  return JSON.parse(JSON.stringify(target));
-}
-function normalizeTarget(target) {
-  switch (target.provider) {
-    case "wordpress":
-      return getProviderDefinition("wordpress").normalizeTarget(target);
-    case "yuque":
-      return getProviderDefinition("yuque").normalizeTarget(target);
-    case "zhihu":
-      return getProviderDefinition("zhihu").normalizeTarget(target);
-    case "csdn":
-      return getProviderDefinition("csdn").normalizeTarget(target);
-    case "juejin":
-      return getProviderDefinition("juejin").normalizeTarget(target);
-  }
-}
-
-// src/core/providerOptionCache.ts
-var PROVIDER_OPTION_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
-function toCachedOptions(items) {
-  if (!Array.isArray(items)) {
-    return [];
-  }
-  return items.map((item) => ({
-    id: item.id,
-    label: item.label,
-    description: typeof item.description === "string" ? item.description : void 0
-  }));
-}
-async function loadJuejinOptionSnapshot(args) {
-  const nowMs = typeof args.nowMs === "number" ? args.nowMs : Date.now();
-  const normalizedCache = normalizeProviderOptionCache(args.providerOptionCache);
-  const cachedEntry = normalizedCache.juejinByTargetId[args.targetId];
-  if (cachedEntry) {
-    const parsedFetchedAt = Date.parse(cachedEntry.fetchedAt);
-    const hasFreshCache = !Number.isNaN(parsedFetchedAt) && nowMs - parsedFetchedAt < PROVIDER_OPTION_CACHE_TTL_MS;
-    if (hasFreshCache) {
-      return {
-        source: "cache",
-        categories: cachedEntry.categories,
-        tags: cachedEntry.tags,
-        nextCache: normalizedCache
-      };
-    }
-  }
-  try {
-    const remoteOptions = await args.loadNormalPublishOptions(args.target);
-    const categories = toCachedOptions(remoteOptions.juejinCategories);
-    const tags = toCachedOptions(remoteOptions.juejinTags);
-    const nextCache = {
-      ...normalizedCache,
-      juejinByTargetId: {
-        ...normalizedCache.juejinByTargetId,
-        [args.targetId]: {
-          fetchedAt: new Date(nowMs).toISOString(),
-          categories,
-          tags
-        }
-      }
-    };
-    return {
-      source: "network",
-      categories,
-      tags,
-      nextCache
-    };
-  } catch {
-    if (cachedEntry) {
-      return {
-        source: "stale-cache",
-        categories: cachedEntry.categories,
-        tags: cachedEntry.tags,
-        nextCache: normalizedCache
-      };
-    }
-    return {
-      source: "unavailable",
-      categories: [],
-      tags: [],
-      nextCache: normalizedCache
-    };
-  }
-}
-
-// src/core/normalPublish/drafts.ts
-function createIdleRemoteOptionsState() {
-  return {
-    status: "idle",
-    data: {},
-    manualFallbackFields: []
-  };
-}
-function buildInitialTargetDraft(target, note) {
-  const definition = getProviderDefinition(target.provider);
-  if (!definition.buildInitialDraft) {
-    throw new Error(`Provider ${target.provider} does not define a normal publish draft builder.`);
-  }
-  return definition.buildInitialDraft(note, target);
-}
-function buildNormalPublishSessionState(note, targets) {
-  const enabledTargets = targets.filter((target) => target.enabled);
-  const targetDrafts = {};
-  const remoteOptions = {};
-  const lastErrorByTargetId = {};
-  for (const target of enabledTargets) {
-    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
-    remoteOptions[target.id] = createIdleRemoteOptionsState();
-    lastErrorByTargetId[target.id] = null;
-  }
-  return {
-    selectedTargetId: enabledTargets[0]?.id ?? null,
-    commonDraft: {
-      title: note.title
-    },
-    targetDrafts,
-    remoteOptions,
-    lastErrorByTargetId
-  };
-}
-
-// src/core/note.ts
-var import_obsidian8 = require("obsidian");
-var import_node_crypto3 = require("node:crypto");
-var import_node_path = require("node:path");
-
-// src/core/markdown.ts
-var WIKI_EMBED_REGEX = /!\[\[([^\]]+)\]\]/g;
-var MARKDOWN_IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g;
-function isAbsoluteUrl(value) {
-  return /^(?:[a-z]+:)?\/\//i.test(value) || value.startsWith("data:");
-}
-function stripAlias(target) {
-  return target.split("|")[0].trim();
-}
-function extractAssetReferences(markdown) {
-  const references = [];
-  for (const match of markdown.matchAll(WIKI_EMBED_REGEX)) {
-    const raw = match[1] ?? "";
-    references.push({
-      originalText: match[0],
-      rawTarget: stripAlias(raw),
-      altText: raw.split("|")[1]?.trim() ?? "",
-      source: "wiki-embed"
-    });
-  }
-  for (const match of markdown.matchAll(MARKDOWN_IMAGE_REGEX)) {
-    const target = (match[2] ?? "").trim();
-    if (isAbsoluteUrl(target)) {
-      continue;
-    }
-    references.push({
-      originalText: match[0],
-      rawTarget: target,
-      altText: match[1] ?? "",
-      source: "markdown-image"
-    });
-  }
-  return references;
-}
-function replaceAssetReference(markdown, reference, replacementPath) {
-  const altText = reference.altText.trim();
-  const rewritten = `![${altText}](${replacementPath})`;
-  return markdown.split(reference.originalText).join(rewritten);
-}
-function replaceAssetReferences(markdown, replacements) {
-  return replacements.reduce(
-    (currentMarkdown, replacement) => replaceAssetReference(currentMarkdown, replacement.reference, replacement.replacementPath),
-    markdown
-  );
-}
-
-// src/core/content.ts
-function stripFrontmatter(markdown) {
-  if (!markdown.startsWith("---")) {
-    return markdown;
-  }
-  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").replace(/^\s*\n/, "");
-}
-
-// src/core/note.ts
-var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"]);
-function ensureArray(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-function slugify2(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-}
-function pickExcerpt(markdown, frontmatter) {
-  const explicit = typeof frontmatter.description === "string" && frontmatter.description || typeof frontmatter.excerpt === "string" && frontmatter.excerpt || typeof frontmatter.summary === "string" && frontmatter.summary || "";
-  if (explicit) {
-    return explicit;
-  }
-  const collapsed = markdown.replace(/^---[\s\S]*?---\s*/m, "").replace(/!\[\[[^\]]+\]\]/g, "").replace(/!\[[^\]]*]\(([^)]+)\)/g, "").replace(/\[\[([^\]]+)]]/g, "$1").replace(/\[([^\]]+)]\(([^)]+)\)/g, "$1").replace(/[#>*`~-]/g, " ").replace(/\s+/g, " ").trim();
-  return collapsed.slice(0, 200);
-}
-function normalizeTitleLine(value) {
-  return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
-}
-function pickTitle(markdown, frontmatter, fallback) {
-  const frontmatterTitle = typeof frontmatter.title === "string" ? frontmatter.title.trim() : "";
-  if (frontmatterTitle) {
-    return frontmatterTitle;
-  }
-  const lines = markdown.split(/\r?\n/);
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line.startsWith("# ")) {
-      continue;
-    }
-    const title = normalizeTitleLine(line);
-    if (title) {
-      return title;
-    }
-  }
-  return fallback;
-}
-function isImagePath(value) {
-  const normalized = value.split(/[?#]/)[0] ?? value;
-  return IMAGE_EXTENSIONS.has((0, import_node_path.extname)(normalized).toLowerCase());
-}
-function resolveAsset(app, file, reference) {
-  if (!isImagePath(reference.rawTarget)) {
-    return {
-      unresolved: {
-        reference,
-        reason: "unsupported-type"
-      }
-    };
-  }
-  const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
-  if (!(resolved instanceof import_obsidian8.TFile)) {
-    return {
-      unresolved: {
-        reference,
-        reason: "missing"
-      }
-    };
-  }
-  if (!isImagePath(resolved.path)) {
-    return {
-      unresolved: {
-        reference,
-        reason: "unsupported-type"
-      }
-    };
-  }
-  return {
-    resolved: {
-      reference,
-      sourcePath: resolved.path,
-      fileName: resolved.name
-    }
-  };
-}
-async function extractPublishableNote(app, file) {
-  const rawMarkdown = await app.vault.cachedRead(file);
-  const cache = app.metadataCache.getFileCache(file);
-  const frontmatter = cache?.frontmatter ?? {};
-  const markdown = stripFrontmatter(rawMarkdown);
-  const references = extractAssetReferences(markdown);
-  const attachments = [];
-  const unresolvedAttachments = [];
-  for (const reference of references) {
-    const result = resolveAsset(app, file, reference);
-    if (result.resolved) {
-      attachments.push(result.resolved);
-    }
-    if (result.unresolved) {
-      unresolvedAttachments.push(result.unresolved);
-    }
-  }
-  const title = pickTitle(markdown, frontmatter, file.basename);
-  const slug = typeof frontmatter.slug === "string" && frontmatter.slug || typeof frontmatter.permalink === "string" && frontmatter.permalink || slugify2(file.basename);
-  const tags = ensureArray(frontmatter.tags);
-  const categories = ensureArray(frontmatter.categories ?? frontmatter.category);
-  return {
-    filePath: file.path,
-    title,
-    markdown,
-    frontmatter,
-    attachments,
-    unresolvedAttachments,
-    excerpt: pickExcerpt(markdown, frontmatter),
-    slug,
-    tags,
-    categories,
-    date: typeof frontmatter.date === "string" ? frontmatter.date : void 0
-  };
-}
-function computeContentHash(note) {
-  return (0, import_node_crypto3.createHash)("sha256").update(
-    JSON.stringify({
-      markdown: note.markdown,
-      frontmatter: note.frontmatter,
-      attachments: note.attachments.map((asset) => asset.sourcePath)
-    })
-  ).digest("hex");
-}
-
-// src/core/mediaPipeline.ts
-async function resolveReplacement(provider, note, target, sourcePath) {
-  const asset = note.attachments.find((item) => item.sourcePath === sourcePath);
-  if (!asset) {
-    throw new Error(`Missing attachment for source path: ${sourcePath}`);
-  }
-  const support = provider.getMediaSupport(target);
-  if (support.mode === "native-upload") {
-    if (!provider.uploadAsset) {
-      throw new Error(`${target.name} cannot upload local assets because uploadAsset() is not implemented.`);
-    }
-    return provider.uploadAsset(asset, note, target);
-  }
-  if (support.mode === "local-copy") {
-    if (!provider.copyAsset) {
-      throw new Error(`${target.name} cannot copy local assets because copyAsset() is not implemented.`);
-    }
-    return provider.copyAsset(asset, note, target);
-  }
-  const files = note.attachments.map((item) => item.sourcePath).join(", ");
-  throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
-}
-async function prepareNoteForPublish(note, target, provider) {
-  const missingAttachment = note.unresolvedAttachments.find((asset) => asset.reason === "missing");
-  if (missingAttachment) {
-    throw new Error(`Missing local image asset: ${missingAttachment.reference.rawTarget}`);
-  }
-  if (note.attachments.length === 0) {
-    return {
-      ...note,
-      mediaReplacements: []
-    };
-  }
-  const support = provider.getMediaSupport(target);
-  if (support.mode === "unsupported") {
-    const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
-    throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
-  }
-  const resolvedPaths = /* @__PURE__ */ new Map();
-  const replacements = [];
-  for (const asset of note.attachments) {
-    let replacementPath = resolvedPaths.get(asset.sourcePath);
-    if (!replacementPath) {
-      const result = await resolveReplacement(provider, note, target, asset.sourcePath);
-      replacementPath = result.url;
-      resolvedPaths.set(asset.sourcePath, replacementPath);
-    }
-    replacements.push({
-      reference: asset.reference,
-      replacementPath
-    });
-  }
-  return {
-    ...note,
-    markdown: replaceAssetReferences(note.markdown, replacements),
-    mediaReplacements: [...resolvedPaths.entries()].map(([sourcePath, replacementPath]) => ({
-      sourcePath,
-      replacementPath
-    }))
-  };
-}
-
-// src/core/normalPublish/overrides.ts
-function cloneStringList2(values) {
-  return values.slice();
-}
-function applyNormalPublishContextToNote(note, context) {
-  if (!context) {
-    return note;
-  }
-  const nextNote = {
-    ...note,
-    frontmatter: {
-      ...note.frontmatter
-    },
-    attachments: note.attachments.slice(),
-    unresolvedAttachments: note.unresolvedAttachments.slice(),
-    title: context.common.title || note.title,
-    tags: cloneStringList2(note.tags),
-    categories: cloneStringList2(note.categories)
-  };
-  switch (context.provider.provider) {
-    case "wordpress":
-      nextNote.slug = context.provider.slug;
-      nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList2(context.provider.tags);
-      nextNote.categories = cloneStringList2(context.provider.categories);
-      break;
-    case "yuque":
-      nextNote.slug = context.provider.slug;
-      break;
-    case "csdn":
-      nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList2(context.provider.tags);
-      nextNote.categories = cloneStringList2(context.provider.categories);
-      break;
-    default:
-      break;
-  }
-  return nextNote;
-}
-
-// src/core/publishService.ts
-function mergeProviderOptionCacheIntoSettings(settings, providerOptionCache) {
-  if (!providerOptionCache) {
-    return settings;
-  }
-  const currentCache = normalizeProviderOptionCache(settings.providerOptionCache);
-  const nextCache = normalizeProviderOptionCache(providerOptionCache);
-  return {
-    ...settings,
-    providerOptionCache: {
-      ...currentCache,
-      juejinByTargetId: {
-        ...currentCache.juejinByTargetId,
-        ...nextCache.juejinByTargetId
-      }
-    }
-  };
-}
-var PublishService = class {
-  constructor(app, providers, mediaPipeline = {
-    prepare: prepareNoteForPublish
-  }) {
-    this.app = app;
-    this.providers = providers;
-    this.mediaPipeline = mediaPipeline;
-  }
-  buildProviderRuntime(settings, provider, target) {
-    return {
-      providerOptionCache: settings.providerOptionCache,
-      loadNormalPublishOptions: typeof provider.loadNormalPublishOptions === "function" ? async (currentTarget) => provider.loadNormalPublishOptions(currentTarget) : void 0
-    };
-  }
-  async publishFile(file, target, settings, context) {
-    const provider = this.providers.get(target);
-    await provider.validateConfig(target);
-    const extractedNote = await extractPublishableNote(this.app, file);
-    const note = applyNormalPublishContextToNote(extractedNote, context);
-    const contentHash = computeContentHash(note);
-    const preparedNote = applyNormalPublishContextToNote(
-      await this.mediaPipeline.prepare(note, target, provider),
-      context
-    );
-    const existing = getRecord(settings.records, file.path, target.id);
-    const runtime = this.buildProviderRuntime(settings, provider, target);
-    const result = existing ? await provider.update(existing.remoteId, preparedNote, target, context, runtime) : await provider.publish(preparedNote, target, context, runtime);
-    const previewUrl = result.remoteUrl ?? await provider.getPreviewUrl(result.remoteId, target);
-    const record = {
-      notePath: file.path,
-      provider: target.provider,
-      targetId: target.id,
-      remoteId: result.remoteId,
-      remoteUrl: previewUrl,
-      lastPublishedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      contentHash
-    };
-    return {
-      record,
-      created: !existing,
-      providerOptionCache: result.providerOptionCache
-    };
-  }
-  updateSettings(settings, record, providerOptionCache) {
-    return {
-      ...mergeProviderOptionCacheIntoSettings(settings, providerOptionCache),
-      records: upsertRecord(settings.records, record)
-    };
-  }
-};
-
-// src/core/publishWorkflow.ts
-var PublishWorkflow = class {
-  constructor(publishService) {
-    this.publishService = publishService;
-  }
-  async emitProgressSafely(options, event) {
-    try {
-      await options.onProgress?.(event);
-    } catch {
-    }
-  }
-  resolveAction(file, target, settings) {
-    return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
-  }
-  async runSingle(file, target, settings, context) {
-    const action = this.resolveAction(file, target, settings);
-    try {
-      const serviceResult = await this.publishService.publishFile(file, target, settings, context);
-      const nextSettings = this.publishService.updateSettings(
-        settings,
-        serviceResult.record,
-        serviceResult.providerOptionCache
-      );
-      return {
-        action,
-        record: serviceResult.record,
-        settings: nextSettings
-      };
-    } catch (error) {
-      const cachedSettings = getPublishFailureSettings(error);
-      if (cachedSettings) {
-        throw withPublishFailureDetails(error, { settings: cachedSettings });
-      }
-      const providerOptionCache = getPublishFailureProviderOptionCache(error);
-      if (providerOptionCache) {
-        throw withPublishFailureDetails(error, {
-          providerOptionCache,
-          settings: mergeProviderOptionCacheIntoSettings(settings, providerOptionCache)
-        });
-      }
-      throw error;
-    }
-  }
-  async runBatch(file, targets, settings, options = {}) {
-    let currentSettings = settings;
-    const results = [];
-    const totalCount = targets.length;
-    for (const [index, target] of targets.entries()) {
-      const action = this.resolveAction(file, target, currentSettings);
-      const context = options.contextByTargetId?.[target.id];
-      const currentIndex = index + 1;
-      await this.emitProgressSafely(options, {
-        targetId: target.id,
-        targetName: target.name,
-        action,
-        status: "running",
-        currentIndex,
-        totalCount
-      });
-      const startedAt = Date.now();
-      try {
-        const singleResult = await this.runSingle(file, target, currentSettings, context);
-        const durationMs = Date.now() - startedAt;
-        currentSettings = singleResult.settings;
-        results.push({
-          targetId: target.id,
-          targetName: target.name,
-          action: singleResult.action,
-          status: "success",
-          durationMs,
-          remoteUrl: singleResult.record.remoteUrl
-        });
-        await this.emitProgressSafely(options, {
-          targetId: target.id,
-          targetName: target.name,
-          action: singleResult.action,
-          status: "success",
-          currentIndex,
-          totalCount,
-          durationMs,
-          remoteUrl: singleResult.record.remoteUrl
-        });
-      } catch (error) {
-        const cachedSettings = getPublishFailureSettings(error);
-        if (cachedSettings) {
-          currentSettings = cachedSettings;
-        } else {
-          const providerOptionCache = getPublishFailureProviderOptionCache(error);
-          if (providerOptionCache) {
-            currentSettings = mergeProviderOptionCacheIntoSettings(currentSettings, providerOptionCache);
-          }
-        }
-        const normalizedError = error instanceof Error ? error : new Error(String(error));
-        const durationMs = Date.now() - startedAt;
-        results.push({
-          targetId: target.id,
-          targetName: target.name,
-          action,
-          status: "failure",
-          durationMs,
-          error: normalizedError
-        });
-        await this.emitProgressSafely(options, {
-          targetId: target.id,
-          targetName: target.name,
-          action,
-          status: "failure",
-          currentIndex,
-          totalCount,
-          durationMs,
-          error: normalizedError
-        });
-      }
-    }
-    const successCount = results.filter((item) => item.status === "success").length;
-    const failureCount = results.length - successCount;
-    return {
-      results,
-      totalCount,
-      successCount,
-      failureCount,
-      settings: currentSettings
-    };
-  }
-};
-
-// src/i18n/index.ts
-var import_obsidian9 = require("obsidian");
-
-// src/i18n/locales.ts
-function normalizeLocale(input) {
-  if (!input) {
-    return "en";
-  }
-  const value = input.toLowerCase();
-  if (value.startsWith("zh")) {
-    return "zh-CN";
-  }
-  return "en";
-}
 
 // src/i18n/messages.ts
 var messages = {
@@ -36808,6 +34969,2300 @@ var messages = {
   }
 };
 
+// src/providers/definitions/settingsForm.ts
+var COMMON_FIELDS = [
+  { key: "enabled", label: "Enabled", type: "toggle" },
+  { key: "name", label: "Display name", type: "text" }
+];
+var WEB_AUTH_COMMON_FIELDS = [
+  {
+    key: "cookie",
+    label: "Cookie",
+    description: "Paste Cookie manually if browser authorization fails.",
+    type: "password"
+  }
+];
+var FIELD_LABEL_ZH = {
+  enabled: "\u542F\u7528",
+  name: "\u663E\u793A\u540D\u79F0",
+  cookie: "Cookie",
+  endpoint: "Endpoint",
+  username: "\u7528\u6237\u540D",
+  appPassword: "\u5E94\u7528\u5BC6\u7801",
+  defaultStatus: "\u9ED8\u8BA4\u72B6\u6001",
+  contentFormat: "\u53D1\u5E03\u683C\u5F0F",
+  baseUrl: "\u57FA\u7840 URL",
+  repo: "\u4ED3\u5E93",
+  token: "Token",
+  publicLevel: "\u516C\u5F00\u7EA7\u522B",
+  defaultColumnId: "\u9ED8\u8BA4\u4E13\u680F ID",
+  defaultColumnTitle: "\u9ED8\u8BA4\u4E13\u680F\u6807\u9898",
+  defaultCategories: "\u9ED8\u8BA4\u5206\u7C7B",
+  defaultTags: "\u9ED8\u8BA4\u6807\u7B7E",
+  defaultCategoryId: "\u9ED8\u8BA4\u5206\u7C7B ID",
+  defaultTagIds: "\u9ED8\u8BA4\u6807\u7B7E ID",
+  defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981"
+};
+var FIELD_DESCRIPTION_ZH = {
+  cookie: "\u5982\u679C\u6D4F\u89C8\u5668\u6388\u6743\u5931\u8D25\uFF0C\u53EF\u624B\u52A8\u7C98\u8D34 Cookie\u3002",
+  endpoint: "\u793A\u4F8B: https://example.com",
+  contentFormat: "\u9009\u62E9\u5411 WordPress \u53D1\u5E03 Markdown \u6587\u672C\u6216\u6E32\u67D3\u540E\u7684 HTML\u3002",
+  repo: "\u793A\u4F8B: namespace/repo",
+  publicLevel: "0 = \u79C1\u6709, 1 = \u516C\u5F00",
+  defaultCategories: "\u7528\u9017\u53F7\u5206\u9694\u5206\u7C7B\u540D\u3002",
+  defaultTags: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E\u540D\u3002",
+  defaultTagIds: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E ID\u3002"
+};
+var FIELD_OPTION_LABEL_ZH = {
+  defaultStatus: {
+    draft: "\u8349\u7A3F",
+    publish: "\u53D1\u5E03",
+    private: "\u79C1\u5BC6",
+    pending: "\u5F85\u5BA1\u6838"
+  },
+  contentFormat: {
+    markdown: "Markdown",
+    html: "HTML"
+  },
+  publicLevel: {
+    "0": "\u79C1\u6709",
+    "1": "\u516C\u5F00"
+  }
+};
+function resolveTranslation(i18n, key, fallback) {
+  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
+    return i18n.t(key);
+  }
+  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
+}
+function localizeField(field, i18n) {
+  const label = resolveTranslation(i18n, `settings.modal.field.${field.key}.label`, {
+    en: field.label,
+    "zh-CN": FIELD_LABEL_ZH[field.key] ?? field.label
+  });
+  const description = field.description ? resolveTranslation(i18n, `settings.modal.field.${field.key}.description`, {
+    en: field.description,
+    "zh-CN": FIELD_DESCRIPTION_ZH[field.key] ?? field.description
+  }) : void 0;
+  const options = field.options?.map((option) => ({
+    value: option.value,
+    label: resolveTranslation(i18n, `settings.modal.field.${field.key}.options.${option.value}`, {
+      en: option.label,
+      "zh-CN": FIELD_OPTION_LABEL_ZH[field.key]?.[option.value] ?? option.label
+    })
+  }));
+  return {
+    key: field.key,
+    label,
+    description,
+    type: field.type,
+    options
+  };
+}
+function readCommonFieldValue(target, key) {
+  switch (key) {
+    case "enabled":
+      return target.enabled;
+    case "name":
+      return target.name;
+    case "cookie":
+      return "cookie" in target ? target.cookie : "";
+    default:
+      return void 0;
+  }
+}
+function applyCommonFieldValue(target, key, value) {
+  switch (key) {
+    case "enabled":
+      target.enabled = Boolean(value);
+      return true;
+    case "name":
+      target.name = String(value).trim() || target.name;
+      return true;
+    case "cookie":
+      if ("cookie" in target) {
+        target.cookie = String(value).trim();
+      }
+      return true;
+    default:
+      return false;
+  }
+}
+function splitCommaSeparatedValue(value) {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+function defineSettingsForm(options) {
+  return {
+    getFields(_target, i18n) {
+      return options.fields.map((field) => localizeField(field, i18n));
+    },
+    readFieldValue(target, key) {
+      const commonValue = readCommonFieldValue(target, key);
+      if (commonValue !== void 0) {
+        return commonValue;
+      }
+      return options.readProviderFieldValue(target, key) ?? "";
+    },
+    applyFieldValue(target, key, value) {
+      if (applyCommonFieldValue(target, key, value)) {
+        return target;
+      }
+      return options.applyProviderFieldValue(target, key, value);
+    }
+  };
+}
+
+// src/providers/definitions/common.ts
+var YUQUE_FIELDS = [
+  { key: "baseUrl", label: "Base URL", type: "text" },
+  { key: "repo", label: "Repo", description: "Example: namespace/repo", type: "text" },
+  { key: "token", label: "Token", type: "password" },
+  {
+    key: "publicLevel",
+    label: "Public level",
+    description: "0 = private, 1 = public",
+    type: "dropdown",
+    options: [
+      { value: "0", label: "Private" },
+      { value: "1", label: "Public" }
+    ]
+  }
+];
+var settingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...YUQUE_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "baseUrl":
+        return target.baseUrl;
+      case "repo":
+        return target.repo;
+      case "token":
+        return target.token;
+      case "publicLevel":
+        return String(target.publicLevel);
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "baseUrl":
+        target.baseUrl = String(value).trim();
+        return target;
+      case "repo":
+        target.repo = String(value).trim();
+        return target;
+      case "token":
+        target.token = String(value).trim();
+        return target;
+      case "publicLevel":
+        target.publicLevel = Number(value) === 1 ? 1 : 0;
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var yuqueNormalPublish = {
+  supportedAiFields: ["title"],
+  buildInitialDraft: (note, target) => ({
+    provider: "yuque",
+    slug: note.slug,
+    publicLevel: target.publicLevel
+  }),
+  applyDraftToNote: (note, draft) => ({
+    ...note,
+    slug: draft.slug
+  })
+};
+var yuqueDefinition = {
+  id: "yuque",
+  name: "Yuque",
+  category: "common",
+  family: "rest-api",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: true,
+    media: "unsupported",
+    normalPublish: true,
+    quickPublish: true
+  },
+  createProvider: () => new YuqueProvider(),
+  createTarget: () => ({
+    id: (0, import_node_crypto.randomUUID)(),
+    name: "Yuque",
+    enabled: true,
+    provider: "yuque",
+    baseUrl: "https://www.yuque.com",
+    repo: "",
+    token: "",
+    publicLevel: 0
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    baseUrl: target.baseUrl || "https://www.yuque.com",
+    publicLevel: target.publicLevel ?? 0
+  }),
+  settingsForm,
+  normalPublish: yuqueNormalPublish,
+  buildInitialDraft: yuqueNormalPublish.buildInitialDraft
+};
+
+// src/providers/definitions/web.ts
+var import_node_crypto3 = require("node:crypto");
+
+// src/providers/csdnProvider.ts
+var import_node_crypto2 = require("node:crypto");
+var import_obsidian4 = require("obsidian");
+
+// src/core/html.ts
+var import_obsidian3 = require("obsidian");
+async function renderMarkdownToHtml(app, markdown, sourcePath) {
+  const container = document.createElement("div");
+  const component = new import_obsidian3.Component();
+  component.load();
+  try {
+    await import_obsidian3.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
+    container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
+      copyButton.remove();
+    });
+    return container.innerHTML.trim();
+  } finally {
+    component.unload();
+  }
+}
+
+// src/core/webPublishConfig.ts
+function readString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+function readStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function pickFirstNonEmptyArray(...values) {
+  for (const value of values) {
+    const items = readStringArray(value);
+    if (items.length > 0) {
+      return items;
+    }
+  }
+  return [];
+}
+function resolveZhihuPublishInput(note, target, overrides) {
+  const columnId = readString(overrides?.columnId) || target.defaultColumnId;
+  return {
+    columnId: columnId || void 0
+  };
+}
+function resolveCsdnPublishInput(note, target, overrides) {
+  const categories = pickFirstNonEmptyArray(
+    overrides?.categories,
+    note.categories,
+    target.defaultCategories
+  );
+  const tags = pickFirstNonEmptyArray(
+    overrides?.tags,
+    note.tags,
+    target.defaultTags
+  );
+  return {
+    categories,
+    tags
+  };
+}
+function normalizeOptionLabel(value) {
+  return value.trim().toLocaleLowerCase();
+}
+function resolveNamedJuejinOptionId(kind, name, options) {
+  const normalizedName = normalizeOptionLabel(name);
+  const matches = options.filter((option) => normalizeOptionLabel(option.label) === normalizedName);
+  if (matches.length === 0) {
+    throw new Error(`Juejin ${kind} "${name}" did not match any available option.`);
+  }
+  if (matches.length > 1) {
+    throw new Error(`Juejin ${kind} "${name}" matched multiple available options.`);
+  }
+  return matches[0].id;
+}
+async function resolveJuejinPublishInput(note, target, overrides, runtime) {
+  const frontmatterCategoryName = readString(note.frontmatter["juejinCategory"]);
+  const frontmatterTagNames = readStringArray(note.frontmatter["juejinTags"]);
+  const briefContent = readString(overrides?.briefContent) || readString(note.frontmatter["description"]) || target.defaultBriefContent || note.excerpt;
+  const overrideCategoryId = readString(overrides?.categoryId);
+  const overrideTagIds = readStringArray(overrides?.tagIds);
+  const shouldResolveCategoryName = !overrideCategoryId && Boolean(frontmatterCategoryName);
+  const shouldResolveTagNames = overrideTagIds.length === 0 && frontmatterTagNames.length > 0;
+  let categoryId = overrideCategoryId;
+  let tagIds = overrideTagIds;
+  let providerOptionCache;
+  if (shouldResolveCategoryName || shouldResolveTagNames) {
+    const snapshot = await loadJuejinOptionSnapshot({
+      targetId: target.id,
+      target,
+      providerOptionCache: runtime?.providerOptionCache,
+      loadNormalPublishOptions: runtime?.loadNormalPublishOptions ?? (async () => {
+        throw new Error("Juejin options are unavailable.");
+      }),
+      nowMs: runtime?.nowMs
+    });
+    if (snapshot.source === "unavailable") {
+      if (shouldResolveCategoryName) {
+        throw new Error(`Juejin options are unavailable, so category "${frontmatterCategoryName}" could not be resolved.`);
+      }
+      throw new Error(`Juejin options are unavailable, so tag "${frontmatterTagNames[0]}" could not be resolved.`);
+    }
+    try {
+      if (shouldResolveCategoryName) {
+        categoryId = resolveNamedJuejinOptionId("category", frontmatterCategoryName, snapshot.categories);
+      }
+      if (shouldResolveTagNames) {
+        tagIds = frontmatterTagNames.map((name) => resolveNamedJuejinOptionId("tag", name, snapshot.tags));
+      }
+    } catch (error) {
+      if (snapshot.source === "network") {
+        throw withPublishFailureDetails(error, { providerOptionCache: snapshot.nextCache });
+      }
+      throw error;
+    }
+    if (snapshot.source === "network") {
+      providerOptionCache = snapshot.nextCache;
+    }
+  }
+  categoryId = categoryId || target.defaultCategoryId;
+  tagIds = tagIds.length > 0 ? tagIds : target.defaultTagIds;
+  if (!categoryId) {
+    throw new Error("Juejin publish requires a categoryId.");
+  }
+  if (tagIds.length === 0) {
+    throw new Error("Juejin publish requires at least one tagId.");
+  }
+  return {
+    input: {
+      categoryId,
+      tagIds,
+      briefContent
+    },
+    providerOptionCache
+  };
+}
+
+// src/providers/csdnProvider.ts
+function buildHeaders(target) {
+  return {
+    Cookie: target.cookie
+  };
+}
+var CSDN_X_CA_KEY = "203803574";
+var CSDN_APP_SECRET = "9znpamsyl2c7cdrr9sas0le9vbc3r6ba";
+function generateXCaSignature(url, method, accept, nonce, contentType) {
+  const parsedUrl = new URL(url);
+  const path = method === "GET" ? `${parsedUrl.pathname}${parsedUrl.search}` : parsedUrl.pathname;
+  const stringToSign = `${method}
+${accept}
+
+${contentType}
+
+x-ca-key:${CSDN_X_CA_KEY}
+x-ca-nonce:${nonce}
+${path}`;
+  return (0, import_node_crypto2.createHmac)("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
+}
+function buildSignedHeaders(target, url, method, contentType) {
+  const accept = "*/*";
+  const nonce = (0, import_node_crypto2.randomUUID)();
+  const signature = generateXCaSignature(url, method, accept, nonce, contentType);
+  return {
+    ...buildHeaders(target),
+    accept,
+    "content-type": contentType,
+    "x-ca-key": CSDN_X_CA_KEY,
+    "x-ca-nonce": nonce,
+    "x-ca-signature": signature,
+    "x-ca-signature-headers": "x-ca-key,x-ca-nonce"
+  };
+}
+function readJsonPayload(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+function readCookieValue(cookieHeader, key) {
+  const pairs = cookieHeader.split(";").map((item) => item.trim()).filter(Boolean);
+  for (const pair of pairs) {
+    const [name, ...rest] = pair.split("=");
+    if (name === key) {
+      return rest.join("=").trim();
+    }
+  }
+  return "";
+}
+function buildPublishPayload(note, html, categories, tags) {
+  return {
+    title: note.title,
+    markdowncontent: note.markdown,
+    content: html,
+    readType: "public",
+    level: 0,
+    tags: tags.join(","),
+    status: 0,
+    categories: categories.join(","),
+    type: "original",
+    original_link: "",
+    authorized_status: false,
+    Description: note.excerpt,
+    not_auto_saved: "1",
+    source: "pc_mdeditor",
+    cover_images: [],
+    cover_type: 1,
+    is_new: 1,
+    vote_id: 0,
+    resource_id: "",
+    pubStatus: "publish"
+  };
+}
+function getResponseMessage(response) {
+  const message = response.msg ?? response.message;
+  return typeof message === "string" && message.trim() ? message.trim() : "unknown error";
+}
+async function requestCsdn(target, url, method = "GET", body) {
+  const contentType = "application/json";
+  const response = await (0, import_obsidian4.requestUrl)({
+    url,
+    method,
+    headers: buildSignedHeaders(target, url, method, contentType),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`CSDN request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload(response);
+}
+function buildPreviewUrl(target, articleId) {
+  const username = readCookieValue(target.cookie, "UserName");
+  if (!username) {
+    return void 0;
+  }
+  return `https://blog.csdn.net/${username}/article/details/${articleId}`;
+}
+var CsdnProvider = class {
+  constructor(app) {
+    this.app = app;
+    this.provider = "csdn";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async loadNormalPublishOptions(target) {
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog/phoenix/console/v1/column/list?type=all"
+    );
+    const columns = [
+      ...response.data?.list?.column ?? [],
+      ...response.data?.list?.pay_column ?? []
+    ];
+    return {
+      csdnCategories: columns.filter((item) => item.id && item.edit_title).map((item) => ({
+        id: String(item.id),
+        label: item.edit_title ?? String(item.id),
+        description: item.column_url
+      })),
+      csdnTags: []
+    };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("CSDN target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const response = await requestCsdn(target, "https://bizapi.csdn.net/blog-console-api/v1/user/info");
+    if (!response.data?.username) {
+      throw new Error("CSDN validation failed: not logged in or cookie expired.");
+    }
+    return {
+      accountId: response.data?.username,
+      accountName: response.data?.username,
+      accountAvatarUrl: response.data?.avatar
+    };
+  }
+  async publish(note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : void 0
+    );
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
+      "POST",
+      buildPublishPayload(note, html, input.categories, input.tags)
+    );
+    if (response.code !== 200 || !response.data?.id) {
+      throw new Error(`CSDN publish failed: ${getResponseMessage(response)}`);
+    }
+    const articleId = String(response.data.id);
+    return {
+      remoteId: articleId,
+      remoteUrl: buildPreviewUrl(target, articleId)
+    };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const input = resolveCsdnPublishInput(
+      note,
+      target,
+      context?.provider.provider === "csdn" ? context.provider : void 0
+    );
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const response = await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog-console-api/v3/mdeditor/saveArticle",
+      "POST",
+      {
+        id: remoteId,
+        title: note.title,
+        markdowncontent: note.markdown,
+        content: html,
+        tags: input.tags.join(","),
+        categories: input.categories.join(","),
+        Description: note.excerpt
+      }
+    );
+    if (response.code !== 200) {
+      throw new Error("CSDN update failed.");
+    }
+    return {
+      remoteId,
+      remoteUrl: buildPreviewUrl(target, remoteId)
+    };
+  }
+  async delete(remoteId, target) {
+    await requestCsdn(
+      target,
+      "https://bizapi.csdn.net/blog/phoenix/console/v1/article/del",
+      "POST",
+      {
+        articleId: remoteId,
+        deep: false
+      }
+    );
+  }
+  async getPreviewUrl(remoteId, target) {
+    return buildPreviewUrl(target, remoteId);
+  }
+};
+
+// src/providers/juejinProvider.ts
+var import_obsidian5 = require("obsidian");
+function buildHeaders2(target) {
+  return {
+    "Content-Type": "application/json",
+    Cookie: target.cookie
+  };
+}
+function readJsonPayload2(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+function encodeRemoteId(articleId, draftId) {
+  return `${articleId}_${draftId}`;
+}
+function decodeRemoteId(remoteId) {
+  const [articleId, draftId] = remoteId.split("_");
+  return {
+    articleId,
+    draftId
+  };
+}
+async function requestJuejin(target, url, method = "POST", body) {
+  const response = await (0, import_obsidian5.requestUrl)({
+    url,
+    method,
+    headers: buildHeaders2(target),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`Juejin request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload2(response);
+}
+function buildPreviewUrl2(articleId) {
+  return `https://juejin.cn/post/${articleId}`;
+}
+var JuejinProvider = class {
+  constructor() {
+    this.provider = "juejin";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async loadNormalPublishOptions(target) {
+    const categories = await requestJuejin(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_category_list",
+      "POST"
+    );
+    const tags = await requestJuejin(
+      target,
+      "https://api.juejin.cn/tag_api/v1/query_tag_list",
+      "POST",
+      {
+        cursor: "0",
+        key_word: "",
+        limit: 500,
+        sort_type: 1
+      }
+    );
+    return {
+      juejinCategories: (categories.data ?? []).filter((item) => item.category_id && item.category?.category_name).map((item) => ({
+        id: String(item.category_id),
+        label: item.category?.category_name ?? String(item.category_id)
+      })),
+      juejinTags: (tags.data ?? []).filter((item) => item.tag_id && item.tag?.tag_name).map((item) => ({
+        id: String(item.tag_id),
+        label: item.tag?.tag_name ?? String(item.tag_id)
+      }))
+    };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("Juejin target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const response = await requestJuejin(
+      target,
+      "https://api.juejin.cn/user_api/v1/user/get",
+      "GET"
+    );
+    if (response.err_no !== 0 || !response.data?.user_id) {
+      throw new Error(`Juejin validation failed: ${response.err_msg ?? "unknown error"}`);
+    }
+    return {
+      accountId: response.data.user_id,
+      accountName: response.data.user_name,
+      accountAvatarUrl: response.data.avatar_large
+    };
+  }
+  async publish(note, target, context, runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const resolved = await resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : void 0,
+      runtime
+    );
+    const input = resolved.input;
+    try {
+      const draftResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/create",
+        "POST",
+        {
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: []
+        }
+      );
+      const draftId = String(draftResponse.data?.id ?? "");
+      if (draftResponse.err_no !== 0 || !draftId) {
+        throw new Error(`Juejin draft creation failed: ${draftResponse.err_msg ?? "unknown error"}`);
+      }
+      const publishResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: []
+        }
+      );
+      const articleId = String(publishResponse.data?.article_id ?? "");
+      if (publishResponse.err_no !== 0 || !articleId) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      }
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl2(articleId),
+        providerOptionCache: resolved.providerOptionCache
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
+    }
+  }
+  async update(remoteId, note, target, context, runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const resolved = await resolveJuejinPublishInput(
+      note,
+      target,
+      context?.provider.provider === "juejin" ? context.provider : void 0,
+      runtime
+    );
+    const input = resolved.input;
+    const { articleId, draftId } = decodeRemoteId(remoteId);
+    try {
+      const draftResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article_draft/update",
+        "POST",
+        {
+          id: draftId,
+          category_id: input.categoryId,
+          tag_ids: input.tagIds,
+          link_url: "",
+          cover_image: "",
+          title: note.title,
+          brief_content: input.briefContent,
+          edit_type: 10,
+          html_content: "deprecated",
+          mark_content: note.markdown,
+          theme_ids: []
+        }
+      );
+      if (draftResponse.err_no !== 0) {
+        throw new Error(`Juejin update failed: ${draftResponse.err_msg ?? "unknown error"}`);
+      }
+      const publishResponse = await requestJuejin(
+        target,
+        "https://api.juejin.cn/content_api/v1/article/publish",
+        "POST",
+        {
+          draft_id: draftId,
+          sync_to_org: false,
+          column_ids: [],
+          theme_ids: []
+        }
+      );
+      if (publishResponse.err_no !== 0) {
+        throw new Error(`Juejin publish failed: ${publishResponse.err_msg ?? "unknown error"}`);
+      }
+      return {
+        remoteId: encodeRemoteId(articleId, draftId),
+        remoteUrl: buildPreviewUrl2(articleId),
+        providerOptionCache: resolved.providerOptionCache
+      };
+    } catch (error) {
+      const providerOptionCache = resolved.providerOptionCache ?? getPublishFailureProviderOptionCache(error);
+      throw withPublishFailureDetails(error, { providerOptionCache });
+    }
+  }
+  async delete(remoteId, target) {
+    const { articleId } = decodeRemoteId(remoteId);
+    const response = await requestJuejin(
+      target,
+      "https://api.juejin.cn/content_api/v1/article/delete",
+      "POST",
+      {
+        article_id: articleId
+      }
+    );
+    if (response.err_no !== 0) {
+      throw new Error(`Juejin delete failed: ${response.err_msg ?? "unknown error"}`);
+    }
+  }
+  async getPreviewUrl(remoteId) {
+    const { articleId } = decodeRemoteId(remoteId);
+    return buildPreviewUrl2(articleId);
+  }
+};
+
+// src/providers/zhihuProvider.ts
+var import_obsidian6 = require("obsidian");
+function buildHeaders3(target) {
+  return {
+    "Content-Type": "application/json",
+    Cookie: target.cookie
+  };
+}
+function readJsonPayload3(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+async function requestZhihu(target, url, method = "GET", body) {
+  const response = await (0, import_obsidian6.requestUrl)({
+    url,
+    method,
+    headers: buildHeaders3(target),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`Zhihu request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload3(response);
+}
+function buildPreviewUrl3(articleId) {
+  return `https://zhuanlan.zhihu.com/p/${articleId}`;
+}
+var ZhihuProvider = class {
+  constructor(app) {
+    this.app = app;
+    this.provider = "zhihu";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async loadNormalPublishOptions(target) {
+    const response = await requestZhihu(
+      target,
+      "https://www.zhihu.com/api/v4/members/self/column-contributions?include=data%5B*%5D.column.intro%2Cfollowers%2Carticles_count%2Cvoteup_count%2Citems_count&offset=0&limit=20"
+    );
+    return {
+      zhihuColumns: (response.data ?? []).map((item) => item.column).filter((column) => Boolean(column?.id && column?.title)).map((column) => ({
+        id: String(column.id),
+        label: column.title ?? String(column.id),
+        description: column.url
+      }))
+    };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error("Zhihu target is missing Cookie.");
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const account = await requestZhihu(
+      target,
+      "https://www.zhihu.com/api/v4/me?include=account_status%2Cis_bind_phone%2Cis_force_renamed%2Cemail%2Crenamed_fullname"
+    );
+    if (!account.uid) {
+      throw new Error("Zhihu validation failed: not logged in or cookie expired.");
+    }
+    return {
+      accountId: account.uid ? String(account.uid) : void 0,
+      accountName: account.name,
+      accountAvatarUrl: account.avatar_url
+    };
+  }
+  async publish(note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const { columnId } = resolveZhihuPublishInput(
+      note,
+      target,
+      context?.provider.provider === "zhihu" ? context.provider : void 0
+    );
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    const draft = await requestZhihu(
+      target,
+      "https://zhuanlan.zhihu.com/api/articles/drafts",
+      "POST",
+      {
+        title: note.title,
+        content: html
+      }
+    );
+    const articleId = String(draft.id ?? "");
+    if (!articleId) {
+      throw new Error("Zhihu publish failed: draft id missing.");
+    }
+    await requestZhihu(
+      target,
+      `https://zhuanlan.zhihu.com/api/articles/${articleId}/publish`,
+      "PUT",
+      {
+        column: null,
+        commentPermission: "anyone",
+        disclaimer_type: "none",
+        disclaimer_status: "close",
+        table_of_contents_enabled: false,
+        commercial_report_info: { commercial_types: [] },
+        commercial_zhitask_bind_info: null
+      }
+    );
+    if (columnId) {
+      await requestZhihu(
+        target,
+        `https://www.zhihu.com/api/v4/columns/${encodeURIComponent(columnId)}/items`,
+        "POST",
+        {
+          type: "article",
+          id: articleId
+        }
+      );
+    }
+    return {
+      remoteId: articleId,
+      remoteUrl: buildPreviewUrl3(articleId)
+    };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    void context;
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    await requestZhihu(
+      target,
+      `https://zhuanlan.zhihu.com/api/articles/${encodeURIComponent(remoteId)}/draft`,
+      "PATCH",
+      {
+        title: note.title,
+        content: html,
+        table_of_contents: false,
+        delta_time: 10
+      }
+    );
+    await requestZhihu(
+      target,
+      `https://zhuanlan.zhihu.com/api/articles/${encodeURIComponent(remoteId)}/publish`,
+      "PUT",
+      {
+        disclaimer_type: "none",
+        disclaimer_status: "close",
+        table_of_contents_enabled: false,
+        commercial_report_info: { commercial_types: [] },
+        commercial_zhitask_bind_info: null
+      }
+    );
+    return {
+      remoteId,
+      remoteUrl: buildPreviewUrl3(remoteId)
+    };
+  }
+  async delete(remoteId, target) {
+    await requestZhihu(target, `https://www.zhihu.com/api/v4/articles/${encodeURIComponent(remoteId)}`, "DELETE");
+  }
+  async getPreviewUrl(remoteId) {
+    return buildPreviewUrl3(remoteId);
+  }
+};
+
+// src/providers/definitions/shared.ts
+function cloneStringList(values) {
+  return values.slice();
+}
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+// src/providers/definitions/web.ts
+var CSDN_FIELDS = [
+  { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
+  { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" }
+];
+var JUEJIN_FIELDS = [
+  { key: "defaultCategoryId", label: "Default category ID", type: "text" },
+  { key: "defaultTagIds", label: "Default tag IDs", description: "Comma-separated tag IDs.", type: "text" },
+  { key: "defaultBriefContent", label: "Default brief content", type: "text" }
+];
+var zhihuSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "defaultColumnId":
+        return target.defaultColumnId;
+      case "defaultColumnTitle":
+        return target.defaultColumnTitle ?? "";
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "defaultColumnId":
+        target.defaultColumnId = String(value).trim();
+        return target;
+      case "defaultColumnTitle":
+        target.defaultColumnTitle = String(value).trim();
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var csdnSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "defaultCategories":
+        return target.defaultCategories.join(", ");
+      case "defaultTags":
+        return target.defaultTags.join(", ");
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "defaultCategories":
+        target.defaultCategories = splitCommaSeparatedValue(String(value));
+        return target;
+      case "defaultTags":
+        target.defaultTags = splitCommaSeparatedValue(String(value));
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var juejinSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "defaultCategoryId":
+        return target.defaultCategoryId;
+      case "defaultTagIds":
+        return target.defaultTagIds.join(", ");
+      case "defaultBriefContent":
+        return target.defaultBriefContent;
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "defaultCategoryId":
+        target.defaultCategoryId = String(value).trim();
+        return target;
+      case "defaultTagIds":
+        target.defaultTagIds = splitCommaSeparatedValue(String(value));
+        return target;
+      case "defaultBriefContent":
+        target.defaultBriefContent = String(value).trim();
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var zhihuNormalPublish = {
+  supportedAiFields: ["title"],
+  skipOptionsLoad: true,
+  buildInitialDraft: (_note, target) => ({
+    provider: "zhihu",
+    columnId: target.defaultColumnId,
+    columnTitle: target.defaultColumnTitle ?? ""
+  })
+};
+var csdnNormalPublish = {
+  supportedAiFields: ["title", "excerpt"],
+  buildInitialDraft: (note, target) => ({
+    provider: "csdn",
+    excerpt: note.excerpt,
+    tags: note.tags.length > 0 ? cloneStringList(note.tags) : cloneStringList(target.defaultTags),
+    categories: note.categories.length > 0 ? cloneStringList(note.categories) : cloneStringList(target.defaultCategories)
+  }),
+  getManualFallbackFields: () => ["categories", "tags"],
+  applyDraftToNote: (note, draft) => ({
+    ...note,
+    excerpt: draft.excerpt,
+    tags: cloneStringList(draft.tags),
+    categories: cloneStringList(draft.categories)
+  })
+};
+var juejinNormalPublish = {
+  supportedAiFields: ["title", "briefContent"],
+  buildInitialDraft: (note, target) => ({
+    provider: "juejin",
+    categoryId: target.defaultCategoryId,
+    categoryName: target.defaultCategoryName ?? "",
+    tagIds: cloneStringList(target.defaultTagIds),
+    tagNames: cloneStringList(target.defaultTagNames ?? []),
+    briefContent: target.defaultBriefContent || note.excerpt
+  }),
+  getManualFallbackFields: () => ["categoryId", "tagIds"],
+  validateDraft: (draft) => {
+    if (!draft.categoryId.trim()) {
+      return "Juejin publish requires a categoryId.";
+    }
+    if (draft.tagIds.length === 0) {
+      return "Juejin publish requires at least one tagId.";
+    }
+    return null;
+  }
+};
+var zhihuDefinition = {
+  id: "zhihu",
+  name: "Zhihu",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: true,
+    media: "unsupported",
+    normalPublish: true,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: (app) => new ZhihuProvider(app),
+  createTarget: () => ({
+    id: (0, import_node_crypto3.randomUUID)(),
+    name: "Zhihu",
+    enabled: true,
+    provider: "zhihu",
+    cookie: "",
+    defaultColumnId: "",
+    defaultColumnTitle: ""
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    cookie: target.cookie || "",
+    defaultColumnId: target.defaultColumnId || "",
+    defaultColumnTitle: target.defaultColumnTitle || ""
+  }),
+  settingsForm: zhihuSettingsForm,
+  normalPublish: zhihuNormalPublish,
+  buildInitialDraft: zhihuNormalPublish.buildInitialDraft,
+  skipNormalPublishOptionsLoad: zhihuNormalPublish.skipOptionsLoad
+};
+var csdnDefinition = {
+  id: "csdn",
+  name: "CSDN",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: true,
+    media: "unsupported",
+    normalPublish: true,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: (app) => new CsdnProvider(app),
+  createTarget: () => ({
+    id: (0, import_node_crypto3.randomUUID)(),
+    name: "CSDN",
+    enabled: true,
+    provider: "csdn",
+    cookie: "",
+    defaultCategories: [],
+    defaultTags: []
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    cookie: target.cookie || "",
+    defaultCategories: normalizeStringList(target.defaultCategories),
+    defaultTags: normalizeStringList(target.defaultTags)
+  }),
+  settingsForm: csdnSettingsForm,
+  normalPublish: csdnNormalPublish,
+  buildInitialDraft: csdnNormalPublish.buildInitialDraft,
+  getManualFallbackFields: csdnNormalPublish.getManualFallbackFields
+};
+var juejinDefinition = {
+  id: "juejin",
+  name: "Juejin",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: true,
+    media: "unsupported",
+    normalPublish: true,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: () => new JuejinProvider(),
+  createTarget: () => ({
+    id: (0, import_node_crypto3.randomUUID)(),
+    name: "Juejin",
+    enabled: true,
+    provider: "juejin",
+    cookie: "",
+    defaultCategoryId: "",
+    defaultCategoryName: "",
+    defaultTagIds: [],
+    defaultTagNames: [],
+    defaultBriefContent: ""
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    cookie: target.cookie || "",
+    defaultCategoryId: target.defaultCategoryId || "",
+    defaultCategoryName: target.defaultCategoryName || "",
+    defaultTagIds: normalizeStringList(target.defaultTagIds),
+    defaultTagNames: normalizeStringList(target.defaultTagNames),
+    defaultBriefContent: target.defaultBriefContent || ""
+  }),
+  settingsForm: juejinSettingsForm,
+  normalPublish: juejinNormalPublish,
+  buildInitialDraft: juejinNormalPublish.buildInitialDraft,
+  getManualFallbackFields: juejinNormalPublish.getManualFallbackFields
+};
+
+// src/providers/definitions/wordpress.ts
+var import_node_crypto4 = require("node:crypto");
+
+// src/providers/wordpressProvider.ts
+var import_obsidian7 = require("obsidian");
+function tryParseJsonPayload(text) {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const objectIndex = trimmed.indexOf("{");
+    const arrayIndex = trimmed.indexOf("[");
+    const startIndex = objectIndex === -1 ? arrayIndex : arrayIndex === -1 ? objectIndex : Math.min(objectIndex, arrayIndex);
+    if (startIndex <= 0) {
+      return null;
+    }
+    try {
+      return JSON.parse(trimmed.slice(startIndex));
+    } catch {
+      return null;
+    }
+  }
+}
+function trimTrailingSlash2(value) {
+  return value.replace(/\/+$/, "");
+}
+function makeAuthHeader(target) {
+  return `Basic ${Buffer.from(`${target.username}:${target.appPassword}`).toString("base64")}`;
+}
+function normalizeEndpoint(target) {
+  return `${trimTrailingSlash2(target.endpoint)}/wp-json/wp/v2`;
+}
+async function requestJson(target, path, method = "GET", body) {
+  const response = await (0, import_obsidian7.requestUrl)({
+    url: `${normalizeEndpoint(target)}${path}`,
+    method,
+    headers: {
+      Authorization: makeAuthHeader(target),
+      "Content-Type": "application/json"
+    },
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`WordPress request failed (${response.status}): ${response.text}`);
+  }
+  const parsed = tryParseJsonPayload(response.text);
+  if (parsed !== null) {
+    return parsed;
+  }
+  const snippet = response.text.replace(/\s+/g, " ").slice(0, 400);
+  throw new Error(
+    `WordPress returned a non-JSON response. This usually means PHP warnings or other output are leaking into the REST API response. Raw response: ${snippet}`
+  );
+}
+function slugify(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+}
+async function ensureTermIds(target, taxonomy, names) {
+  const ids = [];
+  for (const name of names) {
+    const slug = slugify(name);
+    const existing = await requestJson(target, `/${taxonomy}?search=${encodeURIComponent(name)}`);
+    const found = existing.find((item) => item.slug === slug || item.name.toLowerCase() === name.toLowerCase());
+    if (found) {
+      ids.push(found.id);
+      continue;
+    }
+    const created = await requestJson(target, `/${taxonomy}`, "POST", {
+      name,
+      slug
+    });
+    ids.push(created.id);
+  }
+  return ids;
+}
+async function buildPayload2(note, target, context) {
+  const providerContext = context?.provider.provider === "wordpress" ? context.provider : void 0;
+  const content = target.contentFormat === "html" ? note.html ?? note.markdown : note.markdown;
+  const payload = {
+    title: context?.common.title || note.title,
+    content,
+    excerpt: providerContext?.excerpt ?? note.excerpt,
+    slug: providerContext?.slug ?? note.slug,
+    status: providerContext?.status ?? note.frontmatter.status ?? target.defaultStatus,
+    categories: await ensureTermIds(target, "categories", providerContext?.categories ?? note.categories),
+    tags: await ensureTermIds(target, "tags", providerContext?.tags ?? note.tags)
+  };
+  if (providerContext?.password) {
+    payload.password = providerContext.password;
+  }
+  return payload;
+}
+var WordpressProvider = class {
+  constructor(app) {
+    this.app = app;
+    this.provider = "wordpress";
+  }
+  getMediaSupport(_target) {
+    return { mode: "native-upload" };
+  }
+  async loadNormalPublishOptions(target) {
+    const categories = await requestJson(target, "/categories?per_page=100");
+    const tags = await requestJson(target, "/tags?per_page=100");
+    const toOption = (item) => ({
+      id: String(item.id),
+      label: item.name,
+      description: item.slug
+    });
+    return {
+      wordpressCategories: categories.map(toOption),
+      wordpressTags: tags.map(toOption)
+    };
+  }
+  async validateConfig(target) {
+    if (!target.endpoint || !target.username || !target.appPassword) {
+      throw new Error("WordPress target is missing endpoint, username, or application password.");
+    }
+    await requestJson(target, "/users/me");
+  }
+  async publish(note, target, context, _runtime) {
+    const response = await requestJson(
+      target,
+      "/posts",
+      "POST",
+      await buildPayload2(await this.prepareNote(note), target, context)
+    );
+    return {
+      remoteId: String(response.id),
+      remoteUrl: response.link
+    };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    const preparedNote = await this.prepareNote(note);
+    const response = await requestJson(
+      target,
+      `/posts/${encodeURIComponent(remoteId)}`,
+      "POST",
+      await buildPayload2(preparedNote, target, context)
+    );
+    return {
+      remoteId: String(response.id),
+      remoteUrl: response.link
+    };
+  }
+  async delete(remoteId, target) {
+    await requestJson(target, `/posts/${encodeURIComponent(remoteId)}?force=true`, "DELETE");
+  }
+  async getPreviewUrl(remoteId, target) {
+    const response = await requestJson(target, `/posts/${encodeURIComponent(remoteId)}`);
+    return response.link;
+  }
+  async uploadAsset(asset, _note, target) {
+    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian7.normalizePath)(asset.sourcePath));
+    const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
+    const response = await (0, import_obsidian7.requestUrl)({
+      url: `${normalizeEndpoint(target)}/media`,
+      method: "POST",
+      headers: {
+        Authorization: makeAuthHeader(target),
+        "Content-Disposition": `attachment; filename="${asset.fileName}"`,
+        "Content-Type": "application/octet-stream"
+      },
+      body,
+      throw: false
+    });
+    if (response.status >= 400) {
+      throw new Error(`WordPress media upload failed for ${asset.fileName} (${response.status}): ${response.text}`);
+    }
+    const payload = tryParseJsonPayload(response.text);
+    const url = payload?.source_url ?? payload?.guid?.rendered;
+    if (!url) {
+      throw new Error(`WordPress media upload failed for ${asset.fileName}: ${response.text}`);
+    }
+    return { url };
+  }
+  async prepareNote(note) {
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    return {
+      ...note,
+      html
+    };
+  }
+};
+
+// src/providers/definitions/wordpress.ts
+var WORDPRESS_FIELDS = [
+  { key: "endpoint", label: "Endpoint", description: "Example: https://example.com", type: "text" },
+  { key: "username", label: "Username", type: "text" },
+  { key: "appPassword", label: "Application password", type: "password" },
+  {
+    key: "defaultStatus",
+    label: "Default status",
+    type: "dropdown",
+    options: [
+      { value: "draft", label: "Draft" },
+      { value: "publish", label: "Publish" },
+      { value: "private", label: "Private" },
+      { value: "pending", label: "Pending" }
+    ]
+  },
+  {
+    key: "contentFormat",
+    label: "Publish format",
+    description: "Choose whether WordPress receives Markdown text or rendered HTML.",
+    type: "dropdown",
+    options: [
+      { value: "markdown", label: "Markdown" },
+      { value: "html", label: "HTML" }
+    ]
+  }
+];
+var settingsForm2 = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...WORDPRESS_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "endpoint":
+        return target.endpoint;
+      case "username":
+        return target.username;
+      case "appPassword":
+        return target.appPassword;
+      case "defaultStatus":
+        return target.defaultStatus;
+      case "contentFormat":
+        return target.contentFormat;
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "endpoint":
+        target.endpoint = String(value).trim();
+        return target;
+      case "username":
+        target.username = String(value).trim();
+        return target;
+      case "appPassword":
+        target.appPassword = String(value).trim();
+        return target;
+      case "defaultStatus":
+        target.defaultStatus = String(value);
+        return target;
+      case "contentFormat":
+        target.contentFormat = String(value);
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var wordpressNormalPublish = {
+  supportedAiFields: ["title", "excerpt"],
+  buildInitialDraft: (note, target) => ({
+    provider: "wordpress",
+    slug: note.slug,
+    excerpt: note.excerpt,
+    tags: cloneStringList(note.tags),
+    categories: cloneStringList(note.categories),
+    status: target.defaultStatus,
+    password: ""
+  }),
+  getManualFallbackFields: () => ["categories", "tags"],
+  applyDraftToNote: (note, draft) => ({
+    ...note,
+    slug: draft.slug,
+    excerpt: draft.excerpt,
+    tags: cloneStringList(draft.tags),
+    categories: cloneStringList(draft.categories)
+  })
+};
+var wordpressDefinition = {
+  id: "wordpress",
+  name: "WordPress",
+  category: "wordpress",
+  family: "rest-api",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: true,
+    media: "native-upload",
+    normalPublish: true,
+    quickPublish: true
+  },
+  createProvider: (app) => new WordpressProvider(app),
+  createTarget: () => ({
+    id: (0, import_node_crypto4.randomUUID)(),
+    name: "WordPress",
+    enabled: true,
+    provider: "wordpress",
+    endpoint: "",
+    username: "",
+    appPassword: "",
+    defaultStatus: "draft",
+    contentFormat: "html"
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    defaultStatus: target.defaultStatus ?? "draft",
+    contentFormat: target.contentFormat ?? "html"
+  }),
+  settingsForm: settingsForm2,
+  normalPublish: wordpressNormalPublish,
+  buildInitialDraft: wordpressNormalPublish.buildInitialDraft,
+  getManualFallbackFields: wordpressNormalPublish.getManualFallbackFields
+};
+
+// src/providers/definitions/index.ts
+var providerDefinitionsById = {
+  wordpress: wordpressDefinition,
+  yuque: yuqueDefinition,
+  zhihu: zhihuDefinition,
+  csdn: csdnDefinition,
+  juejin: juejinDefinition
+};
+var providerDisplayOrder = ["wordpress", "yuque", "zhihu", "csdn", "juejin"];
+function getProviderDefinitions() {
+  return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
+}
+function getProviderDefinition(providerId) {
+  return providerDefinitionsById[providerId];
+}
+
+// src/settings.ts
+var DEFAULT_LLM_SETTINGS = {
+  enabled: false,
+  vendor: "openai",
+  apiKey: "",
+  model: "",
+  endpointOverride: "",
+  temperature: 0.3,
+  timeoutMs: 3e4,
+  maxInputChars: 12e3
+};
+var DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS = {
+  enabled: false,
+  includeOptionComments: true
+};
+function normalizeLlmSettings(value) {
+  return {
+    enabled: Boolean(value?.enabled),
+    vendor: value?.vendor === "anthropic" || value?.vendor === "gemini" || value?.vendor === "openai" || value?.vendor === "openai-compatible" ? value.vendor : DEFAULT_LLM_SETTINGS.vendor,
+    apiKey: typeof value?.apiKey === "string" ? value.apiKey : "",
+    model: typeof value?.model === "string" ? value.model : "",
+    endpointOverride: typeof value?.endpointOverride === "string" ? value.endpointOverride : "",
+    temperature: typeof value?.temperature === "number" && Number.isFinite(value.temperature) ? value.temperature : DEFAULT_LLM_SETTINGS.temperature,
+    timeoutMs: typeof value?.timeoutMs === "number" && value.timeoutMs > 0 ? value.timeoutMs : DEFAULT_LLM_SETTINGS.timeoutMs,
+    maxInputChars: typeof value?.maxInputChars === "number" && value.maxInputChars > 0 ? value.maxInputChars : DEFAULT_LLM_SETTINGS.maxInputChars
+  };
+}
+function normalizeCachedProviderOption(value) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const raw = value;
+  if (typeof raw.id !== "string" || typeof raw.label !== "string") {
+    return null;
+  }
+  return {
+    id: raw.id,
+    label: raw.label,
+    description: typeof raw.description === "string" ? raw.description : void 0
+  };
+}
+function normalizeCachedProviderOptionList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((item) => normalizeCachedProviderOption(item)).filter((item) => item !== null);
+}
+function normalizeJuejinProviderOptionCacheEntry(value) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const raw = value;
+  if (typeof raw.fetchedAt !== "string") {
+    return null;
+  }
+  return {
+    fetchedAt: raw.fetchedAt,
+    categories: normalizeCachedProviderOptionList(raw.categories),
+    tags: normalizeCachedProviderOptionList(raw.tags)
+  };
+}
+function normalizeFrontmatterAutomationSettings(value) {
+  return {
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.enabled,
+    includeOptionComments: typeof value?.includeOptionComments === "boolean" ? value.includeOptionComments : DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS.includeOptionComments
+  };
+}
+function normalizeProviderOptionCache(value) {
+  const rawValue = typeof value === "object" && value !== null ? value : null;
+  const rawJuejinByTargetId = rawValue?.juejinByTargetId;
+  if (typeof rawJuejinByTargetId !== "object" || rawJuejinByTargetId === null) {
+    return {
+      juejinByTargetId: {}
+    };
+  }
+  const juejinByTargetId = {};
+  for (const [targetId, entry] of Object.entries(rawJuejinByTargetId)) {
+    const normalizedEntry = normalizeJuejinProviderOptionCacheEntry(entry);
+    if (normalizedEntry) {
+      juejinByTargetId[targetId] = normalizedEntry;
+    }
+  }
+  return {
+    juejinByTargetId
+  };
+}
+var DEFAULT_SETTINGS = {
+  targets: [],
+  records: [],
+  frontmatterAutomation: { ...DEFAULT_FRONTMATTER_AUTOMATION_SETTINGS },
+  providerOptionCache: {
+    juejinByTargetId: {}
+  },
+  llm: { ...DEFAULT_LLM_SETTINGS }
+};
+function getRecord(records, notePath, targetId) {
+  return records.find((record) => record.notePath === notePath && record.targetId === targetId);
+}
+function upsertRecord(records, nextRecord) {
+  const existingIndex = records.findIndex(
+    (record) => record.notePath === nextRecord.notePath && record.targetId === nextRecord.targetId
+  );
+  if (existingIndex === -1) {
+    return [...records, nextRecord];
+  }
+  const next = records.slice();
+  next[existingIndex] = nextRecord;
+  return next;
+}
+function cloneTarget(target) {
+  return JSON.parse(JSON.stringify(target));
+}
+function normalizeTarget(target) {
+  switch (target.provider) {
+    case "wordpress":
+      return getProviderDefinition("wordpress").normalizeTarget(target);
+    case "yuque":
+      return getProviderDefinition("yuque").normalizeTarget(target);
+    case "zhihu":
+      return getProviderDefinition("zhihu").normalizeTarget(target);
+    case "csdn":
+      return getProviderDefinition("csdn").normalizeTarget(target);
+    case "juejin":
+      return getProviderDefinition("juejin").normalizeTarget(target);
+  }
+}
+
+// src/core/providerOptionCache.ts
+var PROVIDER_OPTION_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
+function toCachedOptions(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.map((item) => ({
+    id: item.id,
+    label: item.label,
+    description: typeof item.description === "string" ? item.description : void 0
+  }));
+}
+async function loadJuejinOptionSnapshot(args) {
+  const nowMs = typeof args.nowMs === "number" ? args.nowMs : Date.now();
+  const normalizedCache = normalizeProviderOptionCache(args.providerOptionCache);
+  const cachedEntry = normalizedCache.juejinByTargetId[args.targetId];
+  if (cachedEntry) {
+    const parsedFetchedAt = Date.parse(cachedEntry.fetchedAt);
+    const hasFreshCache = !Number.isNaN(parsedFetchedAt) && nowMs - parsedFetchedAt < PROVIDER_OPTION_CACHE_TTL_MS;
+    if (hasFreshCache) {
+      return {
+        source: "cache",
+        categories: cachedEntry.categories,
+        tags: cachedEntry.tags,
+        nextCache: normalizedCache
+      };
+    }
+  }
+  try {
+    const remoteOptions = await args.loadNormalPublishOptions(args.target);
+    const categories = toCachedOptions(remoteOptions.juejinCategories);
+    const tags = toCachedOptions(remoteOptions.juejinTags);
+    const nextCache = {
+      ...normalizedCache,
+      juejinByTargetId: {
+        ...normalizedCache.juejinByTargetId,
+        [args.targetId]: {
+          fetchedAt: new Date(nowMs).toISOString(),
+          categories,
+          tags
+        }
+      }
+    };
+    return {
+      source: "network",
+      categories,
+      tags,
+      nextCache
+    };
+  } catch {
+    if (cachedEntry) {
+      return {
+        source: "stale-cache",
+        categories: cachedEntry.categories,
+        tags: cachedEntry.tags,
+        nextCache: normalizedCache
+      };
+    }
+    return {
+      source: "unavailable",
+      categories: [],
+      tags: [],
+      nextCache: normalizedCache
+    };
+  }
+}
+
+// src/core/normalPublish/drafts.ts
+function createIdleRemoteOptionsState() {
+  return {
+    status: "idle",
+    data: {},
+    manualFallbackFields: []
+  };
+}
+function buildInitialTargetDraft(target, note) {
+  const definition = getProviderDefinition(target.provider);
+  if (!definition.normalPublish) {
+    throw new Error(`Provider ${target.provider} does not define a normal publish draft builder.`);
+  }
+  return definition.normalPublish.buildInitialDraft(note, target);
+}
+function buildNormalPublishSessionState(note, targets) {
+  const enabledTargets = targets.filter((target) => target.enabled);
+  const targetDrafts = {};
+  const remoteOptions = {};
+  const lastErrorByTargetId = {};
+  for (const target of enabledTargets) {
+    targetDrafts[target.id] = buildInitialTargetDraft(target, note);
+    remoteOptions[target.id] = createIdleRemoteOptionsState();
+    lastErrorByTargetId[target.id] = null;
+  }
+  return {
+    selectedTargetId: enabledTargets[0]?.id ?? null,
+    commonDraft: {
+      title: note.title
+    },
+    targetDrafts,
+    remoteOptions,
+    lastErrorByTargetId
+  };
+}
+
+// src/core/note.ts
+var import_obsidian8 = require("obsidian");
+var import_node_crypto5 = require("node:crypto");
+var import_node_path = require("node:path");
+
+// src/core/markdown.ts
+var WIKI_EMBED_REGEX = /!\[\[([^\]]+)\]\]/g;
+var MARKDOWN_IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g;
+function isAbsoluteUrl(value) {
+  return /^(?:[a-z]+:)?\/\//i.test(value) || value.startsWith("data:");
+}
+function stripAlias(target) {
+  return target.split("|")[0].trim();
+}
+function extractAssetReferences(markdown) {
+  const references = [];
+  for (const match of markdown.matchAll(WIKI_EMBED_REGEX)) {
+    const raw = match[1] ?? "";
+    references.push({
+      originalText: match[0],
+      rawTarget: stripAlias(raw),
+      altText: raw.split("|")[1]?.trim() ?? "",
+      source: "wiki-embed"
+    });
+  }
+  for (const match of markdown.matchAll(MARKDOWN_IMAGE_REGEX)) {
+    const target = (match[2] ?? "").trim();
+    if (isAbsoluteUrl(target)) {
+      continue;
+    }
+    references.push({
+      originalText: match[0],
+      rawTarget: target,
+      altText: match[1] ?? "",
+      source: "markdown-image"
+    });
+  }
+  return references;
+}
+function replaceAssetReference(markdown, reference, replacementPath) {
+  const altText = reference.altText.trim();
+  const rewritten = `![${altText}](${replacementPath})`;
+  return markdown.split(reference.originalText).join(rewritten);
+}
+function replaceAssetReferences(markdown, replacements) {
+  return replacements.reduce(
+    (currentMarkdown, replacement) => replaceAssetReference(currentMarkdown, replacement.reference, replacement.replacementPath),
+    markdown
+  );
+}
+
+// src/core/content.ts
+function stripFrontmatter(markdown) {
+  if (!markdown.startsWith("---")) {
+    return markdown;
+  }
+  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").replace(/^\s*\n/, "");
+}
+
+// src/core/note.ts
+var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"]);
+function ensureArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function slugify2(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+}
+function pickExcerpt(markdown, frontmatter) {
+  const explicit = typeof frontmatter.description === "string" && frontmatter.description || typeof frontmatter.excerpt === "string" && frontmatter.excerpt || typeof frontmatter.summary === "string" && frontmatter.summary || "";
+  if (explicit) {
+    return explicit;
+  }
+  const collapsed = markdown.replace(/^---[\s\S]*?---\s*/m, "").replace(/!\[\[[^\]]+\]\]/g, "").replace(/!\[[^\]]*]\(([^)]+)\)/g, "").replace(/\[\[([^\]]+)]]/g, "$1").replace(/\[([^\]]+)]\(([^)]+)\)/g, "$1").replace(/[#>*`~-]/g, " ").replace(/\s+/g, " ").trim();
+  return collapsed.slice(0, 200);
+}
+function normalizeTitleLine(value) {
+  return value.replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "").replace(/\s+/g, " ").trim();
+}
+function pickTitle(markdown, frontmatter, fallback) {
+  const frontmatterTitle = typeof frontmatter.title === "string" ? frontmatter.title.trim() : "";
+  if (frontmatterTitle) {
+    return frontmatterTitle;
+  }
+  const lines = markdown.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line.startsWith("# ")) {
+      continue;
+    }
+    const title = normalizeTitleLine(line);
+    if (title) {
+      return title;
+    }
+  }
+  return fallback;
+}
+function isImagePath(value) {
+  const normalized = value.split(/[?#]/)[0] ?? value;
+  return IMAGE_EXTENSIONS.has((0, import_node_path.extname)(normalized).toLowerCase());
+}
+function resolveAsset(app, file, reference) {
+  if (!isImagePath(reference.rawTarget)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type"
+      }
+    };
+  }
+  const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
+  if (!(resolved instanceof import_obsidian8.TFile)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "missing"
+      }
+    };
+  }
+  if (!isImagePath(resolved.path)) {
+    return {
+      unresolved: {
+        reference,
+        reason: "unsupported-type"
+      }
+    };
+  }
+  return {
+    resolved: {
+      reference,
+      sourcePath: resolved.path,
+      fileName: resolved.name
+    }
+  };
+}
+async function extractPublishableNote(app, file) {
+  const rawMarkdown = await app.vault.cachedRead(file);
+  const cache = app.metadataCache.getFileCache(file);
+  const frontmatter = cache?.frontmatter ?? {};
+  const markdown = stripFrontmatter(rawMarkdown);
+  const references = extractAssetReferences(markdown);
+  const attachments = [];
+  const unresolvedAttachments = [];
+  for (const reference of references) {
+    const result = resolveAsset(app, file, reference);
+    if (result.resolved) {
+      attachments.push(result.resolved);
+    }
+    if (result.unresolved) {
+      unresolvedAttachments.push(result.unresolved);
+    }
+  }
+  const title = pickTitle(markdown, frontmatter, file.basename);
+  const slug = typeof frontmatter.slug === "string" && frontmatter.slug || typeof frontmatter.permalink === "string" && frontmatter.permalink || slugify2(file.basename);
+  const tags = ensureArray(frontmatter.tags);
+  const categories = ensureArray(frontmatter.categories ?? frontmatter.category);
+  return {
+    filePath: file.path,
+    title,
+    markdown,
+    frontmatter,
+    attachments,
+    unresolvedAttachments,
+    excerpt: pickExcerpt(markdown, frontmatter),
+    slug,
+    tags,
+    categories,
+    date: typeof frontmatter.date === "string" ? frontmatter.date : void 0
+  };
+}
+function computeContentHash(note) {
+  return (0, import_node_crypto5.createHash)("sha256").update(
+    JSON.stringify({
+      markdown: note.markdown,
+      frontmatter: note.frontmatter,
+      attachments: note.attachments.map((asset) => asset.sourcePath)
+    })
+  ).digest("hex");
+}
+
+// src/core/mediaPipeline.ts
+async function resolveReplacement(provider, note, target, sourcePath) {
+  const asset = note.attachments.find((item) => item.sourcePath === sourcePath);
+  if (!asset) {
+    throw new Error(`Missing attachment for source path: ${sourcePath}`);
+  }
+  const support = provider.getMediaSupport(target);
+  if (support.mode === "native-upload") {
+    if (!provider.uploadAsset) {
+      throw new Error(`${target.name} cannot upload local assets because uploadAsset() is not implemented.`);
+    }
+    return provider.uploadAsset(asset, note, target);
+  }
+  if (support.mode === "local-copy") {
+    if (!provider.copyAsset) {
+      throw new Error(`${target.name} cannot copy local assets because copyAsset() is not implemented.`);
+    }
+    return provider.copyAsset(asset, note, target);
+  }
+  const files = note.attachments.map((item) => item.sourcePath).join(", ");
+  throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
+}
+async function prepareNoteForPublish(note, target, provider) {
+  const missingAttachment = note.unresolvedAttachments.find((asset) => asset.reason === "missing");
+  if (missingAttachment) {
+    throw new Error(`Missing local image asset: ${missingAttachment.reference.rawTarget}`);
+  }
+  if (note.attachments.length === 0) {
+    return {
+      ...note,
+      mediaReplacements: []
+    };
+  }
+  const support = provider.getMediaSupport(target);
+  if (support.mode === "unsupported") {
+    const files = note.attachments.map((asset) => asset.sourcePath).join(", ");
+    throw new Error(`${target.name} does not support local Obsidian images yet: ${files}`);
+  }
+  const resolvedPaths = /* @__PURE__ */ new Map();
+  const replacements = [];
+  for (const asset of note.attachments) {
+    let replacementPath = resolvedPaths.get(asset.sourcePath);
+    if (!replacementPath) {
+      const result = await resolveReplacement(provider, note, target, asset.sourcePath);
+      replacementPath = result.url;
+      resolvedPaths.set(asset.sourcePath, replacementPath);
+    }
+    replacements.push({
+      reference: asset.reference,
+      replacementPath
+    });
+  }
+  return {
+    ...note,
+    markdown: replaceAssetReferences(note.markdown, replacements),
+    mediaReplacements: [...resolvedPaths.entries()].map(([sourcePath, replacementPath]) => ({
+      sourcePath,
+      replacementPath
+    }))
+  };
+}
+
+// src/core/normalPublish/overrides.ts
+function cloneStringList2(values) {
+  return values.slice();
+}
+function applyNormalPublishContextToNote(note, context) {
+  if (!context) {
+    return note;
+  }
+  const nextNote = {
+    ...note,
+    frontmatter: {
+      ...note.frontmatter
+    },
+    attachments: note.attachments.slice(),
+    unresolvedAttachments: note.unresolvedAttachments.slice(),
+    title: context.common.title || note.title,
+    tags: cloneStringList2(note.tags),
+    categories: cloneStringList2(note.categories)
+  };
+  const definition = getProviderDefinition(context.provider.provider);
+  return definition.normalPublish?.applyDraftToNote?.(nextNote, context.provider, context.common) ?? nextNote;
+}
+
+// src/core/publishService.ts
+function mergeProviderOptionCacheIntoSettings(settings, providerOptionCache) {
+  if (!providerOptionCache) {
+    return settings;
+  }
+  const currentCache = normalizeProviderOptionCache(settings.providerOptionCache);
+  const nextCache = normalizeProviderOptionCache(providerOptionCache);
+  return {
+    ...settings,
+    providerOptionCache: {
+      ...currentCache,
+      juejinByTargetId: {
+        ...currentCache.juejinByTargetId,
+        ...nextCache.juejinByTargetId
+      }
+    }
+  };
+}
+var PublishService = class {
+  constructor(app, providers, mediaPipeline = {
+    prepare: prepareNoteForPublish
+  }) {
+    this.app = app;
+    this.providers = providers;
+    this.mediaPipeline = mediaPipeline;
+  }
+  buildProviderRuntime(settings, provider, target) {
+    return {
+      providerOptionCache: settings.providerOptionCache,
+      loadNormalPublishOptions: typeof provider.loadNormalPublishOptions === "function" ? async (currentTarget) => provider.loadNormalPublishOptions(currentTarget) : void 0
+    };
+  }
+  async publishFile(file, target, settings, context) {
+    const provider = this.providers.get(target);
+    await provider.validateConfig(target);
+    const extractedNote = await extractPublishableNote(this.app, file);
+    const note = applyNormalPublishContextToNote(extractedNote, context);
+    const contentHash = computeContentHash(note);
+    const preparedNote = applyNormalPublishContextToNote(
+      await this.mediaPipeline.prepare(note, target, provider),
+      context
+    );
+    const existing = getRecord(settings.records, file.path, target.id);
+    const runtime = this.buildProviderRuntime(settings, provider, target);
+    const result = existing ? await provider.update(existing.remoteId, preparedNote, target, context, runtime) : await provider.publish(preparedNote, target, context, runtime);
+    const previewUrl = result.remoteUrl ?? await provider.getPreviewUrl(result.remoteId, target);
+    const record = {
+      notePath: file.path,
+      provider: target.provider,
+      targetId: target.id,
+      remoteId: result.remoteId,
+      remoteUrl: previewUrl,
+      lastPublishedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      contentHash
+    };
+    return {
+      record,
+      created: !existing,
+      providerOptionCache: result.providerOptionCache
+    };
+  }
+  updateSettings(settings, record, providerOptionCache) {
+    return {
+      ...mergeProviderOptionCacheIntoSettings(settings, providerOptionCache),
+      records: upsertRecord(settings.records, record)
+    };
+  }
+};
+
+// src/core/publishWorkflow.ts
+var PublishWorkflow = class {
+  constructor(publishService) {
+    this.publishService = publishService;
+  }
+  async emitProgressSafely(options, event) {
+    try {
+      await options.onProgress?.(event);
+    } catch {
+    }
+  }
+  resolveAction(file, target, settings) {
+    return getRecord(settings.records, file.path, target.id) ? "update" : "publish";
+  }
+  async runSingle(file, target, settings, context) {
+    const action = this.resolveAction(file, target, settings);
+    try {
+      const serviceResult = await this.publishService.publishFile(file, target, settings, context);
+      const nextSettings = this.publishService.updateSettings(
+        settings,
+        serviceResult.record,
+        serviceResult.providerOptionCache
+      );
+      return {
+        action,
+        record: serviceResult.record,
+        settings: nextSettings
+      };
+    } catch (error) {
+      const cachedSettings = getPublishFailureSettings(error);
+      if (cachedSettings) {
+        throw withPublishFailureDetails(error, { settings: cachedSettings });
+      }
+      const providerOptionCache = getPublishFailureProviderOptionCache(error);
+      if (providerOptionCache) {
+        throw withPublishFailureDetails(error, {
+          providerOptionCache,
+          settings: mergeProviderOptionCacheIntoSettings(settings, providerOptionCache)
+        });
+      }
+      throw error;
+    }
+  }
+  async runBatch(file, targets, settings, options = {}) {
+    let currentSettings = settings;
+    const results = [];
+    const totalCount = targets.length;
+    for (const [index, target] of targets.entries()) {
+      const action = this.resolveAction(file, target, currentSettings);
+      const context = options.contextByTargetId?.[target.id];
+      const currentIndex = index + 1;
+      await this.emitProgressSafely(options, {
+        targetId: target.id,
+        targetName: target.name,
+        action,
+        status: "running",
+        currentIndex,
+        totalCount
+      });
+      const startedAt = Date.now();
+      try {
+        const singleResult = await this.runSingle(file, target, currentSettings, context);
+        const durationMs = Date.now() - startedAt;
+        currentSettings = singleResult.settings;
+        results.push({
+          targetId: target.id,
+          targetName: target.name,
+          action: singleResult.action,
+          status: "success",
+          durationMs,
+          remoteUrl: singleResult.record.remoteUrl
+        });
+        await this.emitProgressSafely(options, {
+          targetId: target.id,
+          targetName: target.name,
+          action: singleResult.action,
+          status: "success",
+          currentIndex,
+          totalCount,
+          durationMs,
+          remoteUrl: singleResult.record.remoteUrl
+        });
+      } catch (error) {
+        const cachedSettings = getPublishFailureSettings(error);
+        if (cachedSettings) {
+          currentSettings = cachedSettings;
+        } else {
+          const providerOptionCache = getPublishFailureProviderOptionCache(error);
+          if (providerOptionCache) {
+            currentSettings = mergeProviderOptionCacheIntoSettings(currentSettings, providerOptionCache);
+          }
+        }
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        const durationMs = Date.now() - startedAt;
+        results.push({
+          targetId: target.id,
+          targetName: target.name,
+          action,
+          status: "failure",
+          durationMs,
+          error: normalizedError
+        });
+        await this.emitProgressSafely(options, {
+          targetId: target.id,
+          targetName: target.name,
+          action,
+          status: "failure",
+          currentIndex,
+          totalCount,
+          durationMs,
+          error: normalizedError
+        });
+      }
+    }
+    const successCount = results.filter((item) => item.status === "success").length;
+    const failureCount = results.length - successCount;
+    return {
+      results,
+      totalCount,
+      successCount,
+      failureCount,
+      settings: currentSettings
+    };
+  }
+};
+
+// src/i18n/index.ts
+var import_obsidian9 = require("obsidian");
+
+// src/i18n/locales.ts
+function normalizeLocale(input) {
+  if (!input) {
+    return "en";
+  }
+  const value = input.toLowerCase();
+  if (value.startsWith("zh")) {
+    return "zh-CN";
+  }
+  return "en";
+}
+
 // src/i18n/index.ts
 function interpolate(template, params) {
   if (!params) {
@@ -37101,7 +37556,7 @@ var PROVIDER_CATALOG_PRESENTATION = [
   }
 ];
 var DEFAULT_I18N = createI18n("en");
-function resolveTranslation(i18n, key, fallback) {
+function resolveTranslation2(i18n, key, fallback) {
   if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
     return i18n.t(key);
   }
@@ -37139,7 +37594,7 @@ function localizeProviderCatalogEntry(entry, i18n) {
     id: entry.id,
     category: entry.category,
     name: entry.name,
-    description: resolveTranslation(i18n, entry.descriptionKey, entry.descriptionFallback),
+    description: resolveTranslation2(i18n, entry.descriptionKey, entry.descriptionFallback),
     icon: entry.icon,
     createTarget: entry.createTarget
   };
@@ -37152,310 +37607,22 @@ function getProviderCatalogEntry(providerId, i18n = DEFAULT_I18N) {
 }
 
 // src/ui/settings/modalForm.ts
-var COMMON_FIELDS = [
-  { key: "enabled", label: "Enabled", type: "toggle" },
-  { key: "name", label: "Display name", type: "text" }
-];
-var WEB_AUTH_COMMON_FIELDS = [
-  {
-    key: "cookie",
-    label: "Cookie",
-    description: "Paste Cookie manually if browser authorization fails.",
-    type: "password"
-  }
-];
-var WORDPRESS_FIELDS = [
-  { key: "endpoint", label: "Endpoint", description: "Example: https://example.com", type: "text" },
-  { key: "username", label: "Username", type: "text" },
-  { key: "appPassword", label: "Application password", type: "password" },
-  {
-    key: "defaultStatus",
-    label: "Default status",
-    type: "dropdown",
-    options: [
-      { value: "draft", label: "Draft" },
-      { value: "publish", label: "Publish" },
-      { value: "private", label: "Private" },
-      { value: "pending", label: "Pending" }
-    ]
-  },
-  {
-    key: "contentFormat",
-    label: "Publish format",
-    description: "Choose whether WordPress receives Markdown text or rendered HTML.",
-    type: "dropdown",
-    options: [
-      { value: "markdown", label: "Markdown" },
-      { value: "html", label: "HTML" }
-    ]
-  }
-];
-var YUQUE_FIELDS = [
-  { key: "baseUrl", label: "Base URL", type: "text" },
-  { key: "repo", label: "Repo", description: "Example: namespace/repo", type: "text" },
-  { key: "token", label: "Token", type: "password" },
-  {
-    key: "publicLevel",
-    label: "Public level",
-    description: "0 = private, 1 = public",
-    type: "dropdown",
-    options: [
-      { value: "0", label: "Private" },
-      { value: "1", label: "Public" }
-    ]
-  }
-];
-var CSDN_FIELDS = [
-  { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
-  { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" }
-];
-var JUEJIN_FIELDS = [
-  { key: "defaultCategoryId", label: "Default category ID", type: "text" },
-  { key: "defaultTagIds", label: "Default tag IDs", description: "Comma-separated tag IDs.", type: "text" },
-  { key: "defaultBriefContent", label: "Default brief content", type: "text" }
-];
 var DEFAULT_I18N2 = createI18n("en");
-var FIELD_LABEL_ZH = {
-  enabled: "\u542F\u7528",
-  name: "\u663E\u793A\u540D\u79F0",
-  cookie: "Cookie",
-  endpoint: "Endpoint",
-  username: "\u7528\u6237\u540D",
-  appPassword: "\u5E94\u7528\u5BC6\u7801",
-  defaultStatus: "\u9ED8\u8BA4\u72B6\u6001",
-  contentFormat: "\u53D1\u5E03\u683C\u5F0F",
-  baseUrl: "\u57FA\u7840 URL",
-  repo: "\u4ED3\u5E93",
-  token: "Token",
-  publicLevel: "\u516C\u5F00\u7EA7\u522B",
-  defaultColumnId: "\u9ED8\u8BA4\u4E13\u680F ID",
-  defaultColumnTitle: "\u9ED8\u8BA4\u4E13\u680F\u6807\u9898",
-  defaultCategories: "\u9ED8\u8BA4\u5206\u7C7B",
-  defaultTags: "\u9ED8\u8BA4\u6807\u7B7E",
-  defaultCategoryId: "\u9ED8\u8BA4\u5206\u7C7B ID",
-  defaultTagIds: "\u9ED8\u8BA4\u6807\u7B7E ID",
-  defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981"
-};
-var FIELD_DESCRIPTION_ZH = {
-  cookie: "\u5982\u679C\u6D4F\u89C8\u5668\u6388\u6743\u5931\u8D25\uFF0C\u53EF\u624B\u52A8\u7C98\u8D34 Cookie\u3002",
-  endpoint: "\u793A\u4F8B: https://example.com",
-  contentFormat: "\u9009\u62E9\u5411 WordPress \u53D1\u5E03 Markdown \u6587\u672C\u6216\u6E32\u67D3\u540E\u7684 HTML\u3002",
-  repo: "\u793A\u4F8B: namespace/repo",
-  publicLevel: "0 = \u79C1\u6709, 1 = \u516C\u5F00",
-  defaultCategories: "\u7528\u9017\u53F7\u5206\u9694\u5206\u7C7B\u540D\u3002",
-  defaultTags: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E\u540D\u3002",
-  defaultTagIds: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E ID\u3002"
-};
-var FIELD_OPTION_LABEL_ZH = {
-  defaultStatus: {
-    draft: "\u8349\u7A3F",
-    publish: "\u53D1\u5E03",
-    private: "\u79C1\u5BC6",
-    pending: "\u5F85\u5BA1\u6838"
-  },
-  contentFormat: {
-    markdown: "Markdown",
-    html: "HTML"
-  },
-  publicLevel: {
-    "0": "\u79C1\u6709",
-    "1": "\u516C\u5F00"
-  }
-};
-function resolveTranslation2(i18n, key, fallback) {
-  if (Object.prototype.hasOwnProperty.call(messages[i18n.locale], key)) {
-    return i18n.t(key);
-  }
-  return i18n.locale === "zh-CN" ? fallback["zh-CN"] : fallback.en;
-}
-function localizeField(field, i18n) {
-  const label = resolveTranslation2(i18n, `settings.modal.field.${field.key}.label`, {
-    en: field.label,
-    "zh-CN": FIELD_LABEL_ZH[field.key] ?? field.label
-  });
-  const description = field.description ? resolveTranslation2(i18n, `settings.modal.field.${field.key}.description`, {
-    en: field.description,
-    "zh-CN": FIELD_DESCRIPTION_ZH[field.key] ?? field.description
-  }) : void 0;
-  const options = field.options?.map((option) => ({
-    value: option.value,
-    label: resolveTranslation2(i18n, `settings.modal.field.${field.key}.options.${option.value}`, {
-      en: option.label,
-      "zh-CN": FIELD_OPTION_LABEL_ZH[field.key]?.[option.value] ?? option.label
-    })
-  }));
-  return {
-    key: field.key,
-    label,
-    description,
-    type: field.type,
-    options
-  };
-}
-function splitCommaSeparatedValue(value) {
-  return value.split(",").map((item) => item.trim()).filter(Boolean);
+function cloneTarget2(target) {
+  return JSON.parse(JSON.stringify(target));
 }
 function getModalFieldDefinitions(target, i18n = DEFAULT_I18N2) {
-  if (target.provider === "wordpress") {
-    return [...COMMON_FIELDS, ...WORDPRESS_FIELDS].map((field) => localizeField(field, i18n));
-  }
-  if (target.provider === "yuque") {
-    return [...COMMON_FIELDS, ...YUQUE_FIELDS].map((field) => localizeField(field, i18n));
-  }
-  if (target.provider === "zhihu") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS].map(
-      (field) => localizeField(field, i18n)
-    );
-  }
-  if (target.provider === "csdn") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...CSDN_FIELDS].map(
-      (field) => localizeField(field, i18n)
-    );
-  }
-  if (target.provider === "juejin") {
-    return [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS, ...JUEJIN_FIELDS].map(
-      (field) => localizeField(field, i18n)
-    );
-  }
-  return COMMON_FIELDS.map((field) => localizeField(field, i18n));
+  const definition = getProviderDefinition(target.provider);
+  return definition.settingsForm.getFields(target, i18n);
 }
 function readFieldValue(target, key) {
-  switch (key) {
-    case "enabled":
-      return target.enabled;
-    case "name":
-      return target.name;
-    case "cookie":
-      return "cookie" in target ? target.cookie : "";
-    case "endpoint":
-      return target.provider === "wordpress" ? target.endpoint : "";
-    case "username":
-      return target.provider === "wordpress" ? target.username : "";
-    case "appPassword":
-      return target.provider === "wordpress" ? target.appPassword : "";
-    case "defaultStatus":
-      return target.provider === "wordpress" ? target.defaultStatus : "";
-    case "contentFormat":
-      return target.provider === "wordpress" ? target.contentFormat : "";
-    case "baseUrl":
-      return target.provider === "yuque" ? target.baseUrl : "";
-    case "repo":
-      return target.provider === "yuque" ? target.repo : "";
-    case "token":
-      return target.provider === "yuque" ? target.token : "";
-    case "publicLevel":
-      return target.provider === "yuque" ? String(target.publicLevel) : "";
-    case "defaultColumnId":
-      return target.provider === "zhihu" ? target.defaultColumnId : "";
-    case "defaultColumnTitle":
-      return target.provider === "zhihu" ? target.defaultColumnTitle ?? "" : "";
-    case "defaultCategories":
-      return target.provider === "csdn" ? target.defaultCategories.join(", ") : "";
-    case "defaultTags":
-      return target.provider === "csdn" ? target.defaultTags.join(", ") : "";
-    case "defaultCategoryId":
-      return target.provider === "juejin" ? target.defaultCategoryId : "";
-    case "defaultTagIds":
-      return target.provider === "juejin" ? target.defaultTagIds.join(", ") : "";
-    case "defaultBriefContent":
-      return target.provider === "juejin" ? target.defaultBriefContent : "";
-  }
+  const definition = getProviderDefinition(target.provider);
+  return definition.settingsForm.readFieldValue(target, key);
 }
 function applyFieldValue(target, key, value) {
-  const nextTarget = normalizeTarget(cloneTarget(target));
-  switch (key) {
-    case "enabled":
-      nextTarget.enabled = Boolean(value);
-      return nextTarget;
-    case "name":
-      nextTarget.name = String(value).trim() || nextTarget.name;
-      return nextTarget;
-    case "cookie":
-      if ("cookie" in nextTarget) {
-        nextTarget.cookie = String(value).trim();
-      }
-      return nextTarget;
-    case "endpoint":
-      if (nextTarget.provider === "wordpress") {
-        nextTarget.endpoint = String(value).trim();
-      }
-      return nextTarget;
-    case "username":
-      if (nextTarget.provider === "wordpress") {
-        nextTarget.username = String(value).trim();
-      }
-      return nextTarget;
-    case "appPassword":
-      if (nextTarget.provider === "wordpress") {
-        nextTarget.appPassword = String(value).trim();
-      }
-      return nextTarget;
-    case "defaultStatus":
-      if (nextTarget.provider === "wordpress") {
-        nextTarget.defaultStatus = String(value);
-      }
-      return nextTarget;
-    case "contentFormat":
-      if (nextTarget.provider === "wordpress") {
-        nextTarget.contentFormat = String(value);
-      }
-      return nextTarget;
-    case "baseUrl":
-      if (nextTarget.provider === "yuque") {
-        nextTarget.baseUrl = String(value).trim();
-      }
-      return nextTarget;
-    case "repo":
-      if (nextTarget.provider === "yuque") {
-        nextTarget.repo = String(value).trim();
-      }
-      return nextTarget;
-    case "token":
-      if (nextTarget.provider === "yuque") {
-        nextTarget.token = String(value).trim();
-      }
-      return nextTarget;
-    case "publicLevel":
-      if (nextTarget.provider === "yuque") {
-        nextTarget.publicLevel = Number(value) === 1 ? 1 : 0;
-      }
-      return nextTarget;
-    case "defaultColumnId":
-      if (nextTarget.provider === "zhihu") {
-        nextTarget.defaultColumnId = String(value).trim();
-      }
-      return nextTarget;
-    case "defaultColumnTitle":
-      if (nextTarget.provider === "zhihu") {
-        nextTarget.defaultColumnTitle = String(value).trim();
-      }
-      return nextTarget;
-    case "defaultCategories":
-      if (nextTarget.provider === "csdn") {
-        nextTarget.defaultCategories = splitCommaSeparatedValue(String(value));
-      }
-      return nextTarget;
-    case "defaultTags":
-      if (nextTarget.provider === "csdn") {
-        nextTarget.defaultTags = splitCommaSeparatedValue(String(value));
-      }
-      return nextTarget;
-    case "defaultCategoryId":
-      if (nextTarget.provider === "juejin") {
-        nextTarget.defaultCategoryId = String(value).trim();
-      }
-      return nextTarget;
-    case "defaultTagIds":
-      if (nextTarget.provider === "juejin") {
-        nextTarget.defaultTagIds = splitCommaSeparatedValue(String(value));
-      }
-      return nextTarget;
-    case "defaultBriefContent":
-      if (nextTarget.provider === "juejin") {
-        nextTarget.defaultBriefContent = String(value).trim();
-      }
-      return nextTarget;
-  }
+  const definition = getProviderDefinition(target.provider);
+  const nextTarget = definition.normalizeTarget(cloneTarget2(target));
+  return definition.settingsForm.applyFieldValue(nextTarget, key, value);
 }
 
 // src/ui/settings/webAuthTargetActions.ts
@@ -38502,18 +38669,7 @@ function buildBatchPublishExecutionContext(state, targetId) {
 
 // src/core/normalPublish/validation.ts
 function validateTargetDraft(draft) {
-  switch (draft.provider) {
-    case "juejin":
-      if (!draft.categoryId.trim()) {
-        return "Juejin publish requires a categoryId.";
-      }
-      if (draft.tagIds.length === 0) {
-        return "Juejin publish requires at least one tagId.";
-      }
-      return null;
-    default:
-      return null;
-  }
+  return getProviderDefinition(draft.provider).normalPublish?.validateDraft?.(draft) ?? null;
 }
 
 // src/core/normalPublish/remoteOptions.ts
@@ -38531,7 +38687,8 @@ async function ensureRemoteOptionsLoaded(state, target, registry) {
     return state;
   }
   const definition = getProviderDefinition(target.provider);
-  if (definition.skipNormalPublishOptionsLoad) {
+  const normalPublish = definition.normalPublish;
+  if (normalPublish?.skipOptionsLoad) {
     return {
       ...state,
       remoteOptions: {
@@ -38568,7 +38725,7 @@ async function ensureRemoteOptionsLoaded(state, target, registry) {
           "error",
           {},
           error instanceof Error ? error.message : String(error),
-          definition.getManualFallbackFields?.(target) ?? []
+          normalPublish?.getManualFallbackFields?.(target) ?? []
         )
       }
     };
@@ -40159,18 +40316,7 @@ var LlmService = class {
 
 // src/core/normalPublish/ai.ts
 function getSupportedAiFields(draft) {
-  switch (draft.provider) {
-    case "wordpress":
-    case "csdn":
-      return ["title", "excerpt"];
-    case "juejin":
-      return ["title", "briefContent"];
-    case "yuque":
-    case "zhihu":
-      return ["title"];
-  }
-  const exhaustiveCheck = draft;
-  throw new Error(`Unhandled provider draft: ${String(exhaustiveCheck)}`);
+  return getProviderDefinition(draft.provider).normalPublish?.supportedAiFields ?? [];
 }
 function clipMarkdown(markdown, maxInputChars) {
   if (!Number.isFinite(maxInputChars) || maxInputChars <= 0) {

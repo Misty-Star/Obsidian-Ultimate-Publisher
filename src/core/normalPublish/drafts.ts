@@ -17,10 +17,10 @@ function createIdleRemoteOptionsState(): ProviderRemoteOptionsState {
 
 export function buildInitialTargetDraft(target: PublishTargetConfig, note: PublishableNote): ProviderPublishDraft {
   const definition = getProviderDefinition(target.provider);
-  if (!definition.buildInitialDraft) {
+  if (!definition.normalPublish) {
     throw new Error(`Provider ${target.provider} does not define a normal publish draft builder.`);
   }
-  return definition.buildInitialDraft(note, target as never);
+  return definition.normalPublish.buildInitialDraft(note, target as never);
 }
 
 export function buildNormalPublishSessionState(

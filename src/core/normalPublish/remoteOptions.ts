@@ -29,7 +29,8 @@ export async function ensureRemoteOptionsLoaded(
   }
 
   const definition = getProviderDefinition(target.provider);
-  if (definition.skipNormalPublishOptionsLoad) {
+  const normalPublish = definition.normalPublish;
+  if (normalPublish?.skipOptionsLoad) {
     return {
       ...state,
       remoteOptions: {
@@ -68,7 +69,7 @@ export async function ensureRemoteOptionsLoaded(
           "error",
           {},
           error instanceof Error ? error.message : String(error),
-          definition.getManualFallbackFields?.(target as never) ?? []
+          normalPublish?.getManualFallbackFields?.(target as never) ?? []
         ),
       },
     };

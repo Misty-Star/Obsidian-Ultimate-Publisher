@@ -1,3 +1,4 @@
+import { getProviderDefinition } from "../../providers/definitions";
 import { PublishableNote } from "../note";
 import { NormalPublishExecutionContext } from "./types";
 
@@ -25,24 +26,6 @@ export function applyNormalPublishContextToNote(
     categories: cloneStringList(note.categories),
   };
 
-  switch (context.provider.provider) {
-    case "wordpress":
-      nextNote.slug = context.provider.slug;
-      nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList(context.provider.tags);
-      nextNote.categories = cloneStringList(context.provider.categories);
-      break;
-    case "yuque":
-      nextNote.slug = context.provider.slug;
-      break;
-    case "csdn":
-      nextNote.excerpt = context.provider.excerpt;
-      nextNote.tags = cloneStringList(context.provider.tags);
-      nextNote.categories = cloneStringList(context.provider.categories);
-      break;
-    default:
-      break;
-  }
-
-  return nextNote;
+  const definition = getProviderDefinition(context.provider.provider);
+  return definition.normalPublish?.applyDraftToNote?.(nextNote, context.provider as never, context.common) ?? nextNote;
 }

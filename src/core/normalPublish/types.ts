@@ -16,6 +16,8 @@ export type NormalPublishFieldKey =
   | "tagIds"
   | "briefContent";
 
+export type NormalPublishAiField = "title" | "excerpt" | "briefContent";
+
 export interface CommonPublishDraft {
   title: string;
 }

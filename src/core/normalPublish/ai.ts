@@ -1,24 +1,13 @@
 import { PublishableNote } from "../note";
 import { LlmSettings, PublishTargetConfig } from "../../types";
-import { ProviderPublishDraft } from "./types";
+import { NormalPublishAiField, ProviderPublishDraft } from "./types";
 import { LlmTaskInput } from "../llm/types";
+import { getProviderDefinition } from "../../providers/definitions";
 
-export type NormalPublishAiField = "title" | "excerpt" | "briefContent";
+export type { NormalPublishAiField } from "./types";
 
 export function getSupportedAiFields(draft: ProviderPublishDraft): NormalPublishAiField[] {
-  switch (draft.provider) {
-    case "wordpress":
-    case "csdn":
-      return ["title", "excerpt"];
-    case "juejin":
-      return ["title", "briefContent"];
-    case "yuque":
-    case "zhihu":
-      return ["title"];
-  }
-
-  const exhaustiveCheck: never = draft;
-  throw new Error(`Unhandled provider draft: ${String(exhaustiveCheck)}`);
+  return getProviderDefinition(draft.provider).normalPublish?.supportedAiFields ?? [];
 }
 
 function clipMarkdown(markdown: string, maxInputChars: number): string {

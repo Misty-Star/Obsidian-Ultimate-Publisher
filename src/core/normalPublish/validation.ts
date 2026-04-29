@@ -1,17 +1,6 @@
-import { sanitizeFileName } from "../note";
+import { getProviderDefinition } from "../../providers/definitions";
 import { ProviderPublishDraft } from "./types";
 
 export function validateTargetDraft(draft: ProviderPublishDraft): string | null {
-  switch (draft.provider) {
-    case "juejin":
-      if (!draft.categoryId.trim()) {
-        return "Juejin publish requires a categoryId.";
-      }
-      if (draft.tagIds.length === 0) {
-        return "Juejin publish requires at least one tagId.";
-      }
-      return null;
-    default:
-      return null;
-  }
+  return getProviderDefinition(draft.provider).normalPublish?.validateDraft?.(draft as never) ?? null;
 }

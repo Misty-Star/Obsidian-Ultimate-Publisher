@@ -60,11 +60,24 @@ describe("provider definitions", () => {
     });
   });
 
-  it("exposes normal-publish metadata for existing providers", () => {
+  it("exposes provider capabilities and normal-publish metadata for existing providers", () => {
     const wordpress = getProviderDefinition("wordpress");
     const zhihu = getProviderDefinition("zhihu");
 
+    for (const definition of getProviderDefinitions()) {
+      expect(definition.capabilities).toMatchObject({
+        publish: true,
+        update: true,
+        delete: true,
+        normalPublish: true,
+      });
+      expect(typeof definition.settingsForm.getFields).toBe("function");
+      expect(typeof definition.normalPublish?.buildInitialDraft).toBe("function");
+    }
+
+    expect(wordpress.normalPublish?.getManualFallbackFields?.(wordpress.createTarget())).toEqual(["categories", "tags"]);
     expect(wordpress.getManualFallbackFields?.(wordpress.createTarget())).toEqual(["categories", "tags"]);
+    expect(zhihu.normalPublish?.skipOptionsLoad).toBe(true);
     expect(zhihu.skipNormalPublishOptionsLoad).toBe(true);
     expect(typeof wordpress.buildInitialDraft).toBe("function");
   });
