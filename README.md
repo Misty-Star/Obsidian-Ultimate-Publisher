@@ -10,7 +10,7 @@ Publish your Obsidian notes to multiple platforms with one click.
 
 - **One-Click Publishing** - Quickly publish current note to configured platforms
 - **Batch Publishing** - Publish to multiple platforms simultaneously
-- **Multi-Platform Support** - Supports Zhihu, Juejin, CSDN, WordPress, Yuque, and more
+- **Multi-Platform Support** - Supports WordPress, Yuque, Zhihu, CSDN, and Juejin
 - **Smart Updates** - Automatically detects published articles and supports updates
 - **Publishing History** - Track all publishing records
 - **Custom Configuration** - Independent configuration for each platform
@@ -51,12 +51,17 @@ Publish your Obsidian notes to multiple platforms with one click.
 
 ## 🎯 Supported Platforms
 
-- **Zhihu** - Article publishing and updates
-- **Juejin** - Article publishing and updates
-- **CSDN** - Article publishing and updates
-- **WordPress** - Self-hosted WordPress sites
-- **Yuque** - Knowledge base documentation
-- More platforms coming soon...
+The currently supported providers are:
+
+| Provider | Authentication | Publish/update | Normal publish details | Local image handling |
+| --- | --- | --- | --- | --- |
+| WordPress | REST API endpoint, username, and application password | Posts can be published and updated | Supports slug, excerpt, tags, categories, status, password, and Markdown/HTML output format | Uploads local Obsidian images to WordPress media |
+| Yuque | Yuque base URL, repo, token, and public level | Docs can be published and updated | Supports slug and public/private visibility | Local Obsidian images are not uploaded |
+| Zhihu | Cookie-based web authentication | Articles can be published and updated | Supports optional column selection from target defaults or the normal publish dialog | Local Obsidian images are not uploaded |
+| CSDN | Cookie-based web authentication | Articles can be published and updated | Supports excerpt, tags, and categories | Local Obsidian images are not uploaded |
+| Juejin | Cookie-based web authentication | Articles can be published and updated | Requires a category and at least one tag; supports brief content | Local Obsidian images are not uploaded |
+
+Unsupported provider families and empty Marketplace categories are not shown as installable providers.
 
 ## ⚙️ Configuration
 
@@ -70,19 +75,19 @@ Publish your Obsidian notes to multiple platforms with one click.
    - **Authentication**: API Token, Cookie, etc. (platform-specific)
    - **Default Settings**: Tags, categories, etc.
 
-Marketplace providers are grouped by category in the Marketplace tab.
+Marketplace providers are grouped by category in the Marketplace tab. Only categories with supported providers are shown.
 
 ### Frontmatter Metadata
 
-Use note frontmatter to prefill publish metadata:
+Use note frontmatter to prefill publish metadata that the current providers support:
 
 - Common fields: `title`, `slug`, `tags`, `categories`, `description`
-- WordPress field: `status`
-- Juejin fields:
+- WordPress-only field: `status`
+- Juejin-only fields:
   - `juejinCategory`
   - `juejinTags`
 
-You can enable automatic template insertion in the settings panel, and you can also run the command `Insert publish frontmatter template` manually for the current note.
+The automatic frontmatter template only includes provider-specific fields for enabled targets that can use them. You can enable automatic template insertion in the settings panel, and you can also run the command `Insert publish frontmatter template` manually for the current note.
 
 Title precedence when publishing: `frontmatter.title` -> first level-one heading -> file name.
 
@@ -98,6 +103,13 @@ juejinCategory: Backend
 juejinTags: [Obsidian, Efficiency]
 ---
 ```
+
+Notes on frontmatter support:
+
+- `slug` is used by WordPress and Yuque.
+- `tags`, `categories`, and `description` are used where the selected provider exposes matching publish fields, such as WordPress/CSDN tags and categories or Juejin brief content.
+- `juejinCategory` and `juejinTags` are human-readable names. They are resolved against Juejin's available options when publishing; use the normal publish dialog if you need to select exact IDs.
+- Local Obsidian images are currently uploaded only for WordPress targets. For other providers, use already-hosted remote image URLs in the note.
 
 ## 📝 Use Cases
 

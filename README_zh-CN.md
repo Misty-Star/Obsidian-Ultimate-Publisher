@@ -8,7 +8,7 @@
 
 - **一键发布** - 快速将当前笔记发布到配置的平台
 - **批量发布** - 同时发布到多个平台，统一管理
-- **多平台支持** - 支持知乎、掘金、CSDN、WordPress、语雀等主流平台
+- **多平台支持** - 支持 WordPress、语雀、知乎、CSDN、掘金
 - **智能更新** - 自动识别已发布文章，支持更新操作
 - **发布历史** - 记录所有发布历史，方便追踪管理
 - **自定义配置** - 每个平台独立配置，灵活控制发布行为
@@ -49,12 +49,17 @@
 
 ## 🎯 支持的平台
 
-- **知乎** - 支持文章发布和更新
-- **掘金** - 支持文章发布和更新
-- **CSDN** - 支持文章发布和更新
-- **WordPress** - 支持自建 WordPress 站点
-- **语雀** - 支持知识库文档发布
-- 更多平台持续添加中...
+当前支持的 Provider：
+
+| Provider | 认证方式 | 发布/更新 | 普通发布支持的字段 | 本地图片处理 |
+| --- | --- | --- | --- | --- |
+| WordPress | REST API endpoint、用户名、应用密码 | 支持发布和更新文章 | 支持 slug、摘要、标签、分类、状态、密码，以及 Markdown/HTML 输出格式 | 会上传本地 Obsidian 图片到 WordPress 媒体库 |
+| 语雀 | 语雀 base URL、知识库 repo、token、公开级别 | 支持发布和更新文档 | 支持 slug 和公开/私有可见性 | 不上传本地 Obsidian 图片 |
+| 知乎 | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 支持从目标默认值或普通发布对话框选择专栏 | 不上传本地 Obsidian 图片 |
+| CSDN | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 支持摘要、标签、分类 | 不上传本地 Obsidian 图片 |
+| 掘金 | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 必须填写分类和至少一个标签，支持摘要/简介 | 不上传本地 Obsidian 图片 |
+
+尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。
 
 ## ⚙️ 配置
 
@@ -68,19 +73,19 @@
    - **认证信息**：API Token、Cookie 等平台相关认证参数
    - **默认设置**：标签、分类等默认值
 
-市场（Marketplace）中的平台会按平台大类分组展示。
+市场（Marketplace）中的平台会按平台大类分组展示；只有包含已支持 Provider 的分类会显示。
 
 ### Frontmatter 元数据
 
-你可以在笔记的 frontmatter 中预填发布元数据：
+你可以在笔记的 frontmatter 中预填当前 Provider 已支持的发布元数据：
 
 - 通用字段：`title`、`slug`、`tags`、`categories`、`description`
-- WordPress 字段：`status`
-- 掘金字段：
+- WordPress 专属字段：`status`
+- 掘金专属字段：
   - `juejinCategory`
   - `juejinTags`
 
-你可以在设置页开启自动插入模板，也可以通过命令 `Insert publish frontmatter template` 手动为当前笔记插入发布 frontmatter 模板。
+自动 frontmatter 模板只会为已启用且支持对应字段的目标生成平台专属字段。你可以在设置页开启自动插入模板，也可以通过命令 `Insert publish frontmatter template` 手动为当前笔记插入发布 frontmatter 模板。
 
 发布标题优先级：`frontmatter.title` -> 正文第一个一级标题 -> 文件名。
 
@@ -96,6 +101,13 @@ juejinCategory: Backend
 juejinTags: [Obsidian, Efficiency]
 ---
 ```
+
+Frontmatter 支持说明：
+
+- `slug` 会被 WordPress 和语雀使用。
+- `tags`、`categories`、`description` 会在所选 Provider 暴露对应发布字段时使用，例如 WordPress/CSDN 的标签和分类，或掘金的摘要/简介。
+- `juejinCategory` 和 `juejinTags` 使用人类可读名称。发布时会根据掘金可用选项解析为 ID；如果需要精确选择 ID，请使用普通发布对话框。
+- 当前只有 WordPress 目标会上传本地 Obsidian 图片。其他 Provider 请在笔记中使用已经托管的远程图片 URL。
 
 ## 📝 使用场景
 
