@@ -15,12 +15,15 @@ describe("provider definitions", () => {
       { id: "zhihu", category: "web", family: "cookie-web" },
       { id: "csdn", category: "web", family: "cookie-web" },
       { id: "juejin", category: "web", family: "cookie-web" },
+      { id: "github", category: "github", family: "github-static-site" },
+      { id: "gitlab", category: "gitlab", family: "gitlab-static-site" },
     ]);
   });
 
   it("creates default targets through definitions", () => {
     const wordpress = getProviderDefinition("wordpress").createTarget();
     const juejin = getProviderDefinition("juejin").createTarget();
+    const github = getProviderDefinition("github").createTarget();
 
     expect(wordpress).toMatchObject({
       provider: "wordpress",
@@ -36,6 +39,14 @@ describe("provider definitions", () => {
       defaultCategoryId: "",
       defaultTagIds: [],
       defaultBriefContent: "",
+    });
+    expect(github).toMatchObject({
+      provider: "github",
+      name: "GitHub Static Sites",
+      enabled: true,
+      siteGenerator: "hugo",
+      branch: "main",
+      contentRoot: "content/posts",
     });
   });
 
@@ -68,11 +79,14 @@ describe("provider definitions", () => {
       expect(definition.capabilities).toMatchObject({
         publish: true,
         update: true,
-        delete: true,
-        normalPublish: true,
       });
+      expect(typeof definition.capabilities.delete).toBe("boolean");
+      expect(typeof definition.capabilities.normalPublish).toBe("boolean");
       expect(typeof definition.settingsForm.getFields).toBe("function");
-      expect(typeof definition.normalPublish?.buildInitialDraft).toBe("function");
+      if (definition.capabilities.normalPublish) {
+        expect(typeof definition.normalPublish?.buildInitialDraft).toBe("function");
+      }
+
     }
 
     expect(wordpress.normalPublish?.getManualFallbackFields?.(wordpress.createTarget())).toEqual(["categories", "tags"]);
@@ -83,7 +97,7 @@ describe("provider definitions", () => {
   });
 
   it("exposes runtime provider factories for all built-in providers", () => {
-    for (const providerId of ["wordpress", "yuque", "zhihu", "csdn", "juejin"] as const) {
+    for (const providerId of ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"] as const) {
       const definition = getProviderDefinition(providerId);
       expect(typeof definition.createProvider).toBe("function");
     }
