@@ -8,7 +8,7 @@
 
 - **一键发布** - 快速将当前笔记发布到配置的平台
 - **批量发布** - 同时发布到多个平台，统一管理
-- **多平台支持** - 支持 WordPress、语雀、知乎、CSDN、掘金
+- **多平台支持** - 支持 WordPress、语雀、知乎、CSDN、掘金、GitHub 静态站点和 GitLab 静态站点
 - **智能更新** - 自动识别已发布文章，支持更新操作
 - **发布历史** - 记录所有发布历史，方便追踪管理
 - **自定义配置** - 每个平台独立配置，灵活控制发布行为
@@ -58,8 +58,10 @@
 | 知乎 | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 支持从目标默认值或普通发布对话框选择专栏 | 不上传本地 Obsidian 图片 |
 | CSDN | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 支持摘要、标签、分类 | 不上传本地 Obsidian 图片 |
 | 掘金 | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 必须填写分类和至少一个标签，支持摘要/简介 | 不上传本地 Obsidian 图片 |
+| GitHub 静态站点 | GitHub token、owner/repo、分支、内容根目录和静态站点生成器子类型 | 通过 repository contents API 发布和更新 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和仓库路径 | 暂不支持媒体上传和删除 |
+| GitLab 静态站点 | GitLab base URL、项目路径/ID、token、分支、内容根目录和静态站点生成器子类型 | 通过 repository files API 发布和更新 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和仓库路径 | 暂不支持媒体上传和删除 |
 
-尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。
+尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。仍处于计划状态的参考平台（例如 Notion、Halo API、MetaWeblog/CNBlogs/Typecho/Jvue、微信公众号、简书、Bilibili、小红书和本地文件系统导出）不会出现在 Marketplace，直到已经具备真实 provider definition 和发布/更新测试。
 
 ## ⚙️ 配置
 
@@ -109,7 +111,9 @@ Ultimate Publisher 保持 provider 身份扁平且稳定：每个目标只持久
 
 Provider definition 负责声明 family、capability、设置表单、Marketplace 卡片、Normal Publish 集成和运行时 provider factory。对于静态站点 provider，按托管家族使用一个共享 provider id（`github` 或 `gitlab`），并把静态站点生成器子类型（`hugo`、`hexo`、`jekyll`、`vuepress`、`vuepress2`、`vitepress` 或 `quartz`）放在目标配置里。只有当认证方式、API 或持久化边界确实不同，才新增 provider id；默认不要为每个静态站点生成器创建单独 provider id。
 
-当前 GitHub/GitLab 静态站点目标通过仓库内容 API 支持以 Hugo 风格内容路径发布和更新 Markdown 文件。静态站点目标暂不暴露媒体上传和删除能力。
+当前 GitHub/GitLab 静态站点目标通过仓库内容 API 支持发布和更新 Markdown 文件。它们保持每个托管家族一个扁平 provider id，并把所选生成器保存在 `target.siteGenerator`；GitHub 可选择 Hugo、Hexo、Jekyll、VuePress、VuePress 2、VitePress 和 Quartz，GitLab 使用同一个共享目标模型，并且当前也保留 Quartz 作为额外支持的生成器。静态站点目标暂不暴露媒体上传和删除能力。
+
+从 `references/siyuan-plugin-publisher` 迁移更多平台时，必须保持显式 inventory：每个参考平台要么已经实现，要么由共享 provider 覆盖，要么带理由标记为计划中。计划中的平台不要添加 Marketplace 展示，除非 provider 已实现 `validateConfig`、`publish`、`update`、预览 URL 行为，以及明确的删除支持或明确的“不支持删除”错误，并配套测试。
 
 ## 📝 使用场景
 

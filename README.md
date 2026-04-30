@@ -10,7 +10,7 @@ Publish your Obsidian notes to multiple platforms with one click.
 
 - **One-Click Publishing** - Quickly publish current note to configured platforms
 - **Batch Publishing** - Publish to multiple platforms simultaneously
-- **Multi-Platform Support** - Supports WordPress, Yuque, Zhihu, CSDN, and Juejin
+- **Multi-Platform Support** - Supports WordPress, Yuque, Zhihu, CSDN, Juejin, GitHub static sites, and GitLab static sites
 - **Smart Updates** - Automatically detects published articles and supports updates
 - **Publishing History** - Track all publishing records
 - **Custom Configuration** - Independent configuration for each platform
@@ -60,8 +60,10 @@ The currently supported providers are:
 | Zhihu | Cookie-based web authentication | Articles can be published and updated | Supports optional column selection from target defaults or the normal publish dialog | Local Obsidian images are not uploaded |
 | CSDN | Cookie-based web authentication | Articles can be published and updated | Supports excerpt, tags, and categories | Local Obsidian images are not uploaded |
 | Juejin | Cookie-based web authentication | Articles can be published and updated | Requires a category and at least one tag; supports brief content | Local Obsidian images are not uploaded |
+| GitHub Static Sites | GitHub token, owner/repo, branch, content root, and site generator subtype | Markdown files can be published and updated through the repository contents API | Normal publish metadata is not exposed yet; target settings choose the static-site generator and repository path | Media upload and delete are intentionally unsupported |
+| GitLab Static Sites | GitLab base URL, project path/ID, token, branch, content root, and site generator subtype | Markdown files can be published and updated through the repository repository-files API | Normal publish metadata is not exposed yet; target settings choose the static-site generator and repository path | Media upload and delete are intentionally unsupported |
 
-Unsupported provider families and empty Marketplace categories are not shown as installable providers.
+Unsupported provider families and empty Marketplace categories are not shown as installable providers. Reference platforms that are still planned, such as Notion, Halo API, MetaWeblog/CNBlogs/Typecho/Jvue, WeChat, Jianshu, Bilibili, Xiaohongshu, and local filesystem export, are not shown in Marketplace until a real provider definition and publish/update tests exist.
 
 ## ⚙️ Configuration
 
@@ -111,7 +113,9 @@ Ultimate Publisher keeps provider identity flat and stable: a target stores one 
 
 Provider definitions own the family and capability metadata used by settings, Marketplace cards, normal publish integration, and runtime provider factories. For static-site providers, use one shared provider id per hosting family (`github` or `gitlab`) and store the static-site generator subtype (`hugo`, `hexo`, `jekyll`, `vuepress`, `vuepress2`, `vitepress`, or `quartz`) inside the target config. Add a new provider id only when the runtime authentication/API/persistence boundary is genuinely different; do not create one id per static-site generator by default.
 
-The current GitHub/GitLab static-site targets support publishing and updating Markdown files for Hugo-style content paths through the repository contents APIs. Media upload and delete are intentionally not exposed for these static-site targets yet.
+The current GitHub/GitLab static-site targets support publishing and updating Markdown files through the repository contents APIs. They keep one flat provider id per hosting family and store the selected generator on `target.siteGenerator`; Hugo, Hexo, Jekyll, VuePress, VuePress 2, VitePress, and Quartz are available for GitHub, while GitLab uses the same shared target model and currently also keeps Quartz as an extra supported generator. Media upload and delete are intentionally not exposed for these static-site targets yet.
+
+When migrating additional platforms from `references/siyuan-plugin-publisher`, keep the inventory explicit: a reference platform is either implemented, covered by a shared provider, or planned with a rationale. Do not add Marketplace presentation for planned platforms until the provider implements `validateConfig`, `publish`, `update`, preview URL behavior, and explicit delete support or an explicit unsupported-delete error with tests.
 
 ## 📝 Use Cases
 
