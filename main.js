@@ -34395,7 +34395,7 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 
 // src/plugin.ts
-var import_obsidian25 = require("obsidian");
+var import_obsidian28 = require("obsidian");
 
 // src/core/frontmatterTemplate.ts
 var OPTION_COMMENT_LIMIT = 20;
@@ -34995,6 +34995,16 @@ var FIELD_LABEL_ZH = {
   repo: "\u4ED3\u5E93",
   token: "Token",
   publicLevel: "\u516C\u5F00\u7EA7\u522B",
+  databaseId: "\u6570\u636E\u5E93 ID",
+  parentPageId: "\u7236\u9875\u9762 ID",
+  notionVersion: "Notion API \u7248\u672C",
+  accessToken: "\u8BBF\u95EE Token",
+  authorName: "\u4F5C\u8005\u540D",
+  defaultCategory: "\u9ED8\u8BA4\u5206\u7C7B",
+  defaultPublish: "\u9ED8\u8BA4\u53D1\u5E03",
+  apiToken: "API Token",
+  spaceKey: "\u7A7A\u95F4 Key",
+  parentId: "\u7236\u9875\u9762 ID",
   defaultColumnId: "\u9ED8\u8BA4\u4E13\u680F ID",
   defaultColumnTitle: "\u9ED8\u8BA4\u4E13\u680F\u6807\u9898",
   defaultCategories: "\u9ED8\u8BA4\u5206\u7C7B",
@@ -35017,6 +35027,10 @@ var FIELD_DESCRIPTION_ZH = {
   endpoint: "\u793A\u4F8B: https://example.com",
   contentFormat: "\u9009\u62E9\u5411 WordPress \u53D1\u5E03 Markdown \u6587\u672C\u6216\u6E32\u67D3\u540E\u7684 HTML\u3002",
   repo: "\u793A\u4F8B: namespace/repo",
+  databaseId: "Notion \u6570\u636E\u5E93 ID\uFF1B\u4E0E\u7236\u9875\u9762 ID \u81F3\u5C11\u586B\u5199\u4E00\u4E2A\u3002",
+  parentPageId: "Notion \u7236\u9875\u9762 ID\uFF1B\u4E0E\u6570\u636E\u5E93 ID \u81F3\u5C11\u586B\u5199\u4E00\u4E2A\u3002",
+  spaceKey: "Confluence \u7A7A\u95F4 Key\u3002",
+  parentId: "\u53EF\u9009\u7684\u7236\u9875\u9762 ID\u3002",
   publicLevel: "0 = \u79C1\u6709, 1 = \u516C\u5F00",
   defaultCategories: "\u7528\u9017\u53F7\u5206\u9694\u5206\u7C7B\u540D\u3002",
   defaultTags: "\u7528\u9017\u53F7\u5206\u9694\u6807\u7B7E\u540D\u3002",
@@ -35233,21 +35247,622 @@ var yuqueDefinition = {
   buildInitialDraft: yuqueNormalPublish.buildInitialDraft
 };
 
+// src/providers/definitions/api.ts
+var import_node_crypto2 = require("node:crypto");
+
+// src/providers/apiProviders.ts
+var import_obsidian3 = require("obsidian");
+function trimTrailingSlash2(value) {
+  return value.replace(/\/+$/, "");
+}
+function normalizeBaseUrl2(value, fallback) {
+  return trimTrailingSlash2(value || fallback);
+}
+function parseJson(text, fallbackJson) {
+  if (fallbackJson && typeof fallbackJson === "object") {
+    return fallbackJson;
+  }
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return {};
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const snippet = trimmed.replace(/\s+/g, " ").slice(0, 400);
+    throw new Error(`API returned a non-JSON response: ${snippet}`);
+  }
+}
+async function requestJson(options) {
+  const response = await (0, import_obsidian3.requestUrl)({
+    url: options.url,
+    method: options.method ?? "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers
+    },
+    body: options.body === void 0 ? void 0 : JSON.stringify(options.body),
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`${options.errorPrefix} request failed (${response.status}): ${response.text}`);
+  }
+  return parseJson(response.text ?? "", response.json);
+}
+function noteTitle(note, context) {
+  return context?.common.title || note.title;
+}
+function unsupportedDelete(providerName) {
+  return Promise.reject(new Error(`${providerName} does not support deleting published content through this provider.`));
+}
+function buildNotionProperties(title) {
+  return {
+    title: {
+      title: [
+        {
+          type: "text",
+          text: { content: title }
+        }
+      ]
+    }
+  };
+}
+function buildNotionChildren(note) {
+  return [
+    {
+      object: "block",
+      type: "paragraph",
+      paragraph: {
+        rich_text: [
+          {
+            type: "text",
+            text: { content: note.markdown.slice(0, 1900) }
+          }
+        ]
+      }
+    }
+  ];
+}
+var NotionProvider = class {
+  constructor() {
+    this.provider = "notion";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.token || !target.databaseId && !target.parentPageId) {
+      throw new Error("Notion target is missing token and a database ID or parent page ID.");
+    }
+    await requestJson({
+      url: target.databaseId ? `https://api.notion.com/v1/databases/${encodeURIComponent(target.databaseId)}` : `https://api.notion.com/v1/pages/${encodeURIComponent(target.parentPageId)}`,
+      headers: this.headers(target),
+      errorPrefix: "Notion"
+    });
+  }
+  async publish(note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const title = noteTitle(note, context);
+    const parent = target.databaseId ? { database_id: target.databaseId } : { page_id: target.parentPageId };
+    const response = await requestJson({
+      url: "https://api.notion.com/v1/pages",
+      method: "POST",
+      headers: this.headers(target),
+      body: {
+        parent,
+        properties: buildNotionProperties(title),
+        children: buildNotionChildren(note)
+      },
+      errorPrefix: "Notion"
+    });
+    return { remoteId: String(response.id ?? note.slug), remoteUrl: response.url };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const response = await requestJson({
+      url: `https://api.notion.com/v1/pages/${encodeURIComponent(remoteId)}`,
+      method: "PATCH",
+      headers: this.headers(target),
+      body: { properties: buildNotionProperties(noteTitle(note, context)) },
+      errorPrefix: "Notion"
+    });
+    return { remoteId: String(response.id ?? remoteId), remoteUrl: response.url };
+  }
+  async delete(remoteId, target) {
+    await requestJson({
+      url: `https://api.notion.com/v1/pages/${encodeURIComponent(remoteId)}`,
+      method: "PATCH",
+      headers: this.headers(target),
+      body: { archived: true },
+      errorPrefix: "Notion"
+    });
+  }
+  async getPreviewUrl(remoteId, target) {
+    const response = await requestJson({
+      url: `https://api.notion.com/v1/pages/${encodeURIComponent(remoteId)}`,
+      headers: this.headers(target),
+      errorPrefix: "Notion"
+    });
+    return response.url;
+  }
+  headers(target) {
+    return {
+      Authorization: `Bearer ${target.token}`,
+      "Notion-Version": target.notionVersion || "2022-06-28"
+    };
+  }
+};
+function buildHaloPost(note, target, context) {
+  return {
+    post: {
+      spec: {
+        title: noteTitle(note, context),
+        slug: note.slug,
+        publish: target.defaultPublish,
+        deleted: false,
+        allowComment: true,
+        visible: "PUBLIC",
+        priority: 0,
+        excerpt: { autoGenerate: !note.excerpt, raw: note.excerpt || "" },
+        categories: target.defaultCategory ? [target.defaultCategory] : [],
+        tags: target.defaultTags
+      }
+    },
+    content: {
+      raw: note.markdown,
+      content: note.markdown,
+      rawType: "markdown"
+    }
+  };
+}
+var HaloProvider = class {
+  constructor() {
+    this.provider = "halo";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.baseUrl || !target.token) {
+      throw new Error("Halo API target is missing base URL or token.");
+    }
+    await requestJson({ url: `${this.base(target)}/apis/api.console.halo.run/v1alpha1/users/-`, headers: this.headers(target), errorPrefix: "Halo" });
+  }
+  async publish(note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const response = await requestJson({
+      url: `${this.base(target)}/apis/uc.api.content.halo.run/v1alpha1/posts`,
+      method: "POST",
+      headers: this.headers(target),
+      body: buildHaloPost(note, target, context),
+      errorPrefix: "Halo"
+    });
+    const remoteId = String(response.metadata?.name ?? response.name ?? response.spec?.slug ?? note.slug);
+    return { remoteId, remoteUrl: response.status?.permalink };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const response = await requestJson({
+      url: `${this.base(target)}/apis/uc.api.content.halo.run/v1alpha1/posts/${encodeURIComponent(remoteId)}`,
+      method: "PUT",
+      headers: this.headers(target),
+      body: buildHaloPost(note, target, context),
+      errorPrefix: "Halo"
+    });
+    return { remoteId: String(response.metadata?.name ?? response.name ?? remoteId), remoteUrl: response.status?.permalink };
+  }
+  async delete(remoteId, target) {
+    await requestJson({
+      url: `${this.base(target)}/apis/content.halo.run/v1alpha1/posts/${encodeURIComponent(remoteId)}`,
+      method: "DELETE",
+      headers: this.headers(target),
+      errorPrefix: "Halo"
+    });
+  }
+  async getPreviewUrl(remoteId, target) {
+    const response = await requestJson({
+      url: `${this.base(target)}/apis/content.halo.run/v1alpha1/posts/${encodeURIComponent(remoteId)}`,
+      headers: this.headers(target),
+      errorPrefix: "Halo"
+    });
+    return response.status?.permalink;
+  }
+  base(target) {
+    return normalizeBaseUrl2(target.baseUrl, "");
+  }
+  headers(target) {
+    return { Authorization: `Bearer ${target.token}` };
+  }
+};
+function telegraphNodes(note) {
+  return JSON.stringify([{ tag: "p", children: [note.markdown] }]);
+}
+function formBody(values) {
+  return new URLSearchParams(values).toString();
+}
+async function requestTelegraph(target, path, values) {
+  const response = await (0, import_obsidian3.requestUrl)({
+    url: `https://api.telegra.ph${path}`,
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: formBody({ access_token: target.accessToken, ...values }),
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`Telegraph request failed (${response.status}): ${response.text}`);
+  }
+  const payload = parseJson(response.text ?? "", response.json);
+  if (payload.ok === false) {
+    throw new Error(`Telegraph request failed: ${payload.error ?? "unknown error"}`);
+  }
+  return payload;
+}
+var TelegraphProvider = class {
+  constructor() {
+    this.provider = "telegraph";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.accessToken) {
+      throw new Error("Telegraph target is missing access token.");
+    }
+    await requestTelegraph(target, "/getAccountInfo", { fields: JSON.stringify(["short_name"]) });
+  }
+  async publish(note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const response = await requestTelegraph(target, "/createPage", {
+      title: noteTitle(note, context),
+      author_name: target.authorName,
+      content: telegraphNodes(note),
+      return_content: "false"
+    });
+    const page = response.result ?? response;
+    return { remoteId: String(page.path ?? note.slug), remoteUrl: page.url };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const response = await requestTelegraph(target, `/editPage/${encodeURIComponent(remoteId)}`, {
+      title: noteTitle(note, context),
+      author_name: target.authorName,
+      content: telegraphNodes(note),
+      return_content: "false"
+    });
+    const page = response.result ?? response;
+    return { remoteId: String(page.path ?? remoteId), remoteUrl: page.url };
+  }
+  delete(_remoteId, _target) {
+    return unsupportedDelete("Telegraph");
+  }
+  async getPreviewUrl(remoteId, _target) {
+    return `https://telegra.ph/${remoteId}`;
+  }
+};
+function confluenceStorage(note) {
+  return `<ac:structured-macro ac:name="code"><ac:plain-text-body><![CDATA[${note.markdown}]]></ac:plain-text-body></ac:structured-macro>`;
+}
+var ConfluenceProvider = class {
+  constructor() {
+    this.provider = "confluence";
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.baseUrl || !target.username || !target.apiToken || !target.spaceKey) {
+      throw new Error("Confluence target is missing base URL, username, API token, or space key.");
+    }
+    await requestJson({
+      url: `${this.base(target)}/rest/api/space/${encodeURIComponent(target.spaceKey)}`,
+      headers: this.headers(target),
+      errorPrefix: "Confluence"
+    });
+  }
+  async publish(note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const response = await requestJson({
+      url: `${this.base(target)}/rest/api/content`,
+      method: "POST",
+      headers: this.headers(target),
+      body: {
+        type: "page",
+        title: noteTitle(note, context),
+        space: { key: target.spaceKey },
+        ancestors: target.parentId ? [{ id: target.parentId }] : void 0,
+        body: { storage: { value: confluenceStorage(note), representation: "storage" } }
+      },
+      errorPrefix: "Confluence"
+    });
+    return { remoteId: String(response.id ?? note.slug), remoteUrl: this.webUrl(response, target) };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const current = await requestJson({
+      url: `${this.base(target)}/rest/api/content/${encodeURIComponent(remoteId)}?expand=version`,
+      headers: this.headers(target),
+      errorPrefix: "Confluence"
+    });
+    const response = await requestJson({
+      url: `${this.base(target)}/rest/api/content/${encodeURIComponent(remoteId)}`,
+      method: "PUT",
+      headers: this.headers(target),
+      body: {
+        id: remoteId,
+        type: "page",
+        title: noteTitle(note, context),
+        space: { key: target.spaceKey },
+        version: { number: (current.version?.number ?? 1) + 1 },
+        body: { storage: { value: confluenceStorage(note), representation: "storage" } }
+      },
+      errorPrefix: "Confluence"
+    });
+    return { remoteId: String(response.id ?? remoteId), remoteUrl: this.webUrl(response, target) };
+  }
+  async delete(remoteId, target) {
+    await requestJson({
+      url: `${this.base(target)}/rest/api/content/${encodeURIComponent(remoteId)}`,
+      method: "DELETE",
+      headers: this.headers(target),
+      errorPrefix: "Confluence"
+    });
+  }
+  async getPreviewUrl(remoteId, target) {
+    const response = await requestJson({
+      url: `${this.base(target)}/rest/api/content/${encodeURIComponent(remoteId)}`,
+      headers: this.headers(target),
+      errorPrefix: "Confluence"
+    });
+    return this.webUrl(response, target);
+  }
+  base(target) {
+    return normalizeBaseUrl2(target.baseUrl, "");
+  }
+  headers(target) {
+    return { Authorization: `Basic ${Buffer.from(`${target.username}:${target.apiToken}`).toString("base64")}` };
+  }
+  webUrl(response, target) {
+    if (!response._links?.webui) {
+      return void 0;
+    }
+    return `${response._links.base ?? this.base(target)}${response._links.webui}`;
+  }
+};
+
+// src/providers/definitions/api.ts
+var NOTION_FIELDS = [
+  { key: "token", label: "Integration token", type: "password" },
+  { key: "databaseId", label: "Database ID", description: "Required when publishing into a database.", type: "text" },
+  { key: "parentPageId", label: "Parent page ID", description: "Used when database ID is empty.", type: "text" },
+  { key: "notionVersion", label: "Notion API version", type: "text" }
+];
+var notionSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...NOTION_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "token":
+        return target.token;
+      case "databaseId":
+        return target.databaseId;
+      case "parentPageId":
+        return target.parentPageId;
+      case "notionVersion":
+        return target.notionVersion;
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "token":
+        target.token = String(value).trim();
+        return target;
+      case "databaseId":
+        target.databaseId = String(value).trim();
+        return target;
+      case "parentPageId":
+        target.parentPageId = String(value).trim();
+        return target;
+      case "notionVersion":
+        target.notionVersion = String(value).trim() || "2022-06-28";
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var notionDefinition = {
+  id: "notion",
+  name: "Notion",
+  category: "common",
+  family: "rest-api",
+  capabilities: { publish: true, update: true, delete: true, media: "unsupported", normalPublish: false, quickPublish: true },
+  createProvider: () => new NotionProvider(),
+  createTarget: () => ({
+    id: (0, import_node_crypto2.randomUUID)(),
+    name: "Notion",
+    enabled: true,
+    provider: "notion",
+    token: "",
+    databaseId: "",
+    parentPageId: "",
+    notionVersion: "2022-06-28"
+  }),
+  normalizeTarget: (target) => ({ ...target, token: target.token ?? "", databaseId: target.databaseId ?? "", parentPageId: target.parentPageId ?? "", notionVersion: target.notionVersion || "2022-06-28" }),
+  settingsForm: notionSettingsForm
+};
+var HALO_FIELDS = [
+  { key: "baseUrl", label: "Base URL", description: "Example: https://halo.example.com", type: "text" },
+  { key: "token", label: "Token", type: "password" },
+  { key: "defaultCategory", label: "Default category", type: "text" },
+  { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" },
+  { key: "defaultPublish", label: "Publish by default", type: "toggle" }
+];
+var haloSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...HALO_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "baseUrl":
+        return target.baseUrl;
+      case "token":
+        return target.token;
+      case "defaultCategory":
+        return target.defaultCategory;
+      case "defaultTags":
+        return target.defaultTags.join(", ");
+      case "defaultPublish":
+        return target.defaultPublish;
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "baseUrl":
+        target.baseUrl = String(value).trim();
+        return target;
+      case "token":
+        target.token = String(value).trim();
+        return target;
+      case "defaultCategory":
+        target.defaultCategory = String(value).trim();
+        return target;
+      case "defaultTags":
+        target.defaultTags = splitCommaSeparatedValue(String(value));
+        return target;
+      case "defaultPublish":
+        target.defaultPublish = Boolean(value);
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var haloDefinition = {
+  id: "halo",
+  name: "Halo API",
+  category: "common",
+  family: "rest-api",
+  capabilities: { publish: true, update: true, delete: true, media: "unsupported", normalPublish: false, quickPublish: true },
+  createProvider: () => new HaloProvider(),
+  createTarget: () => ({ id: (0, import_node_crypto2.randomUUID)(), name: "Halo API", enabled: true, provider: "halo", baseUrl: "", token: "", defaultCategory: "", defaultTags: [], defaultPublish: false }),
+  normalizeTarget: (target) => ({ ...target, baseUrl: target.baseUrl ?? "", token: target.token ?? "", defaultCategory: target.defaultCategory ?? "", defaultTags: Array.isArray(target.defaultTags) ? target.defaultTags : [], defaultPublish: Boolean(target.defaultPublish) }),
+  settingsForm: haloSettingsForm
+};
+var TELEGRAPH_FIELDS = [
+  { key: "accessToken", label: "Access token", type: "password" },
+  { key: "authorName", label: "Author name", type: "text" }
+];
+var telegraphSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...TELEGRAPH_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "accessToken":
+        return target.accessToken;
+      case "authorName":
+        return target.authorName;
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "accessToken":
+        target.accessToken = String(value).trim();
+        return target;
+      case "authorName":
+        target.authorName = String(value).trim();
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var telegraphDefinition = {
+  id: "telegraph",
+  name: "Telegraph",
+  category: "common",
+  family: "rest-api",
+  capabilities: { publish: true, update: true, delete: false, media: "unsupported", normalPublish: false, quickPublish: true },
+  createProvider: () => new TelegraphProvider(),
+  createTarget: () => ({ id: (0, import_node_crypto2.randomUUID)(), name: "Telegraph", enabled: true, provider: "telegraph", accessToken: "", authorName: "" }),
+  normalizeTarget: (target) => ({ ...target, accessToken: target.accessToken ?? "", authorName: target.authorName ?? "" }),
+  settingsForm: telegraphSettingsForm
+};
+var CONFLUENCE_FIELDS = [
+  { key: "baseUrl", label: "Base URL", description: "Example: https://example.atlassian.net/wiki", type: "text" },
+  { key: "username", label: "Username", type: "text" },
+  { key: "apiToken", label: "API token", type: "password" },
+  { key: "spaceKey", label: "Space key", type: "text" },
+  { key: "parentId", label: "Parent page ID", type: "text" }
+];
+var confluenceSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...CONFLUENCE_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "baseUrl":
+        return target.baseUrl;
+      case "username":
+        return target.username;
+      case "apiToken":
+        return target.apiToken;
+      case "spaceKey":
+        return target.spaceKey;
+      case "parentId":
+        return target.parentId;
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "baseUrl":
+        target.baseUrl = String(value).trim();
+        return target;
+      case "username":
+        target.username = String(value).trim();
+        return target;
+      case "apiToken":
+        target.apiToken = String(value).trim();
+        return target;
+      case "spaceKey":
+        target.spaceKey = String(value).trim();
+        return target;
+      case "parentId":
+        target.parentId = String(value).trim();
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var confluenceDefinition = {
+  id: "confluence",
+  name: "Confluence",
+  category: "common",
+  family: "rest-api",
+  capabilities: { publish: true, update: true, delete: true, media: "unsupported", normalPublish: false, quickPublish: true },
+  createProvider: () => new ConfluenceProvider(),
+  createTarget: () => ({ id: (0, import_node_crypto2.randomUUID)(), name: "Confluence", enabled: true, provider: "confluence", baseUrl: "", username: "", apiToken: "", spaceKey: "", parentId: "" }),
+  normalizeTarget: (target) => ({ ...target, baseUrl: target.baseUrl ?? "", username: target.username ?? "", apiToken: target.apiToken ?? "", spaceKey: target.spaceKey ?? "", parentId: target.parentId ?? "" }),
+  settingsForm: confluenceSettingsForm
+};
+
 // src/providers/definitions/web.ts
-var import_node_crypto3 = require("node:crypto");
+var import_node_crypto4 = require("node:crypto");
 
 // src/providers/csdnProvider.ts
-var import_node_crypto2 = require("node:crypto");
-var import_obsidian4 = require("obsidian");
+var import_node_crypto3 = require("node:crypto");
+var import_obsidian5 = require("obsidian");
 
 // src/core/html.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 async function renderMarkdownToHtml(app, markdown, sourcePath) {
   const container = document.createElement("div");
-  const component = new import_obsidian3.Component();
+  const component = new import_obsidian4.Component();
   component.load();
   try {
-    await import_obsidian3.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
+    await import_obsidian4.MarkdownRenderer.render(app, markdown, container, sourcePath, component);
     container.querySelectorAll("button.copy-code-button").forEach((copyButton) => {
       copyButton.remove();
     });
@@ -35396,11 +36011,11 @@ ${contentType}
 x-ca-key:${CSDN_X_CA_KEY}
 x-ca-nonce:${nonce}
 ${path}`;
-  return (0, import_node_crypto2.createHmac)("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
+  return (0, import_node_crypto3.createHmac)("sha256", CSDN_APP_SECRET).update(stringToSign).digest("base64");
 }
 function buildSignedHeaders(target, url, method, contentType) {
   const accept = "*/*";
-  const nonce = (0, import_node_crypto2.randomUUID)();
+  const nonce = (0, import_node_crypto3.randomUUID)();
   const signature = generateXCaSignature(url, method, accept, nonce, contentType);
   return {
     ...buildHeaders(target),
@@ -35461,7 +36076,7 @@ function getResponseMessage(response) {
 }
 async function requestCsdn(target, url, method = "GET", body) {
   const contentType = "application/json";
-  const response = await (0, import_obsidian4.requestUrl)({
+  const response = await (0, import_obsidian5.requestUrl)({
     url,
     method,
     headers: buildSignedHeaders(target, url, method, contentType),
@@ -35593,7 +36208,7 @@ var CsdnProvider = class {
 };
 
 // src/providers/juejinProvider.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 function buildHeaders2(target) {
   return {
     "Content-Type": "application/json",
@@ -35620,7 +36235,7 @@ function decodeRemoteId(remoteId) {
   };
 }
 async function requestJuejin(target, url, method = "POST", body) {
-  const response = await (0, import_obsidian5.requestUrl)({
+  const response = await (0, import_obsidian6.requestUrl)({
     url,
     method,
     headers: buildHeaders2(target),
@@ -35823,8 +36438,8 @@ var JuejinProvider = class {
   }
 };
 
-// src/providers/zhihuProvider.ts
-var import_obsidian6 = require("obsidian");
+// src/providers/webCookieProvider.ts
+var import_obsidian7 = require("obsidian");
 function buildHeaders3(target) {
   return {
     "Content-Type": "application/json",
@@ -35840,8 +36455,25 @@ function readJsonPayload3(response) {
   }
   return {};
 }
-async function requestZhihu(target, url, method = "GET", body) {
-  const response = await (0, import_obsidian6.requestUrl)({
+function unwrapData(payload) {
+  return payload.data && typeof payload.data === "object" ? payload.data : payload;
+}
+function readRemoteId(payload) {
+  const data = unwrapData(payload);
+  const id = data.id ?? data.articleId ?? data.article_id ?? data.draftId ?? data.draft_id;
+  return id === void 0 || id === null ? "" : String(id);
+}
+function readAccountSummary(payload) {
+  const data = unwrapData(payload);
+  const id = data.id ?? data.uid;
+  return {
+    accountId: id === void 0 || id === null ? void 0 : String(id),
+    accountName: data.name ?? data.nickname ?? data.username,
+    accountAvatarUrl: data.avatar ?? data.avatarUrl
+  };
+}
+async function requestWebCookie(target, url, method = "GET", body) {
+  const response = await (0, import_obsidian7.requestUrl)({
     url,
     method,
     headers: buildHeaders3(target),
@@ -35849,9 +36481,216 @@ async function requestZhihu(target, url, method = "GET", body) {
     throw: false
   });
   if (response.status >= 400) {
-    throw new Error(`Zhihu request failed (${response.status}): ${response.text}`);
+    throw new Error(
+      `${target.name} request failed (${response.status}): ${response.text}`
+    );
   }
   return readJsonPayload3(response);
+}
+var WebCookieProvider = class {
+  constructor(app, spec) {
+    this.app = app;
+    this.spec = spec;
+    this.provider = spec.provider;
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.cookie) {
+      throw new Error(`${this.spec.displayName} target is missing Cookie.`);
+    }
+    await this.getAccountSummary(target);
+  }
+  async getAccountSummary(target) {
+    const payload = await requestWebCookie(
+      target,
+      this.spec.validateUrl(target)
+    );
+    const summary = readAccountSummary(payload);
+    if (!summary.accountId && !summary.accountName) {
+      throw new Error(
+        `${this.spec.displayName} validation failed: not logged in or cookie expired.`
+      );
+    }
+    return summary;
+  }
+  async publish(note, target, _context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const html = await renderMarkdownToHtml(
+      this.app,
+      note.markdown,
+      note.filePath
+    );
+    const payload = await requestWebCookie(
+      target,
+      this.spec.publishUrl(target),
+      "POST",
+      this.spec.buildPayload(note, html, target)
+    );
+    const remoteId = readRemoteId(payload);
+    if (!remoteId) {
+      throw new Error(
+        `${this.spec.displayName} publish failed: remote id missing.`
+      );
+    }
+    return {
+      remoteId,
+      remoteUrl: this.spec.previewUrl(target, remoteId) ?? unwrapData(payload).url
+    };
+  }
+  async update(remoteId, note, target, _context, _runtime) {
+    assertRemoteAssetsSupported(note, target.name);
+    const html = await renderMarkdownToHtml(
+      this.app,
+      note.markdown,
+      note.filePath
+    );
+    const payload = await requestWebCookie(
+      target,
+      this.spec.updateUrl(target, remoteId),
+      "PUT",
+      this.spec.buildUpdatePayload?.(remoteId, note, html, target) ?? this.spec.buildPayload(note, html, target)
+    );
+    const nextRemoteId = readRemoteId(payload) || remoteId;
+    return {
+      remoteId: nextRemoteId,
+      remoteUrl: this.spec.previewUrl(target, nextRemoteId) ?? unwrapData(payload).url
+    };
+  }
+  async delete(_remoteId, target) {
+    throw new Error(
+      `${target.name} does not support delete from Ultimate Publisher yet.`
+    );
+  }
+  async getPreviewUrl(remoteId, target) {
+    return this.spec.previewUrl(target, remoteId);
+  }
+};
+function basePayload(note, html) {
+  return {
+    title: note.title,
+    markdown: note.markdown,
+    html,
+    excerpt: note.excerpt,
+    tags: note.tags,
+    categories: note.categories
+  };
+}
+var JianshuProvider = class extends WebCookieProvider {
+  constructor(app) {
+    super(app, {
+      provider: "jianshu",
+      displayName: "Jianshu",
+      validateUrl: () => "https://www.jianshu.com/users/current",
+      publishUrl: () => "https://www.jianshu.com/author/notes",
+      updateUrl: (_target, remoteId) => `https://www.jianshu.com/author/notes/${encodeURIComponent(remoteId)}`,
+      previewUrl: (_target, remoteId) => `https://www.jianshu.com/p/${encodeURIComponent(remoteId)}`,
+      buildPayload: basePayload
+    });
+  }
+};
+var WechatProvider = class extends WebCookieProvider {
+  constructor(app) {
+    super(app, {
+      provider: "wechat",
+      displayName: "WeChat Official Account",
+      validateUrl: () => "https://mp.weixin.qq.com/cgi-bin/home?t=home/index",
+      publishUrl: () => "https://mp.weixin.qq.com/cgi-bin/appmsg",
+      updateUrl: (_target, remoteId) => `https://mp.weixin.qq.com/cgi-bin/appmsg?action=update&appmsgid=${encodeURIComponent(remoteId)}`,
+      previewUrl: (_target, remoteId) => `https://mp.weixin.qq.com/s/${encodeURIComponent(remoteId)}`,
+      buildPayload: (note, html) => ({
+        ...basePayload(note, html),
+        content: html,
+        digest: note.excerpt
+      })
+    });
+  }
+};
+function normalizeHaloBaseUrl(target) {
+  return (target.baseUrl || "https://halo.example.com").replace(/\/+$/, "");
+}
+var HaloWebProvider = class extends WebCookieProvider {
+  constructor(app) {
+    super(app, {
+      provider: "halo-web",
+      displayName: "Halo Web",
+      validateUrl: (target) => `${normalizeHaloBaseUrl(target)}/console/api/users/-/profile`,
+      publishUrl: (target) => `${normalizeHaloBaseUrl(target)}/console/api/contents/posts`,
+      updateUrl: (target, remoteId) => `${normalizeHaloBaseUrl(target)}/console/api/contents/posts/${encodeURIComponent(remoteId)}`,
+      previewUrl: (target, remoteId) => `${normalizeHaloBaseUrl(target)}/archives/${encodeURIComponent(remoteId)}`,
+      buildPayload: (note, html) => ({
+        ...basePayload(note, html),
+        content: {
+          raw: note.markdown,
+          html
+        }
+      })
+    });
+  }
+};
+var BilibiliProvider = class extends WebCookieProvider {
+  constructor(app) {
+    super(app, {
+      provider: "bilibili",
+      displayName: "Bilibili",
+      validateUrl: () => "https://api.bilibili.com/x/web-interface/nav",
+      publishUrl: () => "https://member.bilibili.com/x/web/article/add",
+      updateUrl: (_target, remoteId) => `https://member.bilibili.com/x/web/article/update?id=${encodeURIComponent(remoteId)}`,
+      previewUrl: (_target, remoteId) => `https://www.bilibili.com/read/cv${encodeURIComponent(remoteId)}`,
+      buildPayload: (note, html) => ({
+        ...basePayload(note, html),
+        content: html
+      })
+    });
+  }
+};
+var XiaohongshuProvider = class extends WebCookieProvider {
+  constructor(app) {
+    super(app, {
+      provider: "xiaohongshu",
+      displayName: "Xiaohongshu",
+      validateUrl: () => "https://edith.xiaohongshu.com/api/sns/web/v1/user/selfinfo",
+      publishUrl: () => "https://edith.xiaohongshu.com/api/sns/web/v1/note",
+      updateUrl: (_target, remoteId) => `https://edith.xiaohongshu.com/api/sns/web/v1/note/${encodeURIComponent(remoteId)}`,
+      previewUrl: (_target, remoteId) => `https://www.xiaohongshu.com/explore/${encodeURIComponent(remoteId)}`,
+      buildPayload: (note, html) => ({
+        ...basePayload(note, html),
+        type: "normal"
+      })
+    });
+  }
+};
+
+// src/providers/zhihuProvider.ts
+var import_obsidian8 = require("obsidian");
+function buildHeaders4(target) {
+  return {
+    "Content-Type": "application/json",
+    Cookie: target.cookie
+  };
+}
+function readJsonPayload4(response) {
+  if (response.json !== void 0) {
+    return response.json;
+  }
+  if (response.text) {
+    return JSON.parse(response.text);
+  }
+  return {};
+}
+async function requestZhihu(target, url, method = "GET", body) {
+  const response = await (0, import_obsidian8.requestUrl)({
+    url,
+    method,
+    headers: buildHeaders4(target),
+    body: body ? JSON.stringify(body) : void 0,
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`Zhihu request failed (${response.status}): ${response.text}`);
+  }
+  return readJsonPayload4(response);
 }
 function buildPreviewUrl3(articleId) {
   return `https://zhuanlan.zhihu.com/p/${articleId}`;
@@ -36004,12 +36843,27 @@ function normalizeStringList(value) {
 
 // src/providers/definitions/web.ts
 var CSDN_FIELDS = [
-  { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
-  { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" }
+  {
+    key: "defaultCategories",
+    label: "Default categories",
+    description: "Comma-separated category names.",
+    type: "text"
+  },
+  {
+    key: "defaultTags",
+    label: "Default tags",
+    description: "Comma-separated tag names.",
+    type: "text"
+  }
 ];
 var JUEJIN_FIELDS = [
   { key: "defaultCategoryId", label: "Default category ID", type: "text" },
-  { key: "defaultTagIds", label: "Default tag IDs", description: "Comma-separated tag IDs.", type: "text" },
+  {
+    key: "defaultTagIds",
+    label: "Default tag IDs",
+    description: "Comma-separated tag IDs.",
+    type: "text"
+  },
   { key: "defaultBriefContent", label: "Default brief content", type: "text" }
 ];
 var zhihuSettingsForm = defineSettingsForm({
@@ -36117,6 +36971,36 @@ var csdnNormalPublish = {
     categories: cloneStringList(draft.categories)
   })
 };
+var simpleWebSettingsForm = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS],
+  readProviderFieldValue() {
+    return void 0;
+  },
+  applyProviderFieldValue(target) {
+    return target;
+  }
+});
+var haloWebSettingsForm = defineSettingsForm({
+  fields: [
+    ...COMMON_FIELDS,
+    {
+      key: "baseUrl",
+      label: "Base URL",
+      description: "Example: https://halo.example.com",
+      type: "text"
+    },
+    ...WEB_AUTH_COMMON_FIELDS
+  ],
+  readProviderFieldValue(target, key) {
+    return key === "baseUrl" ? target.baseUrl : void 0;
+  },
+  applyProviderFieldValue(target, key, value) {
+    if (key === "baseUrl") {
+      target.baseUrl = String(value).trim();
+    }
+    return target;
+  }
+});
 var juejinNormalPublish = {
   supportedAiFields: ["title", "briefContent"],
   buildInitialDraft: (note, target) => ({
@@ -36154,7 +37038,7 @@ var zhihuDefinition = {
   },
   createProvider: (app) => new ZhihuProvider(app),
   createTarget: () => ({
-    id: (0, import_node_crypto3.randomUUID)(),
+    id: (0, import_node_crypto4.randomUUID)(),
     name: "Zhihu",
     enabled: true,
     provider: "zhihu",
@@ -36189,7 +37073,7 @@ var csdnDefinition = {
   },
   createProvider: (app) => new CsdnProvider(app),
   createTarget: () => ({
-    id: (0, import_node_crypto3.randomUUID)(),
+    id: (0, import_node_crypto4.randomUUID)(),
     name: "CSDN",
     enabled: true,
     provider: "csdn",
@@ -36224,7 +37108,7 @@ var juejinDefinition = {
   },
   createProvider: () => new JuejinProvider(),
   createTarget: () => ({
-    id: (0, import_node_crypto3.randomUUID)(),
+    id: (0, import_node_crypto4.randomUUID)(),
     name: "Juejin",
     enabled: true,
     provider: "juejin",
@@ -36249,12 +37133,133 @@ var juejinDefinition = {
   buildInitialDraft: juejinNormalPublish.buildInitialDraft,
   getManualFallbackFields: juejinNormalPublish.getManualFallbackFields
 };
+function createSimpleWebTarget(provider, name) {
+  return {
+    id: (0, import_node_crypto4.randomUUID)(),
+    name,
+    enabled: true,
+    provider,
+    cookie: ""
+  };
+}
+function normalizeSimpleWebTarget(target) {
+  return {
+    ...target,
+    cookie: target.cookie || ""
+  };
+}
+var jianshuDefinition = {
+  id: "jianshu",
+  name: "Jianshu",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: (app) => new JianshuProvider(app),
+  createTarget: () => createSimpleWebTarget("jianshu", "Jianshu"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm: simpleWebSettingsForm
+};
+var wechatDefinition = {
+  id: "wechat",
+  name: "WeChat Official Account",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: (app) => new WechatProvider(app),
+  createTarget: () => createSimpleWebTarget("wechat", "WeChat Official Account"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm: simpleWebSettingsForm
+};
+var haloWebDefinition = {
+  id: "halo-web",
+  name: "Halo Web",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: (app) => new HaloWebProvider(app),
+  createTarget: () => ({
+    id: (0, import_node_crypto4.randomUUID)(),
+    name: "Halo Web",
+    enabled: true,
+    provider: "halo-web",
+    cookie: "",
+    baseUrl: ""
+  }),
+  normalizeTarget: (target) => ({
+    ...target,
+    cookie: target.cookie || "",
+    baseUrl: target.baseUrl || ""
+  }),
+  settingsForm: haloWebSettingsForm
+};
+var bilibiliDefinition = {
+  id: "bilibili",
+  name: "Bilibili",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: (app) => new BilibiliProvider(app),
+  createTarget: () => createSimpleWebTarget("bilibili", "Bilibili"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm: simpleWebSettingsForm
+};
+var xiaohongshuDefinition = {
+  id: "xiaohongshu",
+  name: "Xiaohongshu",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true
+  },
+  createProvider: (app) => new XiaohongshuProvider(app),
+  createTarget: () => createSimpleWebTarget("xiaohongshu", "Xiaohongshu"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm: simpleWebSettingsForm
+};
 
 // src/providers/definitions/wordpress.ts
-var import_node_crypto4 = require("node:crypto");
+var import_node_crypto5 = require("node:crypto");
 
 // src/providers/wordpressProvider.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 function tryParseJsonPayload(text) {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -36276,17 +37281,17 @@ function tryParseJsonPayload(text) {
     }
   }
 }
-function trimTrailingSlash2(value) {
+function trimTrailingSlash3(value) {
   return value.replace(/\/+$/, "");
 }
 function makeAuthHeader(target) {
   return `Basic ${Buffer.from(`${target.username}:${target.appPassword}`).toString("base64")}`;
 }
 function normalizeEndpoint(target) {
-  return `${trimTrailingSlash2(target.endpoint)}/wp-json/wp/v2`;
+  return `${trimTrailingSlash3(target.endpoint)}/wp-json/wp/v2`;
 }
-async function requestJson(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian7.requestUrl)({
+async function requestJson2(target, path, method = "GET", body) {
+  const response = await (0, import_obsidian9.requestUrl)({
     url: `${normalizeEndpoint(target)}${path}`,
     method,
     headers: {
@@ -36315,13 +37320,13 @@ async function ensureTermIds(target, taxonomy, names) {
   const ids = [];
   for (const name of names) {
     const slug = slugify(name);
-    const existing = await requestJson(target, `/${taxonomy}?search=${encodeURIComponent(name)}`);
+    const existing = await requestJson2(target, `/${taxonomy}?search=${encodeURIComponent(name)}`);
     const found = existing.find((item) => item.slug === slug || item.name.toLowerCase() === name.toLowerCase());
     if (found) {
       ids.push(found.id);
       continue;
     }
-    const created = await requestJson(target, `/${taxonomy}`, "POST", {
+    const created = await requestJson2(target, `/${taxonomy}`, "POST", {
       name,
       slug
     });
@@ -36355,8 +37360,8 @@ var WordpressProvider = class {
     return { mode: "native-upload" };
   }
   async loadNormalPublishOptions(target) {
-    const categories = await requestJson(target, "/categories?per_page=100");
-    const tags = await requestJson(target, "/tags?per_page=100");
+    const categories = await requestJson2(target, "/categories?per_page=100");
+    const tags = await requestJson2(target, "/tags?per_page=100");
     const toOption = (item) => ({
       id: String(item.id),
       label: item.name,
@@ -36371,10 +37376,10 @@ var WordpressProvider = class {
     if (!target.endpoint || !target.username || !target.appPassword) {
       throw new Error("WordPress target is missing endpoint, username, or application password.");
     }
-    await requestJson(target, "/users/me");
+    await requestJson2(target, "/users/me");
   }
   async publish(note, target, context, _runtime) {
-    const response = await requestJson(
+    const response = await requestJson2(
       target,
       "/posts",
       "POST",
@@ -36387,7 +37392,7 @@ var WordpressProvider = class {
   }
   async update(remoteId, note, target, context, _runtime) {
     const preparedNote = await this.prepareNote(note);
-    const response = await requestJson(
+    const response = await requestJson2(
       target,
       `/posts/${encodeURIComponent(remoteId)}`,
       "POST",
@@ -36399,16 +37404,16 @@ var WordpressProvider = class {
     };
   }
   async delete(remoteId, target) {
-    await requestJson(target, `/posts/${encodeURIComponent(remoteId)}?force=true`, "DELETE");
+    await requestJson2(target, `/posts/${encodeURIComponent(remoteId)}?force=true`, "DELETE");
   }
   async getPreviewUrl(remoteId, target) {
-    const response = await requestJson(target, `/posts/${encodeURIComponent(remoteId)}`);
+    const response = await requestJson2(target, `/posts/${encodeURIComponent(remoteId)}`);
     return response.link;
   }
   async uploadAsset(asset, _note, target) {
-    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian7.normalizePath)(asset.sourcePath));
+    const bytes = await this.app.vault.adapter.readBinary((0, import_obsidian9.normalizePath)(asset.sourcePath));
     const body = bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer;
-    const response = await (0, import_obsidian7.requestUrl)({
+    const response = await (0, import_obsidian9.requestUrl)({
       url: `${normalizeEndpoint(target)}/media`,
       method: "POST",
       headers: {
@@ -36540,7 +37545,7 @@ var wordpressDefinition = {
   },
   createProvider: (app) => new WordpressProvider(app),
   createTarget: () => ({
-    id: (0, import_node_crypto4.randomUUID)(),
+    id: (0, import_node_crypto5.randomUUID)(),
     name: "WordPress",
     enabled: true,
     provider: "wordpress",
@@ -36561,11 +37566,351 @@ var wordpressDefinition = {
   getManualFallbackFields: wordpressNormalPublish.getManualFallbackFields
 };
 
+// src/providers/definitions/metaweblog.ts
+var import_node_crypto6 = require("node:crypto");
+
+// src/providers/metaWeblogProvider.ts
+var import_obsidian10 = require("obsidian");
+function escapeXml(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+function renderXmlRpcValue(value) {
+  if (value instanceof Date) {
+    return `<value><dateTime.iso8601>${value.toISOString()}</dateTime.iso8601></value>`;
+  }
+  if (typeof value === "number") {
+    return `<value><int>${value}</int></value>`;
+  }
+  if (typeof value === "boolean") {
+    return `<value><boolean>${value ? 1 : 0}</boolean></value>`;
+  }
+  if (Array.isArray(value)) {
+    return `<value><array><data>${value.map((item) => renderXmlRpcValue(item)).join("")}</data></array></value>`;
+  }
+  if (value && typeof value === "object") {
+    const members = Object.entries(value).filter(([, memberValue]) => memberValue !== void 0).map(([key, memberValue]) => `<member><name>${escapeXml(key)}</name>${renderXmlRpcValue(memberValue)}</member>`).join("");
+    return `<value><struct>${members}</struct></value>`;
+  }
+  return `<value><string>${escapeXml(String(value ?? ""))}</string></value>`;
+}
+function buildXmlRpcRequest(methodName, params) {
+  const renderedParams = params.map((param) => `<param>${renderXmlRpcValue(param)}</param>`).join("");
+  return `<?xml version="1.0"?><methodCall><methodName>${escapeXml(methodName)}</methodName><params>${renderedParams}</params></methodCall>`;
+}
+function decodeXmlEntities(value) {
+  return value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+}
+function readTag(body, tag) {
+  const pattern = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i");
+  const match = body.match(pattern);
+  return match ? decodeXmlEntities(match[1].trim()) : void 0;
+}
+function parseXmlRpcResponse(xml) {
+  const faultBody = readTag(xml, "fault");
+  if (faultBody) {
+    return { fault: readTag(faultBody, "string") ?? faultBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() };
+  }
+  const paramBody = readTag(xml, "param") ?? xml;
+  const stringValue = readTag(paramBody, "string");
+  if (stringValue !== void 0) {
+    return { value: stringValue };
+  }
+  const intValue = readTag(paramBody, "int") ?? readTag(paramBody, "i4");
+  if (intValue !== void 0) {
+    return { value: Number(intValue) };
+  }
+  const booleanValue = readTag(paramBody, "boolean");
+  if (booleanValue !== void 0) {
+    return { value: booleanValue === "1" || booleanValue.toLowerCase() === "true" };
+  }
+  return { value: paramBody };
+}
+async function callMetaWeblog(target, methodName, params) {
+  const response = await (0, import_obsidian10.requestUrl)({
+    url: target.endpoint,
+    method: "POST",
+    headers: {
+      "Content-Type": "text/xml"
+    },
+    body: buildXmlRpcRequest(methodName, params),
+    throw: false
+  });
+  if (response.status >= 400) {
+    throw new Error(`MetaWeblog request failed (${response.status}): ${response.text}`);
+  }
+  const parsed = parseXmlRpcResponse(response.text);
+  if (parsed.fault) {
+    throw new Error(`MetaWeblog fault: ${parsed.fault}`);
+  }
+  return parsed.value;
+}
+function splitFrontmatterList(value) {
+  if (Array.isArray(value)) {
+    return value.map(String).map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+function buildPostPayload(note, target, context) {
+  const providerContext = context?.provider.provider === "wordpress" ? context.provider : void 0;
+  const content = target.contentFormat === "html" ? note.html ?? note.markdown : note.markdown;
+  const categories = providerContext?.categories ?? note.categories;
+  const tags = providerContext?.tags ?? note.tags;
+  return {
+    title: context?.common.title || note.title,
+    description: content,
+    mt_excerpt: providerContext?.excerpt ?? note.excerpt,
+    mt_keywords: tags.join(","),
+    categories,
+    post_status: providerContext?.status ?? note.frontmatter.status ?? target.defaultStatus,
+    wp_slug: providerContext?.slug ?? note.slug,
+    wp_password: providerContext?.password || void 0,
+    dateCreated: note.frontmatter.date ? new Date(String(note.frontmatter.date)) : void 0
+  };
+}
+function remoteIdFrom(value) {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  const text = String(value ?? "").trim();
+  if (!text) {
+    throw new Error("MetaWeblog response did not include a post id.");
+  }
+  return text;
+}
+function previewUrlFromEndpoint(remoteId, target) {
+  const base = target.endpoint.replace(/\/?(?:xmlrpc\.php|xmlrpc|api)?\/?$/i, "");
+  return base && base !== target.endpoint ? `${base.replace(/\/+$/, "")}/?p=${encodeURIComponent(remoteId)}` : void 0;
+}
+var MetaWeblogProvider = class {
+  constructor(app, provider) {
+    this.app = app;
+    this.provider = provider;
+  }
+  getMediaSupport(_target) {
+    return { mode: "unsupported" };
+  }
+  async validateConfig(target) {
+    if (!target.endpoint || !target.username || !target.appPassword) {
+      throw new Error("MetaWeblog target is missing endpoint, username, or password/token.");
+    }
+    await callMetaWeblog(target, "blogger.getUsersBlogs", [target.appPassword, target.username, target.appPassword]);
+  }
+  async publish(note, target, context, _runtime) {
+    const preparedNote = await this.prepareNote(note);
+    const remoteId = remoteIdFrom(
+      await callMetaWeblog(target, "metaWeblog.newPost", [
+        target.blogId || "default",
+        target.username,
+        target.appPassword,
+        buildPostPayload(preparedNote, target, context),
+        target.defaultStatus === "publish"
+      ])
+    );
+    return { remoteId, remoteUrl: previewUrlFromEndpoint(remoteId, target) };
+  }
+  async update(remoteId, note, target, context, _runtime) {
+    const preparedNote = await this.prepareNote(note);
+    await callMetaWeblog(target, "metaWeblog.editPost", [
+      remoteId,
+      target.username,
+      target.appPassword,
+      buildPostPayload(preparedNote, target, context),
+      target.defaultStatus === "publish"
+    ]);
+    return { remoteId, remoteUrl: previewUrlFromEndpoint(remoteId, target) };
+  }
+  async delete(remoteId, target) {
+    await callMetaWeblog(target, "blogger.deletePost", [target.appPassword, remoteId, target.username, target.appPassword, true]);
+  }
+  async getPreviewUrl(remoteId, target) {
+    return previewUrlFromEndpoint(remoteId, target);
+  }
+  async prepareNote(note) {
+    const html = await renderMarkdownToHtml(this.app, note.markdown, note.filePath);
+    return {
+      ...note,
+      categories: note.categories.length > 0 ? note.categories : splitFrontmatterList(note.frontmatter.categories),
+      tags: note.tags.length > 0 ? note.tags : splitFrontmatterList(note.frontmatter.tags),
+      html
+    };
+  }
+};
+
+// src/providers/definitions/metaweblog.ts
+var META_WEBLOG_FIELDS = [
+  {
+    key: "endpoint",
+    label: "XML-RPC endpoint",
+    description: "Example: https://example.com/xmlrpc.php",
+    type: "text"
+  },
+  { key: "username", label: "Username", type: "text" },
+  { key: "appPassword", label: "Password or token", type: "password" },
+  {
+    key: "blogId",
+    label: "Blog ID",
+    description: "Use default when the platform exposes only one blog.",
+    type: "text"
+  },
+  {
+    key: "defaultStatus",
+    label: "Default status",
+    type: "dropdown",
+    options: [
+      { value: "draft", label: "Draft" },
+      { value: "publish", label: "Publish" },
+      { value: "private", label: "Private" },
+      { value: "pending", label: "Pending" }
+    ]
+  },
+  {
+    key: "contentFormat",
+    label: "Publish format",
+    description: "Choose whether the XML-RPC post body receives Markdown text or rendered HTML.",
+    type: "dropdown",
+    options: [
+      { value: "markdown", label: "Markdown" },
+      { value: "html", label: "HTML" }
+    ]
+  }
+];
+var settingsForm3 = defineSettingsForm({
+  fields: [...COMMON_FIELDS, ...META_WEBLOG_FIELDS],
+  readProviderFieldValue(target, key) {
+    switch (key) {
+      case "endpoint":
+        return target.endpoint;
+      case "username":
+        return target.username;
+      case "appPassword":
+        return target.appPassword;
+      case "blogId":
+        return target.blogId;
+      case "defaultStatus":
+        return target.defaultStatus;
+      case "contentFormat":
+        return target.contentFormat;
+      default:
+        return void 0;
+    }
+  },
+  applyProviderFieldValue(target, key, value) {
+    switch (key) {
+      case "endpoint":
+        target.endpoint = String(value).trim();
+        return target;
+      case "username":
+        target.username = String(value).trim();
+        return target;
+      case "appPassword":
+        target.appPassword = String(value).trim();
+        return target;
+      case "blogId":
+        target.blogId = String(value).trim();
+        return target;
+      case "defaultStatus":
+        target.defaultStatus = String(value);
+        return target;
+      case "contentFormat":
+        target.contentFormat = String(value);
+        return target;
+      default:
+        return target;
+    }
+  }
+});
+var metaWeblogNormalPublish = {
+  supportedAiFields: ["title", "excerpt"],
+  buildInitialDraft: (note, target) => ({
+    provider: "wordpress",
+    slug: note.slug,
+    excerpt: note.excerpt,
+    tags: cloneStringList(note.tags),
+    categories: cloneStringList(note.categories),
+    status: target.defaultStatus,
+    password: ""
+  }),
+  getManualFallbackFields: () => ["categories", "tags"],
+  applyDraftToNote: (note, draft) => ({
+    ...note,
+    slug: draft.slug,
+    excerpt: draft.excerpt,
+    tags: cloneStringList(draft.tags),
+    categories: cloneStringList(draft.categories)
+  })
+};
+var PROVIDER_NAMES = {
+  "wordpress-com": "WordPress.com",
+  metaweblog: "MetaWeblog",
+  cnblogs: "CNBlogs",
+  typecho: "Typecho",
+  jvue: "Jvue"
+};
+function createTarget(provider) {
+  return {
+    id: (0, import_node_crypto6.randomUUID)(),
+    name: PROVIDER_NAMES[provider],
+    enabled: true,
+    provider,
+    endpoint: "",
+    username: "",
+    appPassword: "",
+    blogId: "default",
+    defaultStatus: "draft",
+    contentFormat: "html"
+  };
+}
+function normalizeTarget(target) {
+  return {
+    ...target,
+    endpoint: target.endpoint ?? "",
+    username: target.username ?? "",
+    appPassword: target.appPassword ?? "",
+    blogId: target.blogId || "default",
+    defaultStatus: target.defaultStatus ?? "draft",
+    contentFormat: target.contentFormat ?? "html"
+  };
+}
+function defineMetaWeblogProvider(provider) {
+  return {
+    id: provider,
+    name: PROVIDER_NAMES[provider],
+    category: "metaweblog",
+    family: "xml-rpc",
+    capabilities: {
+      publish: true,
+      update: true,
+      delete: true,
+      media: "unsupported",
+      normalPublish: true,
+      quickPublish: true
+    },
+    createProvider: ((app) => new MetaWeblogProvider(
+      app,
+      provider
+    )),
+    createTarget: (() => createTarget(provider)),
+    normalizeTarget,
+    settingsForm: settingsForm3,
+    normalPublish: metaWeblogNormalPublish,
+    buildInitialDraft: metaWeblogNormalPublish.buildInitialDraft,
+    getManualFallbackFields: metaWeblogNormalPublish.getManualFallbackFields
+  };
+}
+var wordpressComDefinition = defineMetaWeblogProvider("wordpress-com");
+var metaweblogDefinition = defineMetaWeblogProvider("metaweblog");
+var cnblogsDefinition = defineMetaWeblogProvider("cnblogs");
+var typechoDefinition = defineMetaWeblogProvider("typecho");
+var jvueDefinition = defineMetaWeblogProvider("jvue");
+
 // src/providers/definitions/staticSite.ts
-var import_node_crypto5 = require("node:crypto");
+var import_node_crypto7 = require("node:crypto");
 
 // src/providers/githubProvider.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 
 // src/core/staticSite/content.ts
 function trimSlashes(value) {
@@ -36661,10 +38006,10 @@ function buildPreviewUrl4(previewBaseUrl, contentPath) {
 }
 
 // src/providers/githubProvider.ts
-function trimTrailingSlash3(value) {
+function trimTrailingSlash4(value) {
   return value.replace(/\/+$/, "");
 }
-function parseJson(text) {
+function parseJson2(text) {
   if (!text.trim()) {
     return void 0;
   }
@@ -36684,7 +38029,7 @@ function encodePath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 function githubApiUrl(target, path) {
-  return `${trimTrailingSlash3("https://api.github.com")}/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}${path}`;
+  return `${trimTrailingSlash4("https://api.github.com")}/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}${path}`;
 }
 function getContentInfo(payload) {
   return {
@@ -36694,7 +38039,7 @@ function getContentInfo(payload) {
   };
 }
 async function requestGithub(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian8.requestUrl)({
+  const response = await (0, import_obsidian11.requestUrl)({
     url: githubApiUrl(target, path),
     method,
     headers: {
@@ -36706,7 +38051,7 @@ async function requestGithub(target, path, method = "GET", body) {
     body: body ? JSON.stringify(body) : void 0,
     throw: false
   });
-  const payload = response.json ?? parseJson(response.text ?? "");
+  const payload = response.json ?? parseJson2(response.text ?? "");
   if (response.status >= 400) {
     const message = typeof payload === "object" && payload && "message" in payload ? String(payload.message) : response.text;
     throw new Error(`GitHub request failed (${response.status}): ${message}`);
@@ -36787,11 +38132,11 @@ var GithubProvider = class {
 };
 
 // src/providers/gitlabProvider.ts
-var import_obsidian9 = require("obsidian");
-function trimTrailingSlash4(value) {
+var import_obsidian12 = require("obsidian");
+function trimTrailingSlash5(value) {
   return value.replace(/\/+$/, "");
 }
-function parseJson2(text) {
+function parseJson3(text) {
   if (!text.trim()) return void 0;
   try {
     return JSON.parse(text);
@@ -36800,13 +38145,13 @@ function parseJson2(text) {
   }
 }
 function apiBase(target) {
-  return `${trimTrailingSlash4(target.baseUrl || "https://gitlab.com")}/api/v4`;
+  return `${trimTrailingSlash5(target.baseUrl || "https://gitlab.com")}/api/v4`;
 }
 function encodeFilePath(path) {
   return encodeURIComponent(path);
 }
 async function requestGitlab(target, path, method = "GET", body) {
-  const response = await (0, import_obsidian9.requestUrl)({
+  const response = await (0, import_obsidian12.requestUrl)({
     url: `${apiBase(target)}${path}`,
     method,
     headers: {
@@ -36816,7 +38161,7 @@ async function requestGitlab(target, path, method = "GET", body) {
     body: body ? JSON.stringify(body) : void 0,
     throw: false
   });
-  const payload = response.json ?? parseJson2(response.text ?? "");
+  const payload = response.json ?? parseJson3(response.text ?? "");
   if (response.status >= 400) {
     const message = typeof payload === "object" && payload && "message" in payload ? String(payload.message) : response.text;
     throw new Error(`GitLab request failed (${response.status}): ${message}`);
@@ -37027,7 +38372,7 @@ var githubDefinition = {
   },
   createProvider: () => new GithubProvider(),
   createTarget: () => ({
-    id: (0, import_node_crypto5.randomUUID)(),
+    id: (0, import_node_crypto7.randomUUID)(),
     name: "GitHub Static Sites",
     enabled: true,
     provider: "github",
@@ -37065,7 +38410,7 @@ var gitlabDefinition = {
   },
   createProvider: () => new GitlabProvider(),
   createTarget: () => ({
-    id: (0, import_node_crypto5.randomUUID)(),
+    id: (0, import_node_crypto7.randomUUID)(),
     name: "GitLab Static Sites",
     enabled: true,
     provider: "gitlab",
@@ -37091,22 +38436,22 @@ var gitlabDefinition = {
 };
 
 // src/providers/definitions/filesystem.ts
-var import_node_crypto6 = require("node:crypto");
+var import_node_crypto8 = require("node:crypto");
 
 // src/providers/localFilesystemProvider.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 function trimSlashes2(value) {
   return value.replace(/^\/+|\/+$/g, "");
 }
 function sanitizeVaultRelativePath(value) {
-  const normalized = (0, import_obsidian10.normalizePath)(trimSlashes2(value || "published"));
+  const normalized = (0, import_obsidian13.normalizePath)(trimSlashes2(value || "published"));
   if (!normalized || normalized === "." || normalized.startsWith("../") || normalized.includes("/../")) {
     throw new Error("Local filesystem output path must stay inside the vault.");
   }
   return normalized;
 }
 function joinVaultPath(root, contentPath) {
-  return (0, import_obsidian10.normalizePath)(`${sanitizeVaultRelativePath(root)}/${trimSlashes2(contentPath)}`);
+  return (0, import_obsidian13.normalizePath)(`${sanitizeVaultRelativePath(root)}/${trimSlashes2(contentPath)}`);
 }
 var LocalFilesystemProvider = class {
   constructor(app) {
@@ -37178,7 +38523,7 @@ var LOCAL_FILESYSTEM_FIELDS = [
 function normalizeGenerator2(value) {
   return GENERATOR_OPTIONS.some((option) => option.value === value) ? value : "hugo";
 }
-var settingsForm3 = defineSettingsForm({
+var settingsForm4 = defineSettingsForm({
   fields: [...COMMON_FIELDS, ...LOCAL_FILESYSTEM_FIELDS],
   readProviderFieldValue(target, key) {
     switch (key) {
@@ -37223,7 +38568,7 @@ var localFilesystemDefinition = {
   },
   createProvider: (app) => new LocalFilesystemProvider(app),
   createTarget: () => ({
-    id: (0, import_node_crypto6.randomUUID)(),
+    id: (0, import_node_crypto8.randomUUID)(),
     name: "Local Filesystem",
     enabled: true,
     provider: "local-filesystem",
@@ -37237,23 +38582,62 @@ var localFilesystemDefinition = {
     siteGenerator: normalizeGenerator2(target.siteGenerator),
     overwriteExisting: Boolean(target.overwriteExisting)
   }),
-  settingsForm: settingsForm3
+  settingsForm: settingsForm4
 };
 
 // src/providers/definitions/index.ts
 var providerDefinitionsById = {
   wordpress: wordpressDefinition,
+  "wordpress-com": wordpressComDefinition,
+  metaweblog: metaweblogDefinition,
+  cnblogs: cnblogsDefinition,
+  typecho: typechoDefinition,
+  jvue: jvueDefinition,
   yuque: yuqueDefinition,
+  notion: notionDefinition,
+  halo: haloDefinition,
+  telegraph: telegraphDefinition,
+  confluence: confluenceDefinition,
   zhihu: zhihuDefinition,
   csdn: csdnDefinition,
   juejin: juejinDefinition,
+  jianshu: jianshuDefinition,
+  wechat: wechatDefinition,
+  "halo-web": haloWebDefinition,
+  bilibili: bilibiliDefinition,
+  xiaohongshu: xiaohongshuDefinition,
   github: githubDefinition,
   gitlab: gitlabDefinition,
   "local-filesystem": localFilesystemDefinition
 };
-var providerDisplayOrder = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab", "local-filesystem"];
+var providerDisplayOrder = [
+  "wordpress",
+  "wordpress-com",
+  "metaweblog",
+  "cnblogs",
+  "typecho",
+  "jvue",
+  "yuque",
+  "notion",
+  "halo",
+  "telegraph",
+  "confluence",
+  "zhihu",
+  "csdn",
+  "juejin",
+  "jianshu",
+  "wechat",
+  "halo-web",
+  "bilibili",
+  "xiaohongshu",
+  "github",
+  "gitlab",
+  "local-filesystem"
+];
 function getProviderDefinitions() {
-  return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
+  return providerDisplayOrder.map(
+    (providerId) => providerDefinitionsById[providerId]
+  );
 }
 function getProviderDefinition(providerId) {
   return providerDefinitionsById[providerId];
@@ -37355,7 +38739,9 @@ var DEFAULT_SETTINGS = {
   llm: { ...DEFAULT_LLM_SETTINGS }
 };
 function getRecord(records, notePath, targetId) {
-  return records.find((record) => record.notePath === notePath && record.targetId === targetId);
+  return records.find(
+    (record) => record.notePath === notePath && record.targetId === targetId
+  );
 }
 function upsertRecord(records, nextRecord) {
   const existingIndex = records.findIndex(
@@ -37371,18 +38757,56 @@ function upsertRecord(records, nextRecord) {
 function cloneTarget(target) {
   return JSON.parse(JSON.stringify(target));
 }
-function normalizeTarget(target) {
+function normalizeTarget2(target) {
   switch (target.provider) {
     case "wordpress":
       return getProviderDefinition("wordpress").normalizeTarget(target);
+    case "wordpress-com":
+      return getProviderDefinition("wordpress-com").normalizeTarget(
+        target
+      );
+    case "metaweblog":
+      return getProviderDefinition("metaweblog").normalizeTarget(
+        target
+      );
+    case "cnblogs":
+      return getProviderDefinition("cnblogs").normalizeTarget(
+        target
+      );
+    case "typecho":
+      return getProviderDefinition("typecho").normalizeTarget(
+        target
+      );
+    case "jvue":
+      return getProviderDefinition("jvue").normalizeTarget(
+        target
+      );
     case "yuque":
       return getProviderDefinition("yuque").normalizeTarget(target);
+    case "notion":
+      return getProviderDefinition("notion").normalizeTarget(target);
+    case "halo":
+      return getProviderDefinition("halo").normalizeTarget(target);
+    case "telegraph":
+      return getProviderDefinition("telegraph").normalizeTarget(target);
+    case "confluence":
+      return getProviderDefinition("confluence").normalizeTarget(target);
     case "zhihu":
       return getProviderDefinition("zhihu").normalizeTarget(target);
     case "csdn":
       return getProviderDefinition("csdn").normalizeTarget(target);
     case "juejin":
       return getProviderDefinition("juejin").normalizeTarget(target);
+    case "jianshu":
+      return getProviderDefinition("jianshu").normalizeTarget(target);
+    case "wechat":
+      return getProviderDefinition("wechat").normalizeTarget(target);
+    case "halo-web":
+      return getProviderDefinition("halo-web").normalizeTarget(target);
+    case "bilibili":
+      return getProviderDefinition("bilibili").normalizeTarget(target);
+    case "xiaohongshu":
+      return getProviderDefinition("xiaohongshu").normalizeTarget(target);
     case "github":
       return getProviderDefinition("github").normalizeTarget(target);
     case "gitlab":
@@ -37496,8 +38920,8 @@ function buildNormalPublishSessionState(note, targets) {
 }
 
 // src/core/note.ts
-var import_obsidian11 = require("obsidian");
-var import_node_crypto7 = require("node:crypto");
+var import_obsidian14 = require("obsidian");
+var import_node_crypto9 = require("node:crypto");
 var import_node_path = require("node:path");
 
 // src/core/markdown.ts
@@ -37611,7 +39035,7 @@ function resolveAsset(app, file, reference) {
     };
   }
   const resolved = app.metadataCache.getFirstLinkpathDest(reference.rawTarget, file.path);
-  if (!(resolved instanceof import_obsidian11.TFile)) {
+  if (!(resolved instanceof import_obsidian14.TFile)) {
     return {
       unresolved: {
         reference,
@@ -37671,7 +39095,7 @@ async function extractPublishableNote(app, file) {
   };
 }
 function computeContentHash(note) {
-  return (0, import_node_crypto7.createHash)("sha256").update(
+  return (0, import_node_crypto9.createHash)("sha256").update(
     JSON.stringify({
       markdown: note.markdown,
       frontmatter: note.frontmatter,
@@ -37961,7 +39385,7 @@ var PublishWorkflow = class {
 };
 
 // src/i18n/index.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 
 // src/i18n/locales.ts
 function normalizeLocale(input) {
@@ -37998,7 +39422,7 @@ function createI18n(localeInput) {
   };
 }
 function createI18nFromObsidianLanguage() {
-  return createI18n((0, import_obsidian12.getLanguage)());
+  return createI18n((0, import_obsidian15.getLanguage)());
 }
 
 // src/providers/registry.ts
@@ -38021,10 +39445,24 @@ var ProviderRegistry = class {
 // src/types.ts
 var SUPPORTED_PROVIDER_IDS = [
   "wordpress",
+  "wordpress-com",
+  "metaweblog",
+  "cnblogs",
+  "typecho",
+  "jvue",
   "yuque",
+  "notion",
+  "halo",
+  "telegraph",
+  "confluence",
   "zhihu",
   "csdn",
   "juejin",
+  "jianshu",
+  "wechat",
+  "halo-web",
+  "bilibili",
+  "xiaohongshu",
   "github",
   "gitlab",
   "local-filesystem"
@@ -38034,8 +39472,8 @@ function isProviderId(value) {
 }
 
 // src/ui/PublishTargetModal.ts
-var import_obsidian13 = require("obsidian");
-var PublishTargetModal = class extends import_obsidian13.SuggestModal {
+var import_obsidian16 = require("obsidian");
+var PublishTargetModal = class extends import_obsidian16.SuggestModal {
   constructor(app, targets, onChooseTarget) {
     super(app);
     this.targets = targets;
@@ -38061,7 +39499,7 @@ var PublishTargetModal = class extends import_obsidian13.SuggestModal {
 };
 
 // src/ui/UltimatePublisherSettingTab.ts
-var import_obsidian15 = require("obsidian");
+var import_obsidian18 = require("obsidian");
 
 // src/ui/settings/renderSettingsRoot.tsx
 var import_client = __toESM(require_client());
@@ -38088,6 +39526,41 @@ var WEB_PROVIDER_DESCRIPTORS = {
     loginUrl: "https://juejin.cn/login",
     cookieDomain: "juejin.cn",
     authCookieNames: ["sessionid", "sessionid_ss"]
+  },
+  jianshu: {
+    provider: "jianshu",
+    displayName: "Jianshu",
+    loginUrl: "https://www.jianshu.com/sign_in",
+    cookieDomain: "jianshu.com",
+    authCookieNames: ["remember_user_token"]
+  },
+  wechat: {
+    provider: "wechat",
+    displayName: "WeChat Official Account",
+    loginUrl: "https://mp.weixin.qq.com/",
+    cookieDomain: "mp.weixin.qq.com",
+    authCookieNames: ["slave_sid", "slave_user"]
+  },
+  "halo-web": {
+    provider: "halo-web",
+    displayName: "Halo Web",
+    loginUrl: "https://halo.example.com/console/login",
+    cookieDomain: "halo.example.com",
+    authCookieNames: ["SESSION", "halo_session"]
+  },
+  bilibili: {
+    provider: "bilibili",
+    displayName: "Bilibili",
+    loginUrl: "https://passport.bilibili.com/login",
+    cookieDomain: "bilibili.com",
+    authCookieNames: ["SESSDATA", "bili_jct"]
+  },
+  xiaohongshu: {
+    provider: "xiaohongshu",
+    displayName: "Xiaohongshu",
+    loginUrl: "https://www.xiaohongshu.com/login",
+    cookieDomain: "xiaohongshu.com",
+    authCookieNames: ["web_session"]
   }
 };
 function getWebProviderDescriptor(provider) {
@@ -38226,7 +39699,7 @@ var DesktopWebAuthService = class {
 };
 
 // src/ui/settings/EditTargetModal.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/ui/settings/providerCatalog.ts
 var PROVIDER_CATALOG_PRESENTATION = [
@@ -38240,6 +39713,51 @@ var PROVIDER_CATALOG_PRESENTATION = [
     icon: "WP"
   },
   {
+    id: "wordpress-com",
+    descriptionKey: "settings.providers.wordpress-com.description",
+    descriptionFallback: {
+      en: "Publish posts to WordPress.com-compatible XML-RPC endpoints.",
+      "zh-CN": "\u901A\u8FC7\u517C\u5BB9 WordPress.com \u7684 XML-RPC endpoint \u53D1\u5E03\u6587\u7AE0\u3002"
+    },
+    icon: "WC"
+  },
+  {
+    id: "metaweblog",
+    descriptionKey: "settings.providers.metaweblog.description",
+    descriptionFallback: {
+      en: "Generic MetaWeblog XML-RPC publishing for compatible blogs.",
+      "zh-CN": "\u901A\u8FC7\u901A\u7528 MetaWeblog XML-RPC \u534F\u8BAE\u53D1\u5E03\u5230\u517C\u5BB9\u535A\u5BA2\u3002"
+    },
+    icon: "MW"
+  },
+  {
+    id: "cnblogs",
+    descriptionKey: "settings.providers.cnblogs.description",
+    descriptionFallback: {
+      en: "Publish articles to CNBlogs through its XML-RPC endpoint.",
+      "zh-CN": "\u901A\u8FC7\u535A\u5BA2\u56ED XML-RPC endpoint \u53D1\u5E03\u6587\u7AE0\u3002"
+    },
+    icon: "CN"
+  },
+  {
+    id: "typecho",
+    descriptionKey: "settings.providers.typecho.description",
+    descriptionFallback: {
+      en: "Publish posts to Typecho XML-RPC compatible sites.",
+      "zh-CN": "\u53D1\u5E03\u5230\u517C\u5BB9 Typecho XML-RPC \u7684\u7AD9\u70B9\u3002"
+    },
+    icon: "TY"
+  },
+  {
+    id: "jvue",
+    descriptionKey: "settings.providers.jvue.description",
+    descriptionFallback: {
+      en: "Publish posts to Jvue-compatible XML-RPC blogs.",
+      "zh-CN": "\u53D1\u5E03\u5230\u517C\u5BB9 Jvue XML-RPC \u7684\u535A\u5BA2\u3002"
+    },
+    icon: "JV"
+  },
+  {
     id: "yuque",
     descriptionKey: "settings.providers.yuque.description",
     descriptionFallback: {
@@ -38247,6 +39765,42 @@ var PROVIDER_CATALOG_PRESENTATION = [
       "zh-CN": "\u4F7F\u7528 Token \u5411 Yuque \u77E5\u8BC6\u5E93\u53D1\u5E03\u5185\u5BB9\u3002"
     },
     icon: "YQ"
+  },
+  {
+    id: "notion",
+    descriptionKey: "settings.providers.notion.description",
+    descriptionFallback: {
+      en: "Publish pages to Notion through the official API.",
+      "zh-CN": "\u901A\u8FC7\u5B98\u65B9 API \u5C06\u9875\u9762\u53D1\u5E03\u5230 Notion\u3002"
+    },
+    icon: "NO"
+  },
+  {
+    id: "halo",
+    descriptionKey: "settings.providers.halo.description",
+    descriptionFallback: {
+      en: "Publish Markdown posts to Halo through its API.",
+      "zh-CN": "\u901A\u8FC7 Halo API \u53D1\u5E03 Markdown \u6587\u7AE0\u3002"
+    },
+    icon: "HA"
+  },
+  {
+    id: "telegraph",
+    descriptionKey: "settings.providers.telegraph.description",
+    descriptionFallback: {
+      en: "Publish lightweight pages to Telegraph.",
+      "zh-CN": "\u5C06\u8F7B\u91CF\u9875\u9762\u53D1\u5E03\u5230 Telegraph\u3002"
+    },
+    icon: "TG"
+  },
+  {
+    id: "confluence",
+    descriptionKey: "settings.providers.confluence.description",
+    descriptionFallback: {
+      en: "Publish pages to Confluence spaces with API token auth.",
+      "zh-CN": "\u4F7F\u7528 API Token \u5C06\u9875\u9762\u53D1\u5E03\u5230 Confluence \u7A7A\u95F4\u3002"
+    },
+    icon: "CF"
   },
   {
     id: "zhihu",
@@ -38274,6 +39828,51 @@ var PROVIDER_CATALOG_PRESENTATION = [
       "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u684C\u9762\u7F51\u9875\u53D1\u5E03\u5230 Juejin \u6587\u7AE0\u3002"
     },
     icon: "JJ"
+  },
+  {
+    id: "jianshu",
+    descriptionKey: "settings.providers.jianshu.description",
+    descriptionFallback: {
+      en: "Cookie-based web publishing to Jianshu articles.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u7F51\u9875\u63A5\u53E3\u53D1\u5E03\u5230\u7B80\u4E66\u6587\u7AE0\u3002"
+    },
+    icon: "JS"
+  },
+  {
+    id: "wechat",
+    descriptionKey: "settings.providers.wechat.description",
+    descriptionFallback: {
+      en: "Cookie-based web publishing to WeChat Official Account drafts.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u7F51\u9875\u63A5\u53E3\u53D1\u5E03\u5230\u5FAE\u4FE1\u516C\u4F17\u53F7\u8349\u7A3F\u3002"
+    },
+    icon: "WX"
+  },
+  {
+    id: "halo-web",
+    descriptionKey: "settings.providers.halo-web.description",
+    descriptionFallback: {
+      en: "Cookie-based Halo console publishing for web-auth deployments.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7 Halo \u63A7\u5236\u53F0\u7F51\u9875\u63A5\u53E3\u53D1\u5E03\u5185\u5BB9\u3002"
+    },
+    icon: "HW"
+  },
+  {
+    id: "bilibili",
+    descriptionKey: "settings.providers.bilibili.description",
+    descriptionFallback: {
+      en: "Cookie-based web publishing to Bilibili articles.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u7F51\u9875\u63A5\u53E3\u53D1\u5E03\u5230 Bilibili \u4E13\u680F\u3002"
+    },
+    icon: "BL"
+  },
+  {
+    id: "xiaohongshu",
+    descriptionKey: "settings.providers.xiaohongshu.description",
+    descriptionFallback: {
+      en: "Cookie-based web publishing to Xiaohongshu notes without arbitrary script injection.",
+      "zh-CN": "\u4F7F\u7528 Cookie\uFF0C\u901A\u8FC7\u53D7\u63A7\u7F51\u9875\u63A5\u53E3\u53D1\u5E03\u5230\u5C0F\u7EA2\u4E66\u7B14\u8BB0\uFF0C\u4E0D\u5F15\u5165\u4EFB\u610F\u811A\u672C\u6267\u884C\u3002"
+    },
+    icon: "XH"
   },
   {
     id: "github",
@@ -38324,7 +39923,9 @@ function buildProviderCatalogSeed() {
   return getProviderDefinitions().map((definition) => {
     const presentation = presentationById.get(definition.id);
     if (!presentation) {
-      throw new Error(`Missing provider catalog presentation config for ${definition.id}`);
+      throw new Error(
+        `Missing provider catalog presentation config for ${definition.id}`
+      );
     }
     return {
       id: definition.id,
@@ -38342,13 +39943,19 @@ function localizeProviderCatalogEntry(entry, i18n) {
     id: entry.id,
     category: entry.category,
     name: entry.name,
-    description: resolveTranslation2(i18n, entry.descriptionKey, entry.descriptionFallback),
+    description: resolveTranslation2(
+      i18n,
+      entry.descriptionKey,
+      entry.descriptionFallback
+    ),
     icon: entry.icon,
     createTarget: entry.createTarget
   };
 }
 function getProviderCatalog(i18n = DEFAULT_I18N) {
-  return buildProviderCatalogSeed().map((entry) => localizeProviderCatalogEntry(entry, i18n));
+  return buildProviderCatalogSeed().map(
+    (entry) => localizeProviderCatalogEntry(entry, i18n)
+  );
 }
 function getProviderCatalogEntry(providerId, i18n = DEFAULT_I18N) {
   return getProviderCatalog(i18n).find((entry) => entry.id === providerId);
@@ -38375,7 +39982,16 @@ function applyFieldValue(target, key, value) {
 
 // src/ui/settings/webAuthTargetActions.ts
 function isWebAuthTarget(target) {
-  return target.provider === "zhihu" || target.provider === "csdn" || target.provider === "juejin";
+  return [
+    "zhihu",
+    "csdn",
+    "juejin",
+    "jianshu",
+    "wechat",
+    "halo-web",
+    "bilibili",
+    "xiaohongshu"
+  ].includes(target.provider);
 }
 async function authorizeWebAuthTarget(target, authorizer, loadAccountSummary) {
   const authResult = await authorizer.authorize(target.provider);
@@ -38417,7 +40033,7 @@ function clearWebAuthTarget(target) {
 }
 
 // src/ui/settings/EditTargetModal.ts
-var EditTargetModal = class extends import_obsidian14.Modal {
+var EditTargetModal = class extends import_obsidian17.Modal {
   constructor(app, options) {
     super(app);
     this.options = options;
@@ -38437,7 +40053,7 @@ var EditTargetModal = class extends import_obsidian14.Modal {
       text: this.options.mode === "create" ? i18n.t("settings.modal.title.addTarget", { provider: providerName }) : i18n.t("settings.modal.title.editTarget", { provider: providerName })
     });
     for (const field of getModalFieldDefinitions(this.draft, i18n)) {
-      const setting = new import_obsidian14.Setting(contentEl).setName(field.label);
+      const setting = new import_obsidian17.Setting(contentEl).setName(field.label);
       if (field.description) {
         setting.setDesc(field.description);
       }
@@ -39198,7 +40814,7 @@ function mountSettingsView(containerEl, options) {
     }
     new EditTargetModal(options.plugin.app, {
       mode: "edit",
-      target: normalizeTarget(cloneTarget(currentTarget)),
+      target: normalizeTarget2(cloneTarget(currentTarget)),
       onAuthorizeDraft: async (target) => {
         if (!isWebAuthTarget(target)) {
           return target;
@@ -39264,7 +40880,7 @@ function render(root, props) {
 }
 
 // src/ui/UltimatePublisherSettingTab.ts
-var UltimatePublisherSettingTab = class extends import_obsidian15.PluginSettingTab {
+var UltimatePublisherSettingTab = class extends import_obsidian18.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
@@ -39284,7 +40900,7 @@ var UltimatePublisherSettingTab = class extends import_obsidian15.PluginSettingT
 };
 
 // src/ui/modals/BatchPublishModal.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian19 = require("obsidian");
 
 // src/core/batchPublish/state.ts
 function cloneStringList3(values) {
@@ -39941,7 +41557,7 @@ var VALIDATION_MESSAGE_KEY_BY_TEXT = {
   "Juejin publish requires a categoryId.": "publish.batch.validation.juejin.categoryIdRequired",
   "Juejin publish requires at least one tagId.": "publish.batch.validation.juejin.tagIdsRequired"
 };
-var BatchPublishModal = class extends import_obsidian16.Modal {
+var BatchPublishModal = class extends import_obsidian19.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote) {
     super(plugin.app);
     this.plugin = plugin;
@@ -40444,7 +42060,7 @@ var BatchPublishModal = class extends import_obsidian16.Modal {
     }
     const selectedTargets = this.getSelectedTargets();
     if (selectedTargets.length === 0) {
-      new import_obsidian16.Notice(i18n.t("notice.batch.selectOne"), 6e3);
+      new import_obsidian19.Notice(i18n.t("notice.batch.selectOne"), 6e3);
       return;
     }
     const validationErrors = selectedTargets.reduce((acc, target) => {
@@ -40468,7 +42084,7 @@ var BatchPublishModal = class extends import_obsidian16.Modal {
     };
     this.requestRender();
     if (hasValidationError) {
-      new import_obsidian16.Notice(i18n.t("notice.batch.invalidDraft"), 8e3);
+      new import_obsidian19.Notice(i18n.t("notice.batch.invalidDraft"), 8e3);
       return;
     }
     this.isPublishing = true;
@@ -40495,7 +42111,7 @@ var BatchPublishModal = class extends import_obsidian16.Modal {
           }
         };
       }
-      new import_obsidian16.Notice(
+      new import_obsidian19.Notice(
         i18n.t("notice.batch.finished", {
           successCount: result.successCount,
           failureCount: result.failureCount
@@ -40514,7 +42130,7 @@ var BatchPublishModal = class extends import_obsidian16.Modal {
           }
         };
       }
-      new import_obsidian16.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
+      new import_obsidian19.Notice(i18n.t("notice.batch.failed", { error: this.fatalErrorMessage }), 8e3);
     } finally {
       this.isPublishing = false;
       this.requestRender();
@@ -40557,7 +42173,7 @@ var BatchPublishModal = class extends import_obsidian16.Modal {
 };
 
 // src/ui/modals/JuejinQuickPublishMetadataModal.ts
-var import_obsidian17 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 function cloneDraft(draft) {
   return {
     ...draft,
@@ -40587,7 +42203,7 @@ function readStringArray2(value) {
 function normalizeOptionLabel2(value) {
   return value.trim().toLocaleLowerCase();
 }
-var JuejinQuickPublishMetadataModal = class extends import_obsidian17.Modal {
+var JuejinQuickPublishMetadataModal = class extends import_obsidian20.Modal {
   constructor(app, target, note, initialDraft, providerRegistry = new ProviderRegistry(app)) {
     super(app);
     this.target = target;
@@ -40771,13 +42387,13 @@ var JuejinQuickPublishMetadataModal = class extends import_obsidian17.Modal {
 };
 
 // src/ui/modals/NormalPublishModal.ts
-var import_obsidian23 = require("obsidian");
+var import_obsidian26 = require("obsidian");
 
 // src/core/llm/service.ts
-var import_obsidian22 = require("obsidian");
+var import_obsidian25 = require("obsidian");
 
 // src/core/llm/providers/anthropicProvider.ts
-var import_obsidian18 = require("obsidian");
+var import_obsidian21 = require("obsidian");
 
 // src/core/llm/types.ts
 var LlmHttpError = class extends Error {
@@ -40789,7 +42405,7 @@ var LlmHttpError = class extends Error {
 
 // src/core/llm/providers/anthropicProvider.ts
 var AnthropicLlmProvider = class {
-  constructor(request = import_obsidian18.requestUrl) {
+  constructor(request = import_obsidian21.requestUrl) {
     this.request = request;
     this.vendor = "anthropic";
   }
@@ -40828,9 +42444,9 @@ var AnthropicLlmProvider = class {
 };
 
 // src/core/llm/providers/geminiProvider.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian22 = require("obsidian");
 var GeminiLlmProvider = class {
-  constructor(request = import_obsidian19.requestUrl) {
+  constructor(request = import_obsidian22.requestUrl) {
     this.request = request;
     this.vendor = "gemini";
   }
@@ -40868,7 +42484,7 @@ var GeminiLlmProvider = class {
 };
 
 // src/core/llm/providers/openaiProvider.ts
-var import_obsidian20 = require("obsidian");
+var import_obsidian23 = require("obsidian");
 function resolveBaseUrl(endpointOverride) {
   const base = (endpointOverride || "https://api.openai.com/v1").replace(/\/+$/, "");
   return `${base}/responses`;
@@ -40881,7 +42497,7 @@ function extractResponsesText(payload) {
   return responsePayload.output?.flatMap((item) => item.content ?? []).filter((item) => item.type === "output_text" && typeof item.text === "string").map((item) => item.text ?? "").join("").trim() ?? "";
 }
 var OpenAiLlmProvider = class {
-  constructor(request = import_obsidian20.requestUrl) {
+  constructor(request = import_obsidian23.requestUrl) {
     this.request = request;
     this.vendor = "openai";
   }
@@ -40926,7 +42542,7 @@ var OpenAiLlmProvider = class {
 };
 
 // src/core/llm/providers/openaiCompatibleProvider.ts
-var import_obsidian21 = require("obsidian");
+var import_obsidian24 = require("obsidian");
 function resolveChatCompletionsUrl(endpointOverride) {
   const base = (endpointOverride || "https://api.openai.com/v1/chat/completions").replace(/\/+$/, "");
   return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
@@ -40947,7 +42563,7 @@ function extractChatCompletionText(payload) {
   return "";
 }
 var OpenAiCompatibleLlmProvider = class {
-  constructor(request = import_obsidian21.requestUrl) {
+  constructor(request = import_obsidian24.requestUrl) {
     this.request = request;
     this.vendor = "openai-compatible";
   }
@@ -41039,7 +42655,7 @@ function mapLlmError(error) {
   return error instanceof Error ? error : new Error(String(error));
 }
 var LlmService = class {
-  constructor(request = import_obsidian22.requestUrl) {
+  constructor(request = import_obsidian25.requestUrl) {
     this.openai = new OpenAiLlmProvider(request);
     this.openaiCompatible = new OpenAiCompatibleLlmProvider(request);
     this.anthropic = new AnthropicLlmProvider(request);
@@ -41204,7 +42820,7 @@ function deriveNoteTargetSummaries(settings, notePath) {
 // src/ui/modals/NormalPublishModal.ts
 var NORMAL_PUBLISH_MODAL_FRAME_CLASS = "ultimate-publisher-normal-modal-frame";
 var NORMAL_PUBLISH_MODAL_CONTAINER_CLASS = "ultimate-publisher-normal-modal-container";
-var NormalPublishModal = class extends import_obsidian23.Modal {
+var NormalPublishModal = class extends import_obsidian26.Modal {
   constructor(plugin, file, workflow, providerRegistry = new ProviderRegistry(plugin.app), noteLoader = extractPublishableNote, llmService = new LlmService()) {
     super(plugin.app);
     this.plugin = plugin;
@@ -41476,7 +43092,7 @@ var NormalPublishModal = class extends import_obsidian23.Modal {
       const validationError = validateTargetDraft(draft);
       if (validationError) {
         this.setSelectedTargetError(validationError);
-        new import_obsidian23.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
+        new import_obsidian26.Notice(i18n.t("notice.publish.failed", { error: validationError }), 8e3);
         await this.render();
         return;
       }
@@ -41494,7 +43110,7 @@ var NormalPublishModal = class extends import_obsidian23.Modal {
       this.plugin.settings = result.settings;
       await this.plugin.saveSettings();
       const actionLabel = result.action === "update" ? i18n.t("notice.publish.action.updated") : i18n.t("notice.publish.action.published");
-      new import_obsidian23.Notice(
+      new import_obsidian26.Notice(
         i18n.t("notice.publish.succeeded", {
           target: target.name,
           action: actionLabel
@@ -41506,7 +43122,7 @@ var NormalPublishModal = class extends import_obsidian23.Modal {
       await pluginWithFailurePersistence.persistPublishFailureState?.(error);
       const message = error instanceof Error ? error.message : String(error);
       this.setSelectedTargetError(message);
-      new import_obsidian23.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian26.Notice(i18n.t("notice.publish.failed", { error: message }), 8e3);
     } finally {
       this.isPublishing = false;
       await this.render();
@@ -41701,7 +43317,7 @@ var NormalPublishModal = class extends import_obsidian23.Modal {
       if (!target || !target.enabled) {
         const message = i18n.t("publish.shared.error.targetUnavailable");
         this.setSelectedTargetError(message);
-        new import_obsidian23.Notice(message, 6e3);
+        new import_obsidian26.Notice(message, 6e3);
         void this.render();
         return;
       }
@@ -41813,7 +43429,7 @@ function buildQuickPublishChildren(enabledTargets, i18n) {
 }
 
 // src/ui/views/PublisherDashboardView.ts
-var import_obsidian24 = require("obsidian");
+var import_obsidian27 = require("obsidian");
 var PUBLISHER_DASHBOARD_VIEW_TYPE = "ultimate-publisher-dashboard";
 function formatTimestamp(timestamp, i18n) {
   if (!timestamp) {
@@ -41825,7 +43441,7 @@ function formatTimestamp(timestamp, i18n) {
   }
   return parsed.toLocaleString();
 }
-var PublisherDashboardView = class extends import_obsidian24.ItemView {
+var PublisherDashboardView = class extends import_obsidian27.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -41964,7 +43580,7 @@ function normalizeLoadedTarget(target) {
   if (!isRecordLike(target) || typeof target.id !== "string" || typeof target.name !== "string" || !isProviderId(target.provider)) {
     return null;
   }
-  return normalizeTarget(target);
+  return normalizeTarget2(target);
 }
 function normalizeLoadedRecord(record, targetIds) {
   if (!isRecordLike(record) || typeof record.notePath !== "string" || !isProviderId(record.provider) || typeof record.targetId !== "string" || typeof record.remoteId !== "string" || typeof record.lastPublishedAt !== "string" || typeof record.contentHash !== "string") {
@@ -41983,7 +43599,7 @@ function normalizeLoadedRecord(record, targetIds) {
     contentHash: record.contentHash
   };
 }
-var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
+var UltimatePublisherPlugin = class extends import_obsidian28.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -42016,7 +43632,7 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
       }
     });
     this.registerEvent(this.app.vault.on?.("create", (file) => {
-      if (file instanceof import_obsidian25.TFile) {
+      if (file instanceof import_obsidian28.TFile) {
         void this.handleCreatedMarkdownFile(file);
       }
     }));
@@ -42054,7 +43670,7 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
   async addTarget(target) {
     this.settings = {
       ...this.settings,
-      targets: [...this.settings.targets, normalizeTarget(cloneTarget(target))]
+      targets: [...this.settings.targets, normalizeTarget2(cloneTarget(target))]
     };
     await this.saveSettings();
   }
@@ -42065,9 +43681,9 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
         if (target.id !== targetId) {
           return target;
         }
-        const draft = normalizeTarget(cloneTarget(target));
+        const draft = normalizeTarget2(cloneTarget(target));
         updater(draft);
-        return normalizeTarget(draft);
+        return normalizeTarget2(draft);
       })
     };
     await this.saveSettings();
@@ -42145,7 +43761,7 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(PUBLISHER_DASHBOARD_VIEW_TYPE)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
-      new import_obsidian25.Notice(this.i18n.t("notice.dashboard.openFailed"));
+      new import_obsidian28.Notice(this.i18n.t("notice.dashboard.openFailed"));
       return;
     }
     await leaf.setViewState({
@@ -42160,7 +43776,7 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
   openNormalPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new NormalPublishModal(this, file, this.publishWorkflow).open();
@@ -42168,7 +43784,7 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
   openBatchPublishForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     new BatchPublishModal(this, file, this.publishWorkflow).open();
@@ -42176,12 +43792,12 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
   async runQuickPublishForTarget(targetId) {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const target = this.getEnabledTargets().find((item) => item.id === targetId);
     if (!target) {
-      new import_obsidian25.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
+      new import_obsidian28.Notice(this.i18n.t("notice.quickPublish.targetUnavailable"), 6e3);
       return;
     }
     let quickPublishContext;
@@ -42190,7 +43806,7 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
     } catch (error) {
       await this.persistPublishFailureState(error);
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
     if (quickPublishContext === null) {
@@ -42206,12 +43822,12 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
   async publishActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.noActiveMarkdown"));
       return;
     }
     const targets = this.getEnabledTargets();
     if (targets.length === 0) {
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.noEnabledTargets"));
       return;
     }
     if (targets.length === 1) {
@@ -42225,20 +43841,20 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
   async insertPublishFrontmatterForActiveNote() {
     const file = this.getActiveMarkdownFile();
     if (!file) {
-      new import_obsidian25.Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
+      new import_obsidian28.Notice(this.i18n.t("notice.frontmatter.noActiveMarkdown"));
       return;
     }
     const result = await this.insertPublishFrontmatterIfNeeded(file);
     if (result === "skipped-existing") {
-      new import_obsidian25.Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
+      new import_obsidian28.Notice(this.i18n.t("notice.frontmatter.skippedExisting"));
       return;
     }
     if (result === "inserted") {
-      new import_obsidian25.Notice(this.i18n.t("notice.frontmatter.inserted"));
+      new import_obsidian28.Notice(this.i18n.t("notice.frontmatter.inserted"));
     }
   }
   async handleCreatedMarkdownFile(file) {
-    if (!(file instanceof import_obsidian25.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian28.TFile) || file.extension !== "md") {
       return;
     }
     const automationSettings = normalizeFrontmatterAutomationSettings(this.settings.frontmatterAutomation);
@@ -42332,15 +43948,15 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
     }
   }
   getActiveMarkdownFile() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian25.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian28.MarkdownView);
     const file = view?.file ?? this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian25.TFile) || file.extension !== "md") {
+    if (!(file instanceof import_obsidian28.TFile) || file.extension !== "md") {
       return null;
     }
     return file;
   }
   showPublisherMenu(items, position) {
-    const menu = new import_obsidian25.Menu();
+    const menu = new import_obsidian28.Menu();
     menu.setUseNativeMenu(false);
     for (const item of items) {
       menu.addItem((menuItem) => {
@@ -42463,17 +44079,17 @@ var UltimatePublisherPlugin = class extends import_obsidian25.Plugin {
     };
   }
   async publishToTarget(file, target, context) {
-    new import_obsidian25.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
+    new import_obsidian28.Notice(this.i18n.t("notice.publish.started", { note: file.basename, target: target.name }));
     try {
       const result = await this.publishWorkflow.runSingle(file, target, this.settings, context);
       this.settings = result.settings;
       await this.saveSettings();
       const actionLabel = result.action === "update" ? this.i18n.t("notice.publish.action.updated") : this.i18n.t("notice.publish.action.published");
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.succeeded", { target: target.name, action: actionLabel }));
     } catch (error) {
       await this.persistPublishFailureState(error);
       const message = error instanceof Error ? error.message : String(error);
-      new import_obsidian25.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
+      new import_obsidian28.Notice(this.i18n.t("notice.publish.failed", { error: message }), 8e3);
       throw error;
     }
   }

@@ -10,7 +10,7 @@ Publish your Obsidian notes to multiple platforms with one click.
 
 - **One-Click Publishing** - Quickly publish current note to configured platforms
 - **Batch Publishing** - Publish to multiple platforms simultaneously
-- **Multi-Platform Support** - Supports WordPress, Yuque, Zhihu, CSDN, Juejin, GitHub static sites, and GitLab static sites
+- **Multi-Platform Support** - Supports WordPress, WordPress.com, MetaWeblog/XML-RPC blogs, Yuque, Zhihu, CSDN, Juejin, GitHub static sites, and GitLab static sites
 - **Smart Updates** - Automatically detects published articles and supports updates
 - **Publishing History** - Track all publishing records
 - **Custom Configuration** - Independent configuration for each platform
@@ -53,18 +53,18 @@ Publish your Obsidian notes to multiple platforms with one click.
 
 The currently supported providers are:
 
-| Provider | Authentication | Publish/update | Normal publish details | Local image handling |
-| --- | --- | --- | --- | --- |
-| WordPress | REST API endpoint, username, and application password | Posts can be published and updated | Supports slug, excerpt, tags, categories, status, password, and Markdown/HTML output format | Uploads local Obsidian images to WordPress media |
-| Yuque | Yuque base URL, repo, token, and public level | Docs can be published and updated | Supports slug and public/private visibility | Local Obsidian images are not uploaded |
-| Zhihu | Cookie-based web authentication | Articles can be published and updated | Supports optional column selection from target defaults or the normal publish dialog | Local Obsidian images are not uploaded |
-| CSDN | Cookie-based web authentication | Articles can be published and updated | Supports excerpt, tags, and categories | Local Obsidian images are not uploaded |
-| Juejin | Cookie-based web authentication | Articles can be published and updated | Requires a category and at least one tag; supports brief content | Local Obsidian images are not uploaded |
-| GitHub Static Sites | GitHub token, owner/repo, branch, content root, and site generator subtype | Markdown files can be published and updated through the repository contents API | Normal publish metadata is not exposed yet; target settings choose the static-site generator and repository path | Media upload and delete are intentionally unsupported |
-| GitLab Static Sites | GitLab base URL, project path/ID, token, branch, content root, and site generator subtype | Markdown files can be published and updated through the repository repository-files API | Normal publish metadata is not exposed yet; target settings choose the static-site generator and repository path | Media upload and delete are intentionally unsupported |
-| Local Filesystem | Vault-relative output folder | Markdown files can be published, updated, and deleted inside the vault | Normal publish metadata is not exposed; target settings choose the static-site generator and overwrite behavior | Media copy is intentionally unsupported |
+| Provider            | Target type / settings form                                                                                                                                                             | Provider class / definition                                                 | Publish/update                                                                  | Delete / media / normal publish behavior                                                                                                         |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| WordPress           | REST target; settings form captures endpoint, username, application password, default status, and Markdown/HTML output format                                                           | `WordpressProvider`; `wordpressDefinition` (`rest-api`)                     | Posts can be published and updated                                              | Delete supported; local Obsidian images upload to WordPress media; normal publish supports slug, excerpt, tags, categories, status, and password |
+| Yuque               | REST target; settings form captures Yuque base URL, repo, token, and public level                                                                                                       | `YuqueProvider`; `yuqueDefinition` (`rest-api`)                             | Docs can be published and updated                                               | Delete supported; local Obsidian images are blocked; normal publish supports slug and public/private visibility                                  |
+| Zhihu               | Cookie-web target; settings form stays focused on enabled/name/cookie authorization fields                                                                                              | `ZhihuProvider`; `zhihuDefinition` (`cookie-web`)                           | Articles can be published and updated                                           | Delete supported; local Obsidian images are blocked; normal publish can use target default column metadata                                       |
+| CSDN                | Cookie-web target; settings form captures cookie plus default categories/tags                                                                                                           | `CsdnProvider`; `csdnDefinition` (`cookie-web`)                             | Articles can be published and updated                                           | Delete supported; local Obsidian images are blocked; normal publish supports excerpt, tags, and categories                                       |
+| Juejin              | Cookie-web target; settings form captures cookie plus default category/tag IDs and brief content                                                                                        | `JuejinProvider`; `juejinDefinition` (`cookie-web`)                         | Articles can be published and updated                                           | Delete supported; local Obsidian images are blocked; normal publish requires a category and at least one tag and supports brief content          |
+| GitHub Static Sites | Static-site repository target; settings form captures owner/repo, token, branch, content root, generator subtype, commit message template, and optional preview base URL                | `GithubProvider`; `githubDefinition` (`github-static-site`)                 | Markdown files can be published and updated through the repository contents API | Delete is explicitly unsupported; local Obsidian images are blocked before API writes; normal publish is intentionally not exposed               |
+| GitLab Static Sites | Static-site repository target; settings form captures base URL, project path/ID, token, branch, content root, generator subtype, commit message template, and optional preview base URL | `GitlabProvider`; `gitlabDefinition` (`gitlab-static-site`)                 | Markdown files can be published and updated through the repository files API    | Delete is explicitly unsupported; local Obsidian images are blocked before API writes; normal publish is intentionally not exposed               |
+| Local Filesystem    | Local static-site target; settings form captures vault-relative output folder, generator subtype, and overwrite behavior                                                                | `LocalFilesystemProvider`; `localFilesystemDefinition` (`filesystem-local`) | Markdown files can be published, updated, and deleted inside the vault          | Delete supported for vault-relative files; media copy is intentionally unsupported; normal publish is not exposed                                |
 
-Unsupported provider families and empty Marketplace categories are not shown as installable providers. Reference platforms that are still planned, such as Notion, Halo API, MetaWeblog/CNBlogs/Typecho/Jvue, WeChat, Jianshu, Bilibili, and Xiaohongshu, are not shown in Marketplace until a real provider definition and publish/update tests exist.
+Unsupported provider families and empty Marketplace categories are not shown as installable providers. Reference platforms that are still planned, such as Notion, Halo API, WeChat, Jianshu, Bilibili, and Xiaohongshu, are not shown in Marketplace until a real provider definition and publish/update tests exist.
 
 ## ⚙️ Configuration
 
@@ -106,7 +106,6 @@ juejinCategory: Backend
 juejinTags: [Obsidian, Efficiency]
 ---
 ```
-
 
 ## Provider architecture
 

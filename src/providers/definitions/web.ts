@@ -1,8 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { App } from "obsidian";
-import { CsdnTargetConfig, JuejinTargetConfig, ZhihuTargetConfig } from "../../types";
+import {
+  BilibiliTargetConfig,
+  CsdnTargetConfig,
+  HaloWebTargetConfig,
+  JianshuTargetConfig,
+  JuejinTargetConfig,
+  WechatTargetConfig,
+  XiaohongshuTargetConfig,
+  ZhihuTargetConfig,
+} from "../../types";
 import { CsdnProvider } from "../csdnProvider";
 import { JuejinProvider } from "../juejinProvider";
+import {
+  BilibiliProvider,
+  HaloWebProvider,
+  JianshuProvider,
+  WechatProvider,
+  XiaohongshuProvider,
+} from "../webCookieProvider";
 import { ZhihuProvider } from "../zhihuProvider";
 import { cloneStringList, normalizeStringList } from "./shared";
 import {
@@ -11,16 +27,35 @@ import {
   defineSettingsForm,
   splitCommaSeparatedValue,
 } from "./settingsForm";
-import { ProviderDefinition, ProviderNormalPublishDefinition, ProviderSettingsFieldDefinition } from "./types";
+import {
+  ProviderDefinition,
+  ProviderNormalPublishDefinition,
+  ProviderSettingsFieldDefinition,
+} from "./types";
 
 const CSDN_FIELDS: ProviderSettingsFieldDefinition[] = [
-  { key: "defaultCategories", label: "Default categories", description: "Comma-separated category names.", type: "text" },
-  { key: "defaultTags", label: "Default tags", description: "Comma-separated tag names.", type: "text" },
+  {
+    key: "defaultCategories",
+    label: "Default categories",
+    description: "Comma-separated category names.",
+    type: "text",
+  },
+  {
+    key: "defaultTags",
+    label: "Default tags",
+    description: "Comma-separated tag names.",
+    type: "text",
+  },
 ];
 
 const JUEJIN_FIELDS: ProviderSettingsFieldDefinition[] = [
   { key: "defaultCategoryId", label: "Default category ID", type: "text" },
-  { key: "defaultTagIds", label: "Default tag IDs", description: "Comma-separated tag IDs.", type: "text" },
+  {
+    key: "defaultTagIds",
+    label: "Default tag IDs",
+    description: "Comma-separated tag IDs.",
+    type: "text",
+  },
   { key: "defaultBriefContent", label: "Default brief content", type: "text" },
 ];
 
@@ -122,8 +157,14 @@ const csdnNormalPublish: ProviderNormalPublishDefinition<"csdn"> = {
   buildInitialDraft: (note, target) => ({
     provider: "csdn",
     excerpt: note.excerpt,
-    tags: note.tags.length > 0 ? cloneStringList(note.tags) : cloneStringList(target.defaultTags),
-    categories: note.categories.length > 0 ? cloneStringList(note.categories) : cloneStringList(target.defaultCategories),
+    tags:
+      note.tags.length > 0
+        ? cloneStringList(note.tags)
+        : cloneStringList(target.defaultTags),
+    categories:
+      note.categories.length > 0
+        ? cloneStringList(note.categories)
+        : cloneStringList(target.defaultCategories),
   }),
   getManualFallbackFields: () => ["categories", "tags"],
   applyDraftToNote: (note, draft) => ({
@@ -133,6 +174,43 @@ const csdnNormalPublish: ProviderNormalPublishDefinition<"csdn"> = {
     categories: cloneStringList(draft.categories),
   }),
 };
+
+const simpleWebSettingsForm = defineSettingsForm<
+  | JianshuTargetConfig
+  | WechatTargetConfig
+  | BilibiliTargetConfig
+  | XiaohongshuTargetConfig
+>({
+  fields: [...COMMON_FIELDS, ...WEB_AUTH_COMMON_FIELDS],
+  readProviderFieldValue() {
+    return undefined;
+  },
+  applyProviderFieldValue(target) {
+    return target;
+  },
+});
+
+const haloWebSettingsForm = defineSettingsForm<HaloWebTargetConfig>({
+  fields: [
+    ...COMMON_FIELDS,
+    {
+      key: "baseUrl",
+      label: "Base URL",
+      description: "Example: https://halo.example.com",
+      type: "text",
+    },
+    ...WEB_AUTH_COMMON_FIELDS,
+  ],
+  readProviderFieldValue(target, key) {
+    return key === "baseUrl" ? target.baseUrl : undefined;
+  },
+  applyProviderFieldValue(target, key, value) {
+    if (key === "baseUrl") {
+      target.baseUrl = String(value).trim();
+    }
+    return target;
+  },
+});
 
 const juejinNormalPublish: ProviderNormalPublishDefinition<"juejin"> = {
   supportedAiFields: ["title", "briefContent"],
@@ -268,4 +346,154 @@ export const juejinDefinition: ProviderDefinition<"juejin"> = {
   normalPublish: juejinNormalPublish,
   buildInitialDraft: juejinNormalPublish.buildInitialDraft,
   getManualFallbackFields: juejinNormalPublish.getManualFallbackFields,
+};
+
+function createSimpleWebTarget<
+  TProvider extends "jianshu" | "wechat" | "bilibili" | "xiaohongshu",
+>(
+  provider: TProvider,
+  name: string,
+): {
+  id: string;
+  name: string;
+  enabled: boolean;
+  provider: TProvider;
+  cookie: string;
+} {
+  return {
+    id: randomUUID(),
+    name,
+    enabled: true,
+    provider,
+    cookie: "",
+  };
+}
+
+function normalizeSimpleWebTarget<
+  TTarget extends
+    | JianshuTargetConfig
+    | WechatTargetConfig
+    | BilibiliTargetConfig
+    | XiaohongshuTargetConfig,
+>(target: TTarget): TTarget {
+  return {
+    ...target,
+    cookie: target.cookie || "",
+  };
+}
+
+export const jianshuDefinition: ProviderDefinition<"jianshu"> = {
+  id: "jianshu",
+  name: "Jianshu",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true,
+  },
+  createProvider: (app: App) => new JianshuProvider(app),
+  createTarget: () => createSimpleWebTarget("jianshu", "Jianshu"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm:
+    simpleWebSettingsForm as ProviderDefinition<"jianshu">["settingsForm"],
+};
+
+export const wechatDefinition: ProviderDefinition<"wechat"> = {
+  id: "wechat",
+  name: "WeChat Official Account",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true,
+  },
+  createProvider: (app: App) => new WechatProvider(app),
+  createTarget: () =>
+    createSimpleWebTarget("wechat", "WeChat Official Account"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm:
+    simpleWebSettingsForm as ProviderDefinition<"wechat">["settingsForm"],
+};
+
+export const haloWebDefinition: ProviderDefinition<"halo-web"> = {
+  id: "halo-web",
+  name: "Halo Web",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true,
+  },
+  createProvider: (app: App) => new HaloWebProvider(app),
+  createTarget: () => ({
+    id: randomUUID(),
+    name: "Halo Web",
+    enabled: true,
+    provider: "halo-web",
+    cookie: "",
+    baseUrl: "",
+  }),
+  normalizeTarget: (target: HaloWebTargetConfig) => ({
+    ...target,
+    cookie: target.cookie || "",
+    baseUrl: target.baseUrl || "",
+  }),
+  settingsForm: haloWebSettingsForm,
+};
+
+export const bilibiliDefinition: ProviderDefinition<"bilibili"> = {
+  id: "bilibili",
+  name: "Bilibili",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true,
+  },
+  createProvider: (app: App) => new BilibiliProvider(app),
+  createTarget: () => createSimpleWebTarget("bilibili", "Bilibili"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm:
+    simpleWebSettingsForm as ProviderDefinition<"bilibili">["settingsForm"],
+};
+
+export const xiaohongshuDefinition: ProviderDefinition<"xiaohongshu"> = {
+  id: "xiaohongshu",
+  name: "Xiaohongshu",
+  category: "web",
+  family: "cookie-web",
+  capabilities: {
+    publish: true,
+    update: true,
+    delete: false,
+    media: "unsupported",
+    normalPublish: false,
+    quickPublish: true,
+    webAuth: true,
+  },
+  createProvider: (app: App) => new XiaohongshuProvider(app),
+  createTarget: () => createSimpleWebTarget("xiaohongshu", "Xiaohongshu"),
+  normalizeTarget: normalizeSimpleWebTarget,
+  settingsForm:
+    simpleWebSettingsForm as ProviderDefinition<"xiaohongshu">["settingsForm"],
 };

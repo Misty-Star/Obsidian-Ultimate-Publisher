@@ -1,29 +1,86 @@
 import { ProviderId } from "../../types";
 import { yuqueDefinition } from "./common";
+import {
+  confluenceDefinition,
+  haloDefinition,
+  notionDefinition,
+  telegraphDefinition,
+} from "./api";
 import { ProviderDefinitionMap, AnyProviderDefinition } from "./types";
-import { csdnDefinition, juejinDefinition, zhihuDefinition } from "./web";
+import {
+  bilibiliDefinition,
+  csdnDefinition,
+  haloWebDefinition,
+  jianshuDefinition,
+  juejinDefinition,
+  wechatDefinition,
+  xiaohongshuDefinition,
+  zhihuDefinition,
+} from "./web";
 import { wordpressDefinition } from "./wordpress";
+import { cnblogsDefinition, jvueDefinition, metaweblogDefinition, typechoDefinition, wordpressComDefinition } from "./metaweblog";
 import { githubDefinition, gitlabDefinition } from "./staticSite";
 import { localFilesystemDefinition } from "./filesystem";
 
 const providerDefinitionsById = {
   wordpress: wordpressDefinition,
+  "wordpress-com": wordpressComDefinition,
+  metaweblog: metaweblogDefinition,
+  cnblogs: cnblogsDefinition,
+  typecho: typechoDefinition,
+  jvue: jvueDefinition,
   yuque: yuqueDefinition,
+  notion: notionDefinition,
+  halo: haloDefinition,
+  telegraph: telegraphDefinition,
+  confluence: confluenceDefinition,
   zhihu: zhihuDefinition,
   csdn: csdnDefinition,
   juejin: juejinDefinition,
+  jianshu: jianshuDefinition,
+  wechat: wechatDefinition,
+  "halo-web": haloWebDefinition,
+  bilibili: bilibiliDefinition,
+  xiaohongshu: xiaohongshuDefinition,
   github: githubDefinition,
   gitlab: gitlabDefinition,
   "local-filesystem": localFilesystemDefinition,
 } satisfies ProviderDefinitionMap;
 
-const providerDisplayOrder: ProviderId[] = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab", "local-filesystem"];
+const providerDisplayOrder: ProviderId[] = [
+  "wordpress",
+  "wordpress-com",
+  "metaweblog",
+  "cnblogs",
+  "typecho",
+  "jvue",
+  "yuque",
+  "notion",
+  "halo",
+  "telegraph",
+  "confluence",
+  "zhihu",
+  "csdn",
+  "juejin",
+  "jianshu",
+  "wechat",
+  "halo-web",
+  "bilibili",
+  "xiaohongshu",
+  "github",
+  "gitlab",
+  "local-filesystem",
+];
 
 export function getProviderDefinitions(): AnyProviderDefinition[] {
-  return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);
+  return providerDisplayOrder.map(
+    (providerId) => providerDefinitionsById[providerId],
+  );
 }
 
-export function getProviderDefinition<TId extends ProviderId>(providerId: TId): ProviderDefinitionMap[TId] {
+export function getProviderDefinition<TId extends ProviderId>(
+  providerId: TId,
+): ProviderDefinitionMap[TId] {
   return providerDefinitionsById[providerId];
 }
 

@@ -3,6 +3,8 @@ import { PublishableNote } from "../src/core/note";
 import { buildNormalPublishSessionState } from "../src/core/normalPublish/drafts";
 import * as providerDefinitions from "../src/providers/definitions";
 import {
+  createGithubTarget,
+  createGitlabTarget,
   createJuejinTarget,
   createWordpressTarget,
   createZhihuTarget,
@@ -102,6 +104,19 @@ describe("normal publish drafts", () => {
       columnId: "target-column",
       columnTitle: "Demo Column",
     });
+  });
+
+  it("excludes static-site targets from normal publish because they have no provider-specific draft metadata", () => {
+    const state = buildNormalPublishSessionState(createNote(), [
+      { ...createGithubTarget(), id: "gh", enabled: true },
+      { ...createGitlabTarget(), id: "gl", enabled: true },
+      { ...createWordpressTarget(), id: "wp", enabled: true },
+    ]);
+
+    expect(Object.keys(state.targetDrafts)).toEqual(["wp"]);
+    expect(state.remoteOptions).toHaveProperty("wp");
+    expect(state.remoteOptions).not.toHaveProperty("gh");
+    expect(state.remoteOptions).not.toHaveProperty("gl");
   });
 
   it("pre-fills only fields with explicit sources and leaves the rest empty", () => {

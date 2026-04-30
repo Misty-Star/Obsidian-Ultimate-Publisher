@@ -20,10 +20,11 @@ describe("settingsViewModel", () => {
       records: [],
     };
 
-    expect(buildConfiguredTargetCards(settings, getProviderCatalog()).map((item) => item.id)).toEqual([
-      "yuque-1",
-      "wp-1",
-    ]);
+    expect(
+      buildConfiguredTargetCards(settings, getProviderCatalog()).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["yuque-1", "wp-1"]);
   });
 
   it("shows all providers in marketplace order", () => {
@@ -32,12 +33,30 @@ describe("settingsViewModel", () => {
       records: [],
     };
 
-    expect(buildMarketplaceCards(settings, getProviderCatalog()).map((item) => item.id)).toEqual([
+    expect(
+      buildMarketplaceCards(settings, getProviderCatalog()).map(
+        (item) => item.id,
+      ),
+    ).toEqual([
       "wordpress",
+      "wordpress-com",
+      "metaweblog",
+      "cnblogs",
+      "typecho",
+      "jvue",
       "yuque",
+      "notion",
+      "halo",
+      "telegraph",
+      "confluence",
       "zhihu",
       "csdn",
       "juejin",
+      "jianshu",
+      "wechat",
+      "halo-web",
+      "bilibili",
+      "xiaohongshu",
       "github",
       "gitlab",
       "local-filesystem",
@@ -46,16 +65,39 @@ describe("settingsViewModel", () => {
 
   it("builds visible marketplace categories with fixed order", () => {
     expect(
-      buildMarketplaceCategories(getProviderCatalog(), createI18n("zh-CN")).map((item) => item.id)
-    ).toEqual(["common", "github", "gitlab", "filesystem", "wordpress", "web"]);
+      buildMarketplaceCategories(getProviderCatalog(), createI18n("zh-CN")).map(
+        (item) => item.id,
+      ),
+    ).toEqual([
+      "common",
+      "github",
+      "gitlab",
+      "metaweblog",
+      "filesystem",
+      "wordpress",
+      "web",
+    ]);
   });
 
   it("builds cards for the web category", () => {
     const settings: UltimatePublisherSettings = { targets: [], records: [] };
 
     expect(
-      buildMarketplaceCardsForCategory(settings, getProviderCatalog(), "web").map((item) => item.id)
-    ).toEqual(["zhihu", "csdn", "juejin"]);
+      buildMarketplaceCardsForCategory(
+        settings,
+        getProviderCatalog(),
+        "web",
+      ).map((item) => item.id),
+    ).toEqual([
+      "zhihu",
+      "csdn",
+      "juejin",
+      "jianshu",
+      "wechat",
+      "halo-web",
+      "bilibili",
+      "xiaohongshu",
+    ]);
   });
 
   it("filters category cards directly from catalog entries without id lookup coupling", () => {
@@ -79,9 +121,11 @@ describe("settingsViewModel", () => {
       },
     ] as unknown as ReturnType<typeof getProviderCatalog>;
 
-    expect(buildMarketplaceCardsForCategory(settings, catalog, "web").map((item) => item.name)).toEqual([
-      "Yuque Web",
-    ]);
+    expect(
+      buildMarketplaceCardsForCategory(settings, catalog, "web").map(
+        (item) => item.name,
+      ),
+    ).toEqual(["Yuque Web"]);
   });
 
   it("marks marketplace providers as configured when any target uses that provider", () => {
@@ -98,16 +142,13 @@ describe("settingsViewModel", () => {
         id: item.id,
         configured: item.configured,
         configuredCount: item.configuredCount,
-      }))
-    ).toEqual([
-      { id: "wordpress", configured: true, configuredCount: 2 },
-      { id: "yuque", configured: false, configuredCount: 0 },
-      { id: "zhihu", configured: false, configuredCount: 0 },
-      { id: "csdn", configured: false, configuredCount: 0 },
-      { id: "juejin", configured: false, configuredCount: 0 },
-      { id: "github", configured: false, configuredCount: 0 },
-      { id: "gitlab", configured: false, configuredCount: 0 },
-      { id: "local-filesystem", configured: false, configuredCount: 0 },
-    ]);
+      })),
+    ).toEqual(
+      getProviderCatalog().map((entry) => ({
+        id: entry.id,
+        configured: entry.id === "wordpress",
+        configuredCount: entry.id === "wordpress" ? 2 : 0,
+      })),
+    );
   });
 });

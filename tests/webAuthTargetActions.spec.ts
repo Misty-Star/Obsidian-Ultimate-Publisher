@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { createWordpressTarget, createZhihuTarget } from "../src/settings";
+import {
+  createBilibiliTarget,
+  createHaloWebTarget,
+  createJianshuTarget,
+  createWechatTarget,
+  createWordpressTarget,
+  createXiaohongshuTarget,
+  createZhihuTarget,
+} from "../src/settings";
 import {
   authorizeWebAuthTarget,
   clearWebAuthTarget,
@@ -10,6 +18,11 @@ import {
 describe("web auth target actions", () => {
   it("identifies which targets support web auth", () => {
     expect(isWebAuthTarget(createZhihuTarget())).toBe(true);
+    expect(isWebAuthTarget(createJianshuTarget())).toBe(true);
+    expect(isWebAuthTarget(createWechatTarget())).toBe(true);
+    expect(isWebAuthTarget(createHaloWebTarget())).toBe(true);
+    expect(isWebAuthTarget(createBilibiliTarget())).toBe(true);
+    expect(isWebAuthTarget(createXiaohongshuTarget())).toBe(true);
     expect(isWebAuthTarget(createWordpressTarget())).toBe(false);
   });
 
@@ -32,7 +45,7 @@ describe("web auth target actions", () => {
       async () => ({
         accountId: "1001",
         accountName: "demo",
-      })
+      }),
     );
 
     expect(result.cookie).toBe("z_c0=demo");
@@ -53,7 +66,7 @@ describe("web auth target actions", () => {
       async () => ({
         accountId: "1002",
         accountName: "validated",
-      })
+      }),
     );
 
     expect(result.authSource).toBe("manual");

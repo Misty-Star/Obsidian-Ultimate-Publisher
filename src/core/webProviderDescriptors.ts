@@ -1,4 +1,12 @@
-export type WebAuthProviderId = "zhihu" | "csdn" | "juejin";
+export type WebAuthProviderId =
+  | "zhihu"
+  | "csdn"
+  | "juejin"
+  | "jianshu"
+  | "wechat"
+  | "halo-web"
+  | "bilibili"
+  | "xiaohongshu";
 
 export interface WebProviderDescriptor {
   provider: WebAuthProviderId;
@@ -8,7 +16,10 @@ export interface WebProviderDescriptor {
   authCookieNames: string[];
 }
 
-const WEB_PROVIDER_DESCRIPTORS: Record<WebAuthProviderId, WebProviderDescriptor> = {
+const WEB_PROVIDER_DESCRIPTORS: Record<
+  WebAuthProviderId,
+  WebProviderDescriptor
+> = {
   zhihu: {
     provider: "zhihu",
     displayName: "Zhihu",
@@ -30,9 +41,46 @@ const WEB_PROVIDER_DESCRIPTORS: Record<WebAuthProviderId, WebProviderDescriptor>
     cookieDomain: "juejin.cn",
     authCookieNames: ["sessionid", "sessionid_ss"],
   },
+  jianshu: {
+    provider: "jianshu",
+    displayName: "Jianshu",
+    loginUrl: "https://www.jianshu.com/sign_in",
+    cookieDomain: "jianshu.com",
+    authCookieNames: ["remember_user_token"],
+  },
+  wechat: {
+    provider: "wechat",
+    displayName: "WeChat Official Account",
+    loginUrl: "https://mp.weixin.qq.com/",
+    cookieDomain: "mp.weixin.qq.com",
+    authCookieNames: ["slave_sid", "slave_user"],
+  },
+  "halo-web": {
+    provider: "halo-web",
+    displayName: "Halo Web",
+    loginUrl: "https://halo.example.com/console/login",
+    cookieDomain: "halo.example.com",
+    authCookieNames: ["SESSION", "halo_session"],
+  },
+  bilibili: {
+    provider: "bilibili",
+    displayName: "Bilibili",
+    loginUrl: "https://passport.bilibili.com/login",
+    cookieDomain: "bilibili.com",
+    authCookieNames: ["SESSDATA", "bili_jct"],
+  },
+  xiaohongshu: {
+    provider: "xiaohongshu",
+    displayName: "Xiaohongshu",
+    loginUrl: "https://www.xiaohongshu.com/login",
+    cookieDomain: "xiaohongshu.com",
+    authCookieNames: ["web_session"],
+  },
 };
 
-export function getWebProviderDescriptor(provider: WebAuthProviderId): WebProviderDescriptor {
+export function getWebProviderDescriptor(
+  provider: WebAuthProviderId,
+): WebProviderDescriptor {
   return WEB_PROVIDER_DESCRIPTORS[provider];
 }
 

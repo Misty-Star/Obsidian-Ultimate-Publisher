@@ -1,9 +1,23 @@
 export const SUPPORTED_PROVIDER_IDS = [
   "wordpress",
+  "wordpress-com",
+  "metaweblog",
+  "cnblogs",
+  "typecho",
+  "jvue",
   "yuque",
+  "notion",
+  "halo",
+  "telegraph",
+  "confluence",
   "zhihu",
   "csdn",
   "juejin",
+  "jianshu",
+  "wechat",
+  "halo-web",
+  "bilibili",
+  "xiaohongshu",
   "github",
   "gitlab",
   "local-filesystem",
@@ -11,10 +25,13 @@ export const SUPPORTED_PROVIDER_IDS = [
 
 export type ProviderId = (typeof SUPPORTED_PROVIDER_IDS)[number];
 export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web" | "filesystem";
-export type ProviderFamilyId = "rest-api" | "cookie-web" | "github-static-site" | "gitlab-static-site" | "filesystem-local";
+export type ProviderFamilyId = "rest-api" | "xml-rpc" | "cookie-web" | "github-static-site" | "gitlab-static-site" | "filesystem-local";
 
 export function isProviderId(value: unknown): value is ProviderId {
-  return typeof value === "string" && (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(value)
+  );
 }
 
 export type WordpressStatus = "draft" | "publish" | "private" | "pending";
@@ -58,12 +75,56 @@ export interface WordpressTargetConfig extends BaseTargetConfig {
   contentFormat: PublishContentFormat;
 }
 
+export type MetaWeblogProviderId = "wordpress-com" | "metaweblog" | "cnblogs" | "typecho" | "jvue";
+
+export interface MetaWeblogTargetConfig<TProvider extends MetaWeblogProviderId = MetaWeblogProviderId> extends BaseTargetConfig {
+  provider: TProvider;
+  endpoint: string;
+  username: string;
+  appPassword: string;
+  blogId: string;
+  defaultStatus: WordpressStatus;
+  contentFormat: PublishContentFormat;
+}
+
 export interface YuqueTargetConfig extends BaseTargetConfig {
   provider: "yuque";
   baseUrl: string;
   repo: string;
   token: string;
   publicLevel: 0 | 1;
+}
+
+export interface NotionTargetConfig extends BaseTargetConfig {
+  provider: "notion";
+  token: string;
+  databaseId: string;
+  parentPageId: string;
+  notionVersion: string;
+}
+
+export interface HaloTargetConfig extends BaseTargetConfig {
+  provider: "halo";
+  baseUrl: string;
+  token: string;
+  defaultCategory: string;
+  defaultTags: string[];
+  defaultPublish: boolean;
+}
+
+export interface TelegraphTargetConfig extends BaseTargetConfig {
+  provider: "telegraph";
+  accessToken: string;
+  authorName: string;
+}
+
+export interface ConfluenceTargetConfig extends BaseTargetConfig {
+  provider: "confluence";
+  baseUrl: string;
+  username: string;
+  apiToken: string;
+  spaceKey: string;
+  parentId: string;
 }
 
 export interface ZhihuTargetConfig extends WebAuthTargetBase {
@@ -87,7 +148,35 @@ export interface JuejinTargetConfig extends WebAuthTargetBase {
   defaultBriefContent: string;
 }
 
-export type StaticSiteGenerator = "hugo" | "hexo" | "jekyll" | "vuepress" | "vuepress2" | "vitepress" | "quartz";
+export interface JianshuTargetConfig extends WebAuthTargetBase {
+  provider: "jianshu";
+}
+
+export interface WechatTargetConfig extends WebAuthTargetBase {
+  provider: "wechat";
+}
+
+export interface HaloWebTargetConfig extends WebAuthTargetBase {
+  provider: "halo-web";
+  baseUrl: string;
+}
+
+export interface BilibiliTargetConfig extends WebAuthTargetBase {
+  provider: "bilibili";
+}
+
+export interface XiaohongshuTargetConfig extends WebAuthTargetBase {
+  provider: "xiaohongshu";
+}
+
+export type StaticSiteGenerator =
+  | "hugo"
+  | "hexo"
+  | "jekyll"
+  | "vuepress"
+  | "vuepress2"
+  | "vitepress"
+  | "quartz";
 
 export interface GithubTargetConfig extends BaseTargetConfig {
   provider: "github";
@@ -122,10 +211,20 @@ export interface LocalFilesystemTargetConfig extends BaseTargetConfig {
 
 export type PublishTargetConfig =
   | WordpressTargetConfig
+  | MetaWeblogTargetConfig
   | YuqueTargetConfig
+  | NotionTargetConfig
+  | HaloTargetConfig
+  | TelegraphTargetConfig
+  | ConfluenceTargetConfig
   | ZhihuTargetConfig
   | CsdnTargetConfig
   | JuejinTargetConfig
+  | JianshuTargetConfig
+  | WechatTargetConfig
+  | HaloWebTargetConfig
+  | BilibiliTargetConfig
+  | XiaohongshuTargetConfig
   | GithubTargetConfig
   | GitlabTargetConfig
   | LocalFilesystemTargetConfig;

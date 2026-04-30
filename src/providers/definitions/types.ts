@@ -13,26 +13,50 @@ import {
 } from "../../core/normalPublish/types";
 import { Translator } from "../../i18n";
 import {
+  BilibiliTargetConfig,
+  ConfluenceTargetConfig,
   CsdnTargetConfig,
-  JuejinTargetConfig,
   GithubTargetConfig,
   GitlabTargetConfig,
+  HaloTargetConfig,
+  HaloWebTargetConfig,
+  JianshuTargetConfig,
+  JuejinTargetConfig,
   LocalFilesystemTargetConfig,
+  MetaWeblogTargetConfig,
+  NotionTargetConfig,
   ProviderCategory,
   ProviderFamilyId,
   ProviderId,
   PublishTargetConfig,
+  TelegraphTargetConfig,
+  WechatTargetConfig,
   WordpressTargetConfig,
+  XiaohongshuTargetConfig,
   YuqueTargetConfig,
   ZhihuTargetConfig,
 } from "../../types";
 
 export type ProviderTargetById = {
   wordpress: WordpressTargetConfig;
+  "wordpress-com": MetaWeblogTargetConfig<"wordpress-com">;
+  metaweblog: MetaWeblogTargetConfig<"metaweblog">;
+  cnblogs: MetaWeblogTargetConfig<"cnblogs">;
+  typecho: MetaWeblogTargetConfig<"typecho">;
+  jvue: MetaWeblogTargetConfig<"jvue">;
   yuque: YuqueTargetConfig;
+  notion: NotionTargetConfig;
+  halo: HaloTargetConfig;
+  telegraph: TelegraphTargetConfig;
+  confluence: ConfluenceTargetConfig;
   zhihu: ZhihuTargetConfig;
   csdn: CsdnTargetConfig;
   juejin: JuejinTargetConfig;
+  jianshu: JianshuTargetConfig;
+  wechat: WechatTargetConfig;
+  "halo-web": HaloWebTargetConfig;
+  bilibili: BilibiliTargetConfig;
+  xiaohongshu: XiaohongshuTargetConfig;
   github: GithubTargetConfig;
   gitlab: GitlabTargetConfig;
   "local-filesystem": LocalFilesystemTargetConfig;
@@ -40,10 +64,24 @@ export type ProviderTargetById = {
 
 export type ProviderDraftById = {
   wordpress: WordpressPublishDraft;
+  "wordpress-com": WordpressPublishDraft;
+  metaweblog: WordpressPublishDraft;
+  cnblogs: WordpressPublishDraft;
+  typecho: WordpressPublishDraft;
+  jvue: WordpressPublishDraft;
   yuque: YuquePublishDraft;
+  notion: never;
+  halo: never;
+  telegraph: never;
+  confluence: never;
   zhihu: ZhihuPublishDraft;
   csdn: CsdnPublishDraft;
   juejin: JuejinPublishDraft;
+  jianshu: never;
+  wechat: never;
+  "halo-web": never;
+  bilibili: never;
+  xiaohongshu: never;
   github: never;
   gitlab: never;
   "local-filesystem": never;
@@ -76,12 +114,23 @@ export type ProviderSettingsFieldKey =
   | "endpoint"
   | "username"
   | "appPassword"
+  | "blogId"
   | "defaultStatus"
   | "contentFormat"
   | "baseUrl"
   | "repo"
   | "token"
   | "publicLevel"
+  | "databaseId"
+  | "parentPageId"
+  | "notionVersion"
+  | "accessToken"
+  | "authorName"
+  | "defaultCategory"
+  | "defaultPublish"
+  | "apiToken"
+  | "spaceKey"
+  | "parentId"
   | "defaultColumnId"
   | "defaultColumnTitle"
   | "defaultCategories"
@@ -99,7 +148,11 @@ export type ProviderSettingsFieldKey =
   | "localOutputPath"
   | "overwriteExisting";
 
-export type ProviderSettingsFieldType = "toggle" | "text" | "password" | "dropdown";
+export type ProviderSettingsFieldType =
+  | "toggle"
+  | "text"
+  | "password"
+  | "dropdown";
 
 export interface ProviderSettingsFieldOption {
   value: string;
@@ -115,13 +168,26 @@ export interface ProviderSettingsFieldDefinition {
 }
 
 export interface ProviderSettingsForm<TTarget extends PublishTargetConfig> {
-  getFields(target: TTarget, i18n: Translator): ProviderSettingsFieldDefinition[];
-  readFieldValue(target: TTarget, key: ProviderSettingsFieldKey): string | boolean;
-  applyFieldValue(target: TTarget, key: ProviderSettingsFieldKey, value: string | boolean): TTarget;
+  getFields(
+    target: TTarget,
+    i18n: Translator,
+  ): ProviderSettingsFieldDefinition[];
+  readFieldValue(
+    target: TTarget,
+    key: ProviderSettingsFieldKey,
+  ): string | boolean;
+  applyFieldValue(
+    target: TTarget,
+    key: ProviderSettingsFieldKey,
+    value: string | boolean,
+  ): TTarget;
 }
 
 export interface ProviderNormalPublishDefinition<TId extends ProviderId> {
-  buildInitialDraft: (note: PublishableNote, target: ProviderTargetById[TId]) => ProviderDraftById[TId];
+  buildInitialDraft: (
+    note: PublishableNote,
+    target: ProviderTargetById[TId],
+  ) => ProviderDraftById[TId];
   skipOptionsLoad?: boolean;
   getManualFallbackFields?: (target: ProviderTargetById[TId]) => string[];
   supportedAiFields: NormalPublishAiField[];
@@ -129,7 +195,7 @@ export interface ProviderNormalPublishDefinition<TId extends ProviderId> {
   applyDraftToNote?: (
     note: PublishableNote,
     draft: ProviderDraftById[TId],
-    common: CommonPublishDraft
+    common: CommonPublishDraft,
   ) => PublishableNote;
 }
 
@@ -159,8 +225,10 @@ export type ProviderDefinitionMap = {
 export type AnyProviderDefinition = ProviderDefinitionMap[ProviderId];
 
 export function hasNormalPublishDefinition<TId extends ProviderId>(
-  definition: ProviderDefinition<TId>
-): definition is ProviderDefinition<TId> & { normalPublish: ProviderNormalPublishDefinition<TId> } {
+  definition: ProviderDefinition<TId>,
+): definition is ProviderDefinition<TId> & {
+  normalPublish: ProviderNormalPublishDefinition<TId>;
+} {
   return Boolean(definition.normalPublish);
 }
 

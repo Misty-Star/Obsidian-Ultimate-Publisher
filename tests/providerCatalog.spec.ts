@@ -6,10 +6,24 @@ describe("getProviderCatalog", () => {
   it("returns the supported provider definitions", () => {
     expect(getProviderCatalog().map((item) => item.id)).toEqual([
       "wordpress",
+      "wordpress-com",
+      "metaweblog",
+      "cnblogs",
+      "typecho",
+      "jvue",
       "yuque",
+      "notion",
+      "halo",
+      "telegraph",
+      "confluence",
       "zhihu",
       "csdn",
       "juejin",
+      "jianshu",
+      "wechat",
+      "halo-web",
+      "bilibili",
+      "xiaohongshu",
       "github",
       "gitlab",
       "local-filesystem",
@@ -18,13 +32,30 @@ describe("getProviderCatalog", () => {
 
   it("returns provider definitions with shared categories", () => {
     expect(
-      getProviderCatalog().map((item) => ({ id: item.id, category: item.category }))
+      getProviderCatalog().map((item) => ({
+        id: item.id,
+        category: item.category,
+      })),
     ).toEqual([
       { id: "wordpress", category: "wordpress" },
+      { id: "wordpress-com", category: "metaweblog" },
+      { id: "metaweblog", category: "metaweblog" },
+      { id: "cnblogs", category: "metaweblog" },
+      { id: "typecho", category: "metaweblog" },
+      { id: "jvue", category: "metaweblog" },
       { id: "yuque", category: "common" },
+      { id: "notion", category: "common" },
+      { id: "halo", category: "common" },
+      { id: "telegraph", category: "common" },
+      { id: "confluence", category: "common" },
       { id: "zhihu", category: "web" },
       { id: "csdn", category: "web" },
       { id: "juejin", category: "web" },
+      { id: "jianshu", category: "web" },
+      { id: "wechat", category: "web" },
+      { id: "halo-web", category: "web" },
+      { id: "bilibili", category: "web" },
+      { id: "xiaohongshu", category: "web" },
       { id: "github", category: "github" },
       { id: "gitlab", category: "gitlab" },
       { id: "local-filesystem", category: "filesystem" },
@@ -38,12 +69,20 @@ describe("getProviderCatalog", () => {
     const yuque = catalog.find((entry) => entry.id === "yuque");
     const zhihu = catalog.find((entry) => entry.id === "zhihu");
     const juejin = catalog.find((entry) => entry.id === "juejin");
+    const jianshu = catalog.find((entry) => entry.id === "jianshu");
+    const xiaohongshu = catalog.find((entry) => entry.id === "xiaohongshu");
 
     expect(wordpress?.name).toBe("WordPress");
-    expect(wordpress?.description).toBe("使用应用密码认证，通过 REST API 发布内容。");
+    expect(wordpress?.description).toBe(
+      "使用应用密码认证，通过 REST API 发布内容。",
+    );
     expect(yuque?.description).toContain("Yuque");
     expect(zhihu?.description).toContain("Zhihu");
     expect(juejin?.description).toContain("Juejin");
+    expect(jianshu?.name).toBe("Jianshu");
+    expect(jianshu?.description).toContain("简书");
+    expect(xiaohongshu?.name).toBe("Xiaohongshu");
+    expect(xiaohongshu?.description).toContain("小红书");
   });
 
   it("uses locale fallback when translator returns en fallback for missing locale key", () => {
@@ -57,7 +96,9 @@ describe("getProviderCatalog", () => {
       },
     };
 
-    const yuque = getProviderCatalog(zhWithEnFallback).find((entry) => entry.id === "yuque");
+    const yuque = getProviderCatalog(zhWithEnFallback).find(
+      (entry) => entry.id === "yuque",
+    );
     expect(yuque?.description).toBe("使用 Token 向 Yuque 知识库发布内容。");
   });
 });

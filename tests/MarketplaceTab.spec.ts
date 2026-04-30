@@ -11,26 +11,39 @@ vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
   return {
     ...actual,
-    useMemo: <T,>(factory: () => T): T => factory(),
+    useMemo: <T>(factory: () => T): T => factory(),
     useEffect: (effect: () => void): void => {
       effect();
     },
-    useState: <T,>(initial: T | (() => T)): [T, (next: T | ((previous: T) => T)) => void] => {
+    useState: <T>(
+      initial: T | (() => T),
+    ): [T, (next: T | ((previous: T) => T)) => void] => {
       if (hookState === undefined) {
-        hookState = (typeof initial === "function" ? (initial as () => T)() : initial) as ProviderCategory | null;
+        hookState = (
+          typeof initial === "function" ? (initial as () => T)() : initial
+        ) as ProviderCategory | null;
       }
       const setState = (next: T | ((previous: T) => T)): void => {
         const previous = hookState as T;
-        hookState = (typeof next === "function" ? (next as (value: T) => T)(previous) : next) as
-          | ProviderCategory
-          | null;
+        hookState = (
+          typeof next === "function"
+            ? (next as (value: T) => T)(previous)
+            : next
+        ) as ProviderCategory | null;
       };
       return [hookState as T, setState];
     },
   };
 });
 
-type RenderNode = string | number | null | { type: unknown; props: { [key: string]: unknown; children: RenderNode[] } };
+type RenderNode =
+  | string
+  | number
+  | null
+  | {
+      type: unknown;
+      props: { [key: string]: unknown; children: RenderNode[] };
+    };
 
 function expandElement(node: unknown): RenderNode {
   if (node === null || node === undefined || typeof node === "boolean") {
@@ -42,7 +55,11 @@ function expandElement(node: unknown): RenderNode {
   if (Array.isArray(node)) {
     return {
       type: "fragment",
-      props: { children: node.map((item) => expandElement(item)).filter((item) => item !== null) as RenderNode[] },
+      props: {
+        children: node
+          .map((item) => expandElement(item))
+          .filter((item) => item !== null) as RenderNode[],
+      },
     };
   }
   if (!React.isValidElement(node)) {
@@ -76,7 +93,10 @@ function collectText(node: RenderNode): string {
   return node.props.children.map((child) => collectText(child)).join("");
 }
 
-function findButtonByText(node: RenderNode, text: string): { onClick: () => void } {
+function findButtonByText(
+  node: RenderNode,
+  text: string,
+): { onClick: () => void } {
   if (node === null || typeof node === "string" || typeof node === "number") {
     throw new Error(`Button "${text}" not found.`);
   }
@@ -84,7 +104,11 @@ function findButtonByText(node: RenderNode, text: string): { onClick: () => void
   const queue: RenderNode[] = [node];
   while (queue.length > 0) {
     const current = queue.shift();
-    if (!current || typeof current === "string" || typeof current === "number") {
+    if (
+      !current ||
+      typeof current === "string" ||
+      typeof current === "number"
+    ) {
       continue;
     }
 
@@ -118,7 +142,7 @@ describe("MarketplaceTab", () => {
         settings,
         providerCatalog,
         onAddProvider: vi.fn(),
-      })
+      }),
     );
     const initialText = collectText(initialTree);
 
@@ -133,13 +157,18 @@ describe("MarketplaceTab", () => {
         settings,
         providerCatalog,
         onAddProvider: vi.fn(),
-      })
+      }),
     );
     const switchedText = collectText(switchedTree);
 
     expect(switchedText).toContain("Zhihu");
     expect(switchedText).toContain("CSDN");
     expect(switchedText).toContain("Juejin");
+    expect(switchedText).toContain("Jianshu");
+    expect(switchedText).toContain("WeChat Official Account");
+    expect(switchedText).toContain("Halo Web");
+    expect(switchedText).toContain("Bilibili");
+    expect(switchedText).toContain("Xiaohongshu");
     expect(switchedText).not.toContain("Yuque");
   });
 });

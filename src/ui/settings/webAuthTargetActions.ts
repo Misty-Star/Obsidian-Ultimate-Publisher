@@ -1,7 +1,25 @@
 import { DesktopWebAuthResult } from "../../core/desktopWebAuth";
-import { CsdnTargetConfig, JuejinTargetConfig, PublishTargetConfig, ZhihuTargetConfig } from "../../types";
+import {
+  BilibiliTargetConfig,
+  CsdnTargetConfig,
+  HaloWebTargetConfig,
+  JianshuTargetConfig,
+  JuejinTargetConfig,
+  PublishTargetConfig,
+  WechatTargetConfig,
+  XiaohongshuTargetConfig,
+  ZhihuTargetConfig,
+} from "../../types";
 
-export type WebAuthTargetConfig = ZhihuTargetConfig | CsdnTargetConfig | JuejinTargetConfig;
+export type WebAuthTargetConfig =
+  | ZhihuTargetConfig
+  | CsdnTargetConfig
+  | JuejinTargetConfig
+  | JianshuTargetConfig
+  | WechatTargetConfig
+  | HaloWebTargetConfig
+  | BilibiliTargetConfig
+  | XiaohongshuTargetConfig;
 
 export interface WebAuthAccountSummary {
   accountId?: string;
@@ -10,17 +28,32 @@ export interface WebAuthAccountSummary {
 }
 
 export interface BrowserAuthorizer {
-  authorize(provider: WebAuthTargetConfig["provider"]): Promise<DesktopWebAuthResult>;
+  authorize(
+    provider: WebAuthTargetConfig["provider"],
+  ): Promise<DesktopWebAuthResult>;
 }
 
-export function isWebAuthTarget(target: PublishTargetConfig): target is WebAuthTargetConfig {
-  return target.provider === "zhihu" || target.provider === "csdn" || target.provider === "juejin";
+export function isWebAuthTarget(
+  target: PublishTargetConfig,
+): target is WebAuthTargetConfig {
+  return [
+    "zhihu",
+    "csdn",
+    "juejin",
+    "jianshu",
+    "wechat",
+    "halo-web",
+    "bilibili",
+    "xiaohongshu",
+  ].includes(target.provider);
 }
 
 export async function authorizeWebAuthTarget(
   target: WebAuthTargetConfig,
   authorizer: BrowserAuthorizer,
-  loadAccountSummary: (target: WebAuthTargetConfig) => Promise<WebAuthAccountSummary>
+  loadAccountSummary: (
+    target: WebAuthTargetConfig,
+  ) => Promise<WebAuthAccountSummary>,
 ): Promise<WebAuthTargetConfig> {
   const authResult = await authorizer.authorize(target.provider);
   const now = new Date().toISOString();
@@ -41,7 +74,9 @@ export async function authorizeWebAuthTarget(
 
 export async function validateWebAuthTarget(
   target: WebAuthTargetConfig,
-  loadAccountSummary: (target: WebAuthTargetConfig) => Promise<WebAuthAccountSummary>
+  loadAccountSummary: (
+    target: WebAuthTargetConfig,
+  ) => Promise<WebAuthAccountSummary>,
 ): Promise<WebAuthTargetConfig> {
   const now = new Date().toISOString();
   const accountSummary = await loadAccountSummary(target);
@@ -54,7 +89,9 @@ export async function validateWebAuthTarget(
   };
 }
 
-export function clearWebAuthTarget(target: WebAuthTargetConfig): WebAuthTargetConfig {
+export function clearWebAuthTarget(
+  target: WebAuthTargetConfig,
+): WebAuthTargetConfig {
   return {
     ...target,
     cookie: "",

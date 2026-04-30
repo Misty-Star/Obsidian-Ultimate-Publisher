@@ -8,7 +8,7 @@
 
 - **一键发布** - 快速将当前笔记发布到配置的平台
 - **批量发布** - 同时发布到多个平台，统一管理
-- **多平台支持** - 支持 WordPress、语雀、知乎、CSDN、掘金、GitHub 静态站点和 GitLab 静态站点
+- **多平台支持** - 支持 WordPress、WordPress.com、MetaWeblog/XML-RPC 博客、语雀、知乎、CSDN、掘金、GitHub 静态站点和 GitLab 静态站点
 - **智能更新** - 自动识别已发布文章，支持更新操作
 - **发布历史** - 记录所有发布历史，方便追踪管理
 - **自定义配置** - 每个平台独立配置，灵活控制发布行为
@@ -51,18 +51,18 @@
 
 当前支持的 Provider：
 
-| Provider | 认证方式 | 发布/更新 | 普通发布支持的字段 | 本地图片处理 |
-| --- | --- | --- | --- | --- |
-| WordPress | REST API endpoint、用户名、应用密码 | 支持发布和更新文章 | 支持 slug、摘要、标签、分类、状态、密码，以及 Markdown/HTML 输出格式 | 会上传本地 Obsidian 图片到 WordPress 媒体库 |
-| 语雀 | 语雀 base URL、知识库 repo、token、公开级别 | 支持发布和更新文档 | 支持 slug 和公开/私有可见性 | 不上传本地 Obsidian 图片 |
-| 知乎 | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 支持从目标默认值或普通发布对话框选择专栏 | 不上传本地 Obsidian 图片 |
-| CSDN | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 支持摘要、标签、分类 | 不上传本地 Obsidian 图片 |
-| 掘金 | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 必须填写分类和至少一个标签，支持摘要/简介 | 不上传本地 Obsidian 图片 |
-| GitHub 静态站点 | GitHub token、owner/repo、分支、内容根目录和静态站点生成器子类型 | 通过 repository contents API 发布和更新 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和仓库路径 | 暂不支持媒体上传和删除 |
-| GitLab 静态站点 | GitLab base URL、项目路径/ID、token、分支、内容根目录和静态站点生成器子类型 | 通过 repository files API 发布和更新 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和仓库路径 | 暂不支持媒体上传和删除 |
-| 本地文件系统 | 库内相对输出目录 | 支持在当前库内发布、更新、删除 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和覆盖行为 | 暂不支持媒体复制 |
+| Provider        | 目标类型 / 设置表单                                                                                                     | Provider 类 / Definition                                                     | 发布/更新                                             | 删除 / 媒体 / 普通发布行为                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| WordPress       | REST 目标；设置表单填写 endpoint、用户名、应用密码、默认状态和 Markdown/HTML 输出格式                                   | `WordpressProvider`；`wordpressDefinition`（`rest-api`）                     | 支持发布和更新文章                                    | 支持删除；本地 Obsidian 图片上传到 WordPress 媒体库；普通发布支持 slug、摘要、标签、分类、状态和密码 |
+| 语雀            | REST 目标；设置表单填写 base URL、知识库 repo、token 和公开级别                                                         | `YuqueProvider`；`yuqueDefinition`（`rest-api`）                             | 支持发布和更新文档                                    | 支持删除；本地 Obsidian 图片会被拦截；普通发布支持 slug 和公开/私有可见性                            |
+| 知乎            | Cookie-web 目标；设置表单聚焦启用状态、名称和 Cookie 授权字段                                                           | `ZhihuProvider`；`zhihuDefinition`（`cookie-web`）                           | 支持发布和更新文章                                    | 支持删除；本地 Obsidian 图片会被拦截；普通发布可使用目标默认专栏元数据                               |
+| CSDN            | Cookie-web 目标；设置表单填写 Cookie 和默认分类/标签                                                                    | `CsdnProvider`；`csdnDefinition`（`cookie-web`）                             | 支持发布和更新文章                                    | 支持删除；本地 Obsidian 图片会被拦截；普通发布支持摘要、标签和分类                                   |
+| 掘金            | Cookie-web 目标；设置表单填写 Cookie、默认分类/标签 ID 和默认摘要                                                       | `JuejinProvider`；`juejinDefinition`（`cookie-web`）                         | 支持发布和更新文章                                    | 支持删除；本地 Obsidian 图片会被拦截；普通发布要求分类和至少一个标签，并支持摘要/简介                |
+| GitHub 静态站点 | 静态站点仓库目标；设置表单填写 owner/repo、token、分支、内容根目录、生成器子类型、提交消息模板和可选预览 URL            | `GithubProvider`；`githubDefinition`（`github-static-site`）                 | 通过 repository contents API 发布和更新 Markdown 文件 | 明确不支持删除；本地 Obsidian 图片会在 API 写入前被拦截；普通发布暂不暴露                            |
+| GitLab 静态站点 | 静态站点仓库目标；设置表单填写 base URL、项目路径/ID、token、分支、内容根目录、生成器子类型、提交消息模板和可选预览 URL | `GitlabProvider`；`gitlabDefinition`（`gitlab-static-site`）                 | 通过 repository files API 发布和更新 Markdown 文件    | 明确不支持删除；本地 Obsidian 图片会在 API 写入前被拦截；普通发布暂不暴露                            |
+| 本地文件系统    | 本地静态站点目标；设置表单填写库内相对输出目录、生成器子类型和覆盖行为                                                  | `LocalFilesystemProvider`；`localFilesystemDefinition`（`filesystem-local`） | 支持在当前库内发布、更新、删除 Markdown 文件          | 支持删除库内相对文件；暂不支持媒体复制；普通发布不暴露                                               |
 
-尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。仍处于计划状态的参考平台（例如 Notion、Halo API、MetaWeblog/CNBlogs/Typecho/Jvue、微信公众号、简书、Bilibili 和小红书）不会出现在 Marketplace，直到已经具备真实 provider definition 和发布/更新测试。
+尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。仍处于计划状态的参考平台（例如 Notion、Halo API、MetaWeblog/CNBlogs/Typecho/Jvue）不会出现在 Marketplace，直到已经具备真实 provider definition 和发布/更新测试。上表中的 Cookie Web 平台只有在 provider definition、设置表单、网页授权描述和发布/更新请求边界都有测试后才展示。
 
 ## ⚙️ 配置
 
@@ -104,7 +104,6 @@ juejinCategory: Backend
 juejinTags: [Obsidian, Efficiency]
 ---
 ```
-
 
 ## Provider 架构
 
