@@ -225,12 +225,9 @@ describe("provider definitions", () => {
   });
 
 
-  it("keeps legacy static-site ids runtime-compatible but out of Marketplace order", () => {
-    const legacyGithub = getProviderDefinition("github").createTarget();
-    const legacyGitlab = getProviderDefinition("gitlab").createTarget();
-
-    expect(legacyGithub).toMatchObject({ provider: "github", siteGenerator: "hugo" });
-    expect(legacyGitlab).toMatchObject({ provider: "gitlab", siteGenerator: "hugo" });
+  it("rejects removed legacy static-site ids instead of keeping hidden compatibility", () => {
+    expect(getProviderDefinition("github" as never)).toBeUndefined();
+    expect(getProviderDefinition("gitlab" as never)).toBeUndefined();
     expect(getProviderDefinitions().map((definition) => definition.id)).not.toContain("github");
     expect(getProviderDefinitions().map((definition) => definition.id)).not.toContain("gitlab");
   });

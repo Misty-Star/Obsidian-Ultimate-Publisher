@@ -347,10 +347,6 @@ export function normalizeTarget(
       return getProviderDefinition("bilibili").normalizeTarget(target);
     case "xiaohongshu":
       return getProviderDefinition("xiaohongshu").normalizeTarget(target);
-    case "github":
-      return getProviderDefinition("github").normalizeTarget(target as GithubTargetConfig<"github">);
-    case "gitlab":
-      return getProviderDefinition("gitlab").normalizeTarget(target as GitlabTargetConfig<"gitlab">);
     case "github-hugo":
       return getProviderDefinition("github-hugo").normalizeTarget(target as GithubTargetConfig<"github-hugo">);
     case "github-hexo":

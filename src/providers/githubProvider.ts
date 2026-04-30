@@ -107,7 +107,7 @@ function buildPayload(note: PublishableNote, target: GithubTargetConfig, path: s
 export class GithubProvider<TProvider extends GithubStaticSiteProviderId = GithubStaticSiteProviderId> implements PublisherProvider<GithubTargetConfig<TProvider>> {
   readonly provider: TProvider;
 
-  constructor(provider: TProvider = "github" as TProvider) {
+  constructor(provider: TProvider = "github-hugo" as TProvider) {
     this.provider = provider;
   }
 

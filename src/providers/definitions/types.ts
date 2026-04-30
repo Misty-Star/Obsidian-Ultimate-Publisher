@@ -56,8 +56,6 @@ type ProviderTargetByIdBase = {
   "halo-web": HaloWebTargetConfig;
   bilibili: BilibiliTargetConfig;
   xiaohongshu: XiaohongshuTargetConfig;
-  github: GithubTargetConfig<"github">;
-  gitlab: GitlabTargetConfig<"gitlab">;
   "github-hugo": GithubTargetConfig<"github-hugo">;
   "github-hexo": GithubTargetConfig<"github-hexo">;
   "github-jekyll": GithubTargetConfig<"github-jekyll">;
@@ -95,8 +93,6 @@ type ProviderDraftByIdBase = {
   "halo-web": never;
   bilibili: never;
   xiaohongshu: never;
-  github: never;
-  gitlab: never;
   "github-hugo": never;
   "github-hexo": never;
   "github-jekyll": never;
@@ -165,7 +161,6 @@ export type ProviderSettingsFieldKey =
   | "defaultCategoryId"
   | "defaultTagIds"
   | "defaultBriefContent"
-  | "siteGenerator"
   | "owner"
   | "branch"
   | "contentRoot"

@@ -35012,7 +35012,6 @@ var FIELD_LABEL_ZH = {
   defaultCategoryId: "\u9ED8\u8BA4\u5206\u7C7B ID",
   defaultTagIds: "\u9ED8\u8BA4\u6807\u7B7E ID",
   defaultBriefContent: "\u9ED8\u8BA4\u6458\u8981",
-  siteGenerator: "\u7AD9\u70B9\u751F\u6210\u5668",
   owner: "\u6240\u6709\u8005",
   branch: "\u5206\u652F",
   contentRoot: "\u5185\u5BB9\u6839\u76EE\u5F55",
@@ -35053,15 +35052,6 @@ var FIELD_OPTION_LABEL_ZH = {
   publicLevel: {
     "0": "\u79C1\u6709",
     "1": "\u516C\u5F00"
-  },
-  siteGenerator: {
-    hugo: "Hugo",
-    hexo: "Hexo",
-    jekyll: "Jekyll",
-    vuepress: "VuePress",
-    vuepress2: "VuePress 2",
-    vitepress: "VitePress",
-    quartz: "Quartz"
   }
 };
 function resolveTranslation(i18n, key, fallback) {
@@ -38071,7 +38061,7 @@ function buildPayload3(note, target, path, sha) {
   };
 }
 var GithubProvider = class {
-  constructor(provider = "github") {
+  constructor(provider = "github-hugo") {
     this.provider = provider;
   }
   getMediaSupport(_target) {
@@ -38176,7 +38166,7 @@ function buildPayload4(note, target, path) {
   };
 }
 var GitlabProvider = class {
-  constructor(provider = "gitlab") {
+  constructor(provider = "gitlab-hugo") {
     this.provider = provider;
   }
   getMediaSupport(_target) {
@@ -38250,40 +38240,24 @@ var SHARED_STATIC_SITE_FIELDS = [
   },
   { key: "previewBaseUrl", label: "Preview base URL", description: "Optional published site base URL.", type: "text" }
 ];
-var LEGACY_SHARED_STATIC_SITE_FIELDS = [
-  { key: "siteGenerator", label: "Site generator", type: "dropdown", options: STATIC_SITE_GENERATOR_OPTIONS },
-  ...SHARED_STATIC_SITE_FIELDS
-];
 var GITHUB_FIELDS = [
   { key: "owner", label: "Owner", type: "text" },
   { key: "repo", label: "Repo", type: "text" },
   ...SHARED_STATIC_SITE_FIELDS
-];
-var LEGACY_GITHUB_FIELDS = [
-  { key: "owner", label: "Owner", type: "text" },
-  { key: "repo", label: "Repo", type: "text" },
-  ...LEGACY_SHARED_STATIC_SITE_FIELDS
 ];
 var GITLAB_FIELDS = [
   { key: "baseUrl", label: "Base URL", description: "Example: https://gitlab.com", type: "text" },
   { key: "projectIdOrPath", label: "Project ID or path", description: "Example: group/project", type: "text" },
   ...SHARED_STATIC_SITE_FIELDS
 ];
-var LEGACY_GITLAB_FIELDS = [
-  { key: "baseUrl", label: "Base URL", description: "Example: https://gitlab.com", type: "text" },
-  { key: "projectIdOrPath", label: "Project ID or path", description: "Example: group/project", type: "text" },
-  ...LEGACY_SHARED_STATIC_SITE_FIELDS
-];
 function normalizeGenerator(value, fallback) {
   return STATIC_SITE_GENERATOR_OPTIONS.some((option) => option.value === value) ? value : fallback;
 }
 function createGithubSettingsForm(fixedGenerator) {
   return defineSettingsForm({
-    fields: [...COMMON_FIELDS, ...fixedGenerator ? GITHUB_FIELDS : LEGACY_GITHUB_FIELDS],
+    fields: [...COMMON_FIELDS, ...GITHUB_FIELDS],
     readProviderFieldValue(target, key) {
       switch (key) {
-        case "siteGenerator":
-          return target.siteGenerator;
         case "owner":
           return target.owner;
         case "repo":
@@ -38304,9 +38278,6 @@ function createGithubSettingsForm(fixedGenerator) {
     },
     applyProviderFieldValue(target, key, value) {
       switch (key) {
-        case "siteGenerator":
-          target.siteGenerator = fixedGenerator ?? normalizeGenerator(value, "hugo");
-          return target;
         case "owner":
           target.owner = String(value).trim();
           return target;
@@ -38336,11 +38307,9 @@ function createGithubSettingsForm(fixedGenerator) {
 }
 function createGitlabSettingsForm(fixedGenerator) {
   return defineSettingsForm({
-    fields: [...COMMON_FIELDS, ...fixedGenerator ? GITLAB_FIELDS : LEGACY_GITLAB_FIELDS],
+    fields: [...COMMON_FIELDS, ...GITLAB_FIELDS],
     readProviderFieldValue(target, key) {
       switch (key) {
-        case "siteGenerator":
-          return target.siteGenerator;
         case "baseUrl":
           return target.baseUrl;
         case "projectIdOrPath":
@@ -38361,9 +38330,6 @@ function createGitlabSettingsForm(fixedGenerator) {
     },
     applyProviderFieldValue(target, key, value) {
       switch (key) {
-        case "siteGenerator":
-          target.siteGenerator = fixedGenerator ?? normalizeGenerator(value, "hugo");
-          return target;
         case "baseUrl":
           target.baseUrl = String(value).trim() || "https://gitlab.com";
           return target;
@@ -38394,7 +38360,7 @@ function createGitlabSettingsForm(fixedGenerator) {
 function createGithubTarget(provider, generator) {
   return {
     id: (0, import_node_crypto7.randomUUID)(),
-    name: provider === "github" ? "GitHub Static Sites" : `GitHub ${GENERATOR_LABELS[generator]}`,
+    name: `GitHub ${GENERATOR_LABELS[generator]}`,
     enabled: true,
     provider,
     siteGenerator: generator,
@@ -38410,7 +38376,7 @@ function createGithubTarget(provider, generator) {
 function createGitlabTarget(provider, generator) {
   return {
     id: (0, import_node_crypto7.randomUUID)(),
-    name: provider === "gitlab" ? "GitLab Static Sites" : `GitLab ${GENERATOR_LABELS[generator]}`,
+    name: `GitLab ${GENERATOR_LABELS[generator]}`,
     enabled: true,
     provider,
     siteGenerator: generator,
@@ -38496,42 +38462,6 @@ function createGitlabDefinition(provider, generator) {
     settingsForm: createGitlabSettingsForm(generator)
   };
 }
-var githubDefinition = {
-  id: "github",
-  name: "GitHub Static Sites",
-  category: "github",
-  family: "github-static-site",
-  capabilities: {
-    publish: true,
-    update: true,
-    delete: false,
-    media: "unsupported",
-    normalPublish: false,
-    quickPublish: true
-  },
-  createProvider: () => new GithubProvider("github"),
-  createTarget: () => createGithubTarget("github", "hugo"),
-  normalizeTarget: (target) => normalizeGithubTarget(target, "hugo"),
-  settingsForm: createGithubSettingsForm()
-};
-var gitlabDefinition = {
-  id: "gitlab",
-  name: "GitLab Static Sites",
-  category: "gitlab",
-  family: "gitlab-static-site",
-  capabilities: {
-    publish: true,
-    update: true,
-    delete: false,
-    media: "unsupported",
-    normalPublish: false,
-    quickPublish: true
-  },
-  createProvider: () => new GitlabProvider("gitlab"),
-  createTarget: () => createGitlabTarget("gitlab", "hugo"),
-  normalizeTarget: (target) => normalizeGitlabTarget(target, "hugo"),
-  settingsForm: createGitlabSettingsForm()
-};
 var githubStaticSiteDefinitions = Object.fromEntries(
   GITHUB_GENERATOR_PROVIDERS.map(({ id, generator }) => [id, createGithubDefinition(id, generator)])
 );
@@ -38560,8 +38490,6 @@ var providerDefinitionsById = {
   "halo-web": haloWebDefinition,
   bilibili: bilibiliDefinition,
   xiaohongshu: xiaohongshuDefinition,
-  github: githubDefinition,
-  gitlab: gitlabDefinition,
   ...githubStaticSiteDefinitions,
   ...gitlabStaticSiteDefinitions
 };
@@ -38772,10 +38700,6 @@ function normalizeTarget2(target) {
       return getProviderDefinition("bilibili").normalizeTarget(target);
     case "xiaohongshu":
       return getProviderDefinition("xiaohongshu").normalizeTarget(target);
-    case "github":
-      return getProviderDefinition("github").normalizeTarget(target);
-    case "gitlab":
-      return getProviderDefinition("gitlab").normalizeTarget(target);
     case "github-hugo":
       return getProviderDefinition("github-hugo").normalizeTarget(target);
     case "github-hexo":
@@ -39452,8 +39376,6 @@ var SUPPORTED_PROVIDER_IDS = [
   "halo-web",
   "bilibili",
   "xiaohongshu",
-  "github",
-  "gitlab",
   "github-hugo",
   "github-hexo",
   "github-jekyll",

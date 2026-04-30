@@ -58,8 +58,8 @@
 | 知乎            | Cookie-web 目标；设置表单聚焦启用状态、名称和 Cookie 授权字段                                                           | `ZhihuProvider`；`zhihuDefinition`（`cookie-web`）                           | 支持发布和更新文章                                    | 支持删除；本地 Obsidian 图片会被拦截；普通发布可使用目标默认专栏元数据                               |
 | CSDN            | Cookie-web 目标；设置表单填写 Cookie 和默认分类/标签                                                                    | `CsdnProvider`；`csdnDefinition`（`cookie-web`）                             | 支持发布和更新文章                                    | 支持删除；本地 Obsidian 图片会被拦截；普通发布支持摘要、标签和分类                                   |
 | 掘金            | Cookie-web 目标；设置表单填写 Cookie、默认分类/标签 ID 和默认摘要                                                       | `JuejinProvider`；`juejinDefinition`（`cookie-web`）                         | 支持发布和更新文章                                    | 支持删除；本地 Obsidian 图片会被拦截；普通发布要求分类和至少一个标签，并支持摘要/简介                |
-| GitHub 静态站点生成器 | Marketplace 中以 GitHub Hugo、Hexo、Jekyll、VuePress、VuePress 2、VitePress、Quartz 作为具体发布对象；设置表单填写 owner/repo、token、分支、内容根目录、提交消息模板和可选预览 URL | 共享 `GithubProvider`；隐藏兼容用 `githubDefinition` 加生成器专属 definitions（`github-static-site`） | 通过 repository contents API 发布和更新 Markdown 文件 | 明确不支持删除；本地 Obsidian 图片会在 API 写入前被拦截；普通发布暂不暴露 |
-| GitLab 静态站点生成器 | Marketplace 中以 GitLab Hugo、Hexo、Jekyll、VuePress、VuePress 2、VitePress 作为参考项目一致的具体发布对象；设置表单填写 base URL、项目路径/ID、token、分支、内容根目录、提交消息模板和可选预览 URL | 共享 `GitlabProvider`；隐藏兼容用 `gitlabDefinition` 加生成器专属 definitions（`gitlab-static-site`） | 通过 repository files API 发布和更新 Markdown 文件 | 明确不支持删除；本地 Obsidian 图片会在 API 写入前被拦截；普通发布暂不暴露 |
+| GitHub 静态站点生成器 | Marketplace 中以 GitHub Hugo、Hexo、Jekyll、VuePress、VuePress 2、VitePress、Quartz 作为具体发布对象；设置表单填写 owner/repo、token、分支、内容根目录、提交消息模板和可选预览 URL | 共享 `GithubProvider`；生成器专属 definitions（`github-static-site`） | 通过 repository contents API 发布和更新 Markdown 文件 | 明确不支持删除；本地 Obsidian 图片会在 API 写入前被拦截；普通发布暂不暴露 |
+| GitLab 静态站点生成器 | Marketplace 中以 GitLab Hugo、Hexo、Jekyll、VuePress、VuePress 2、VitePress 作为参考项目一致的具体发布对象；设置表单填写 base URL、项目路径/ID、token、分支、内容根目录、提交消息模板和可选预览 URL | 共享 `GitlabProvider`；生成器专属 definitions（`gitlab-static-site`） | 通过 repository files API 发布和更新 Markdown 文件 | 明确不支持删除；本地 Obsidian 图片会在 API 写入前被拦截；普通发布暂不暴露 |
 
 尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。仍处于计划状态的参考平台（例如 Notion、Halo API、MetaWeblog/CNBlogs/Typecho/Jvue）不会出现在 Marketplace，直到已经具备真实 provider definition 和发布/更新测试。上表中的 Cookie Web 平台只有在 provider definition、设置表单、网页授权描述和发布/更新请求边界都有测试后才展示。
 
@@ -110,7 +110,7 @@ Ultimate Publisher 保持 provider 身份扁平且稳定：每个目标只持久
 
 Provider definition 负责声明 family、capability、设置表单、Marketplace 卡片、Normal Publish 集成和运行时 provider factory。静态站点生成器现在按参考项目方式展示为具体 Marketplace 发布对象：GitHub 暴露 Hugo、Hexo、Jekyll、VuePress、VuePress 2、VitePress 和 Quartz；GitLab 暴露参考项目已有的 Hugo、Hexo、Jekyll、VuePress、VuePress 2 和 VitePress。每个生成器专属目标仍会把固定生成器保存在 `target.siteGenerator`，供共享 GitHub/GitLab runtime 生成正确内容路径。
 
-历史保存的 `github` 和 `gitlab` 目标仍由 definition/registry 层接受，以保证迁移兼容；但它们不再作为 Marketplace 卡片展示，新建的生成器专属目标也不再显示生成器下拉框。Local File / Local Filesystem 发布已从产品入口中删除。静态站点仓库目标暂不暴露媒体上传和删除能力。
+旧的泛型 `github` 和 `gitlab` 静态站点目标 id 已不再接受；请改用 `github-hugo` 或 `gitlab-vitepress` 这样的生成器专属目标。Local File / Local Filesystem 发布已从产品入口中删除。静态站点仓库目标暂不暴露媒体上传和删除能力。
 
 从 `references/siyuan-plugin-publisher` 迁移更多平台时，必须保持显式 inventory：每个参考平台要么已经实现，要么由共享 provider 覆盖，要么带理由标记为计划中。计划中的平台不要添加 Marketplace 展示，除非 provider 已实现 `validateConfig`、`publish`、`update`、预览 URL 行为，以及明确的删除支持或明确的“不支持删除”错误，并配套测试。
 

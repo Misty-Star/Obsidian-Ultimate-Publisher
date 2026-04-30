@@ -19,7 +19,7 @@ import {
 } from "./web";
 import { wordpressDefinition } from "./wordpress";
 import { cnblogsDefinition, jvueDefinition, metaweblogDefinition, typechoDefinition, wordpressComDefinition } from "./metaweblog";
-import { githubDefinition, githubStaticSiteDefinitions, gitlabDefinition, gitlabStaticSiteDefinitions } from "./staticSite";
+import { githubStaticSiteDefinitions, gitlabStaticSiteDefinitions } from "./staticSite";
 
 const providerDefinitionsById = {
   wordpress: wordpressDefinition,
@@ -41,8 +41,6 @@ const providerDefinitionsById = {
   "halo-web": haloWebDefinition,
   bilibili: bilibiliDefinition,
   xiaohongshu: xiaohongshuDefinition,
-  github: githubDefinition,
-  gitlab: gitlabDefinition,
   ...githubStaticSiteDefinitions,
   ...gitlabStaticSiteDefinitions,
 } satisfies ProviderDefinitionMap;

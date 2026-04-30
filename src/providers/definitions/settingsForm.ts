@@ -51,7 +51,6 @@ const FIELD_LABEL_ZH: Partial<Record<ProviderSettingsFieldKey, string>> = {
   defaultCategoryId: "默认分类 ID",
   defaultTagIds: "默认标签 ID",
   defaultBriefContent: "默认摘要",
-  siteGenerator: "站点生成器",
   owner: "所有者",
   branch: "分支",
   contentRoot: "内容根目录",
@@ -94,15 +93,6 @@ const FIELD_OPTION_LABEL_ZH: Partial<Record<ProviderSettingsFieldKey, Record<str
   publicLevel: {
     "0": "私有",
     "1": "公开",
-  },
-  siteGenerator: {
-    hugo: "Hugo",
-    hexo: "Hexo",
-    jekyll: "Jekyll",
-    vuepress: "VuePress",
-    vuepress2: "VuePress 2",
-    vitepress: "VitePress",
-    quartz: "Quartz",
   },
 };
 

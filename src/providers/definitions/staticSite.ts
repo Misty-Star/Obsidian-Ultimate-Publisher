@@ -25,7 +25,7 @@ const GENERATOR_LABELS: Record<StaticSiteGenerator, string> = Object.fromEntries
   STATIC_SITE_GENERATOR_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<StaticSiteGenerator, string>;
 
-const GITHUB_GENERATOR_PROVIDERS: Array<{ id: Exclude<GithubStaticSiteProviderId, "github">; generator: StaticSiteGenerator }> = [
+const GITHUB_GENERATOR_PROVIDERS: Array<{ id: GithubStaticSiteProviderId; generator: StaticSiteGenerator }> = [
   { id: "github-hugo", generator: "hugo" },
   { id: "github-hexo", generator: "hexo" },
   { id: "github-jekyll", generator: "jekyll" },
@@ -35,7 +35,7 @@ const GITHUB_GENERATOR_PROVIDERS: Array<{ id: Exclude<GithubStaticSiteProviderId
   { id: "github-quartz", generator: "quartz" },
 ];
 
-const GITLAB_GENERATOR_PROVIDERS: Array<{ id: Exclude<GitlabStaticSiteProviderId, "gitlab">; generator: StaticSiteGenerator }> = [
+const GITLAB_GENERATOR_PROVIDERS: Array<{ id: GitlabStaticSiteProviderId; generator: StaticSiteGenerator }> = [
   { id: "gitlab-hugo", generator: "hugo" },
   { id: "gitlab-hexo", generator: "hexo" },
   { id: "gitlab-jekyll", generator: "jekyll" },
@@ -57,10 +57,6 @@ const SHARED_STATIC_SITE_FIELDS: ProviderSettingsFieldDefinition[] = [
   { key: "previewBaseUrl", label: "Preview base URL", description: "Optional published site base URL.", type: "text" },
 ];
 
-const LEGACY_SHARED_STATIC_SITE_FIELDS: ProviderSettingsFieldDefinition[] = [
-  { key: "siteGenerator", label: "Site generator", type: "dropdown", options: STATIC_SITE_GENERATOR_OPTIONS },
-  ...SHARED_STATIC_SITE_FIELDS,
-];
 
 const GITHUB_FIELDS: ProviderSettingsFieldDefinition[] = [
   { key: "owner", label: "Owner", type: "text" },
@@ -68,11 +64,6 @@ const GITHUB_FIELDS: ProviderSettingsFieldDefinition[] = [
   ...SHARED_STATIC_SITE_FIELDS,
 ];
 
-const LEGACY_GITHUB_FIELDS: ProviderSettingsFieldDefinition[] = [
-  { key: "owner", label: "Owner", type: "text" },
-  { key: "repo", label: "Repo", type: "text" },
-  ...LEGACY_SHARED_STATIC_SITE_FIELDS,
-];
 
 const GITLAB_FIELDS: ProviderSettingsFieldDefinition[] = [
   { key: "baseUrl", label: "Base URL", description: "Example: https://gitlab.com", type: "text" },
@@ -80,23 +71,16 @@ const GITLAB_FIELDS: ProviderSettingsFieldDefinition[] = [
   ...SHARED_STATIC_SITE_FIELDS,
 ];
 
-const LEGACY_GITLAB_FIELDS: ProviderSettingsFieldDefinition[] = [
-  { key: "baseUrl", label: "Base URL", description: "Example: https://gitlab.com", type: "text" },
-  { key: "projectIdOrPath", label: "Project ID or path", description: "Example: group/project", type: "text" },
-  ...LEGACY_SHARED_STATIC_SITE_FIELDS,
-];
 
 function normalizeGenerator(value: unknown, fallback: StaticSiteGenerator): StaticSiteGenerator {
   return STATIC_SITE_GENERATOR_OPTIONS.some((option) => option.value === value) ? (value as StaticSiteGenerator) : fallback;
 }
 
-function createGithubSettingsForm<TProvider extends GithubStaticSiteProviderId>(fixedGenerator?: StaticSiteGenerator) {
+function createGithubSettingsForm<TProvider extends GithubStaticSiteProviderId>(fixedGenerator: StaticSiteGenerator) {
   return defineSettingsForm<GithubTargetConfig<TProvider>>({
-    fields: [...COMMON_FIELDS, ...(fixedGenerator ? GITHUB_FIELDS : LEGACY_GITHUB_FIELDS)],
+    fields: [...COMMON_FIELDS, ...GITHUB_FIELDS],
     readProviderFieldValue(target, key) {
       switch (key) {
-        case "siteGenerator":
-          return target.siteGenerator;
         case "owner":
           return target.owner;
         case "repo":
@@ -117,9 +101,6 @@ function createGithubSettingsForm<TProvider extends GithubStaticSiteProviderId>(
     },
     applyProviderFieldValue(target, key, value) {
       switch (key) {
-        case "siteGenerator":
-          target.siteGenerator = fixedGenerator ?? normalizeGenerator(value, "hugo");
-          return target;
         case "owner":
           target.owner = String(value).trim();
           return target;
@@ -148,13 +129,11 @@ function createGithubSettingsForm<TProvider extends GithubStaticSiteProviderId>(
   });
 }
 
-function createGitlabSettingsForm<TProvider extends GitlabStaticSiteProviderId>(fixedGenerator?: StaticSiteGenerator) {
+function createGitlabSettingsForm<TProvider extends GitlabStaticSiteProviderId>(fixedGenerator: StaticSiteGenerator) {
   return defineSettingsForm<GitlabTargetConfig<TProvider>>({
-    fields: [...COMMON_FIELDS, ...(fixedGenerator ? GITLAB_FIELDS : LEGACY_GITLAB_FIELDS)],
+    fields: [...COMMON_FIELDS, ...GITLAB_FIELDS],
     readProviderFieldValue(target, key) {
       switch (key) {
-        case "siteGenerator":
-          return target.siteGenerator;
         case "baseUrl":
           return target.baseUrl;
         case "projectIdOrPath":
@@ -175,9 +154,6 @@ function createGitlabSettingsForm<TProvider extends GitlabStaticSiteProviderId>(
     },
     applyProviderFieldValue(target, key, value) {
       switch (key) {
-        case "siteGenerator":
-          target.siteGenerator = fixedGenerator ?? normalizeGenerator(value, "hugo");
-          return target;
         case "baseUrl":
           target.baseUrl = String(value).trim() || "https://gitlab.com";
           return target;
@@ -209,7 +185,7 @@ function createGitlabSettingsForm<TProvider extends GitlabStaticSiteProviderId>(
 function createGithubTarget<TProvider extends GithubStaticSiteProviderId>(provider: TProvider, generator: StaticSiteGenerator): GithubTargetConfig<TProvider> {
   return {
     id: randomUUID(),
-    name: provider === "github" ? "GitHub Static Sites" : `GitHub ${GENERATOR_LABELS[generator]}`,
+    name: `GitHub ${GENERATOR_LABELS[generator]}`,
     enabled: true,
     provider,
     siteGenerator: generator,
@@ -226,7 +202,7 @@ function createGithubTarget<TProvider extends GithubStaticSiteProviderId>(provid
 function createGitlabTarget<TProvider extends GitlabStaticSiteProviderId>(provider: TProvider, generator: StaticSiteGenerator): GitlabTargetConfig<TProvider> {
   return {
     id: randomUUID(),
-    name: provider === "gitlab" ? "GitLab Static Sites" : `GitLab ${GENERATOR_LABELS[generator]}`,
+    name: `GitLab ${GENERATOR_LABELS[generator]}`,
     enabled: true,
     provider,
     siteGenerator: generator,
@@ -251,7 +227,7 @@ function normalizeGithubTarget<TProvider extends GithubStaticSiteProviderId>(tar
   };
 }
 
-function normalizeFixedGithubTarget<TProvider extends Exclude<GithubStaticSiteProviderId, "github">>(target: GithubTargetConfig<TProvider>, generator: StaticSiteGenerator): GithubTargetConfig<TProvider> {
+function normalizeFixedGithubTarget<TProvider extends GithubStaticSiteProviderId>(target: GithubTargetConfig<TProvider>, generator: StaticSiteGenerator): GithubTargetConfig<TProvider> {
   return {
     ...normalizeGithubTarget(target, generator),
     siteGenerator: generator,
@@ -270,14 +246,14 @@ function normalizeGitlabTarget<TProvider extends GitlabStaticSiteProviderId>(tar
   };
 }
 
-function normalizeFixedGitlabTarget<TProvider extends Exclude<GitlabStaticSiteProviderId, "gitlab">>(target: GitlabTargetConfig<TProvider>, generator: StaticSiteGenerator): GitlabTargetConfig<TProvider> {
+function normalizeFixedGitlabTarget<TProvider extends GitlabStaticSiteProviderId>(target: GitlabTargetConfig<TProvider>, generator: StaticSiteGenerator): GitlabTargetConfig<TProvider> {
   return {
     ...normalizeGitlabTarget(target, generator),
     siteGenerator: generator,
   };
 }
 
-function createGithubDefinition<TProvider extends Exclude<GithubStaticSiteProviderId, "github">>(provider: TProvider, generator: StaticSiteGenerator): ProviderDefinition<TProvider> {
+function createGithubDefinition<TProvider extends GithubStaticSiteProviderId>(provider: TProvider, generator: StaticSiteGenerator): ProviderDefinition<TProvider> {
   return {
     id: provider,
     name: `GitHub ${GENERATOR_LABELS[generator]}`,
@@ -298,7 +274,7 @@ function createGithubDefinition<TProvider extends Exclude<GithubStaticSiteProvid
   };
 }
 
-function createGitlabDefinition<TProvider extends Exclude<GitlabStaticSiteProviderId, "gitlab">>(provider: TProvider, generator: StaticSiteGenerator): ProviderDefinition<TProvider> {
+function createGitlabDefinition<TProvider extends GitlabStaticSiteProviderId>(provider: TProvider, generator: StaticSiteGenerator): ProviderDefinition<TProvider> {
   return {
     id: provider,
     name: `GitLab ${GENERATOR_LABELS[generator]}`,
@@ -319,48 +295,10 @@ function createGitlabDefinition<TProvider extends Exclude<GitlabStaticSiteProvid
   };
 }
 
-export const githubDefinition: ProviderDefinition<"github"> = {
-  id: "github",
-  name: "GitHub Static Sites",
-  category: "github",
-  family: "github-static-site",
-  capabilities: {
-    publish: true,
-    update: true,
-    delete: false,
-    media: "unsupported",
-    normalPublish: false,
-    quickPublish: true,
-  },
-  createProvider: () => new GithubProvider("github") as never,
-  createTarget: () => createGithubTarget("github", "hugo"),
-  normalizeTarget: (target) => normalizeGithubTarget(target, "hugo"),
-  settingsForm: createGithubSettingsForm<"github">(),
-};
-
-export const gitlabDefinition: ProviderDefinition<"gitlab"> = {
-  id: "gitlab",
-  name: "GitLab Static Sites",
-  category: "gitlab",
-  family: "gitlab-static-site",
-  capabilities: {
-    publish: true,
-    update: true,
-    delete: false,
-    media: "unsupported",
-    normalPublish: false,
-    quickPublish: true,
-  },
-  createProvider: () => new GitlabProvider("gitlab") as never,
-  createTarget: () => createGitlabTarget("gitlab", "hugo"),
-  normalizeTarget: (target) => normalizeGitlabTarget(target, "hugo"),
-  settingsForm: createGitlabSettingsForm<"gitlab">(),
-};
-
 export const githubStaticSiteDefinitions = Object.fromEntries(
   GITHUB_GENERATOR_PROVIDERS.map(({ id, generator }) => [id, createGithubDefinition(id, generator)]),
-) as { [TProvider in Exclude<GithubStaticSiteProviderId, "github">]: ProviderDefinition<TProvider> };
+) as { [TProvider in GithubStaticSiteProviderId]: ProviderDefinition<TProvider> };
 
 export const gitlabStaticSiteDefinitions = Object.fromEntries(
   GITLAB_GENERATOR_PROVIDERS.map(({ id, generator }) => [id, createGitlabDefinition(id, generator)]),
-) as { [TProvider in Exclude<GitlabStaticSiteProviderId, "gitlab">]: ProviderDefinition<TProvider> };
+) as { [TProvider in GitlabStaticSiteProviderId]: ProviderDefinition<TProvider> };

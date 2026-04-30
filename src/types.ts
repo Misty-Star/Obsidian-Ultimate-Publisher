@@ -18,8 +18,6 @@ export const SUPPORTED_PROVIDER_IDS = [
   "halo-web",
   "bilibili",
   "xiaohongshu",
-  "github",
-  "gitlab",
   "github-hugo",
   "github-hexo",
   "github-jekyll",
@@ -191,7 +189,6 @@ export type StaticSiteGenerator =
   | "quartz";
 
 export type GithubStaticSiteProviderId =
-  | "github"
   | "github-hugo"
   | "github-hexo"
   | "github-jekyll"
@@ -201,7 +198,6 @@ export type GithubStaticSiteProviderId =
   | "github-quartz";
 
 export type GitlabStaticSiteProviderId =
-  | "gitlab"
   | "gitlab-hugo"
   | "gitlab-hexo"
   | "gitlab-jekyll"

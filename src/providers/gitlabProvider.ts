@@ -56,7 +56,7 @@ function buildPayload(note: PublishableNote, target: GitlabTargetConfig, path: s
 export class GitlabProvider<TProvider extends GitlabStaticSiteProviderId = GitlabStaticSiteProviderId> implements PublisherProvider<GitlabTargetConfig<TProvider>> {
   readonly provider: TProvider;
 
-  constructor(provider: TProvider = "gitlab" as TProvider) {
+  constructor(provider: TProvider = "gitlab-hugo" as TProvider) {
     this.provider = provider;
   }
 
