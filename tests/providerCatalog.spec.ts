@@ -12,6 +12,7 @@ describe("getProviderCatalog", () => {
       "juejin",
       "github",
       "gitlab",
+      "local-filesystem",
     ]);
   });
 
@@ -26,6 +27,7 @@ describe("getProviderCatalog", () => {
       { id: "juejin", category: "web" },
       { id: "github", category: "github" },
       { id: "gitlab", category: "gitlab" },
+      { id: "local-filesystem", category: "filesystem" },
     ]);
   });
 

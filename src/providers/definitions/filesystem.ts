@@ -22,7 +22,7 @@ const LOCAL_FILESYSTEM_FIELDS: ProviderSettingsFieldDefinition[] = [
 ];
 
 function normalizeGenerator(value: StaticSiteGenerator | undefined): StaticSiteGenerator {
-  return GENERATOR_OPTIONS.some((option) => option.value === value) ? value : "hugo";
+  return GENERATOR_OPTIONS.some((option) => option.value === value) ? (value as StaticSiteGenerator) : "hugo";
 }
 
 const settingsForm = defineSettingsForm<LocalFilesystemTargetConfig>({

@@ -17,6 +17,7 @@ describe("provider definitions", () => {
       { id: "juejin", category: "web", family: "cookie-web" },
       { id: "github", category: "github", family: "github-static-site" },
       { id: "gitlab", category: "gitlab", family: "gitlab-static-site" },
+      { id: "local-filesystem", category: "filesystem", family: "filesystem-local" },
     ]);
   });
 
@@ -97,7 +98,7 @@ describe("provider definitions", () => {
   });
 
   it("exposes runtime provider factories for all built-in providers", () => {
-    for (const providerId of ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"] as const) {
+    for (const providerId of ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab", "local-filesystem"] as const) {
       const definition = getProviderDefinition(providerId);
       expect(typeof definition.createProvider).toBe("function");
     }

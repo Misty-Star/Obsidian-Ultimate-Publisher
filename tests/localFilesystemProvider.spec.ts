@@ -58,9 +58,9 @@ describe("LocalFilesystemProvider", () => {
 
     const result = await provider.publish(createNote(), createTarget());
 
-    expect(result).toEqual({ remoteId: "published/post.md", remoteUrl: "published/post.md" });
+    expect(result).toEqual({ remoteId: "published/content/posts/post.md", remoteUrl: "published/content/posts/post.md" });
     expect(writes).toHaveLength(1);
-    expect(writes[0]?.path).toBe("published/post.md");
+    expect(writes[0]?.path).toBe("published/content/posts/post.md");
     expect(writes[0]?.data).toContain('title: Post');
     expect(writes[0]?.data).toContain('date: 2026-04-30');
     expect(writes[0]?.data).toContain('# Post');

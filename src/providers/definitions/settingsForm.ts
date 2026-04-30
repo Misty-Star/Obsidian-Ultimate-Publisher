@@ -48,6 +48,8 @@ const FIELD_LABEL_ZH: Partial<Record<ProviderSettingsFieldKey, string>> = {
   commitMessageTemplate: "提交消息模板",
   previewBaseUrl: "预览基础 URL",
   projectIdOrPath: "项目 ID 或路径",
+  localOutputPath: "输出目录",
+  overwriteExisting: "覆盖已有文件",
 };
 
 const FIELD_DESCRIPTION_ZH: Partial<Record<ProviderSettingsFieldKey, string>> = {
@@ -64,6 +66,7 @@ const FIELD_DESCRIPTION_ZH: Partial<Record<ProviderSettingsFieldKey, string>> = 
   previewBaseUrl: "可选的已发布站点基础 URL。",
   baseUrl: "示例: https://gitlab.com",
   projectIdOrPath: "示例: group/project",
+  localOutputPath: "相对于当前库的 Markdown 导出目录。",
 };
 
 const FIELD_OPTION_LABEL_ZH: Partial<Record<ProviderSettingsFieldKey, Record<string, string>>> = {
