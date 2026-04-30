@@ -1,32 +1,8 @@
-export const SUPPORTED_PROVIDER_IDS = [
-  "wordpress",
-  "wordpress-com",
-  "yuque",
-  "notion",
-  "halo",
-  "telegraph",
-  "confluence",
-  "metaweblog",
-  "cnblogs",
-  "typecho",
-  "jvue",
-  "zhihu",
-  "csdn",
-  "juejin",
-  "github",
-  "gitlab",
-  "local-filesystem",
-] as const;
+export const SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"] as const;
 
 export type ProviderId = (typeof SUPPORTED_PROVIDER_IDS)[number];
-export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web" | "filesystem";
-export type ProviderFamilyId =
-  | "rest-api"
-  | "cookie-web"
-  | "github-static-site"
-  | "gitlab-static-site"
-  | "metaweblog-xmlrpc"
-  | "filesystem-local";
+export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web";
+export type ProviderFamilyId = "rest-api" | "cookie-web" | "github-static-site" | "gitlab-static-site";
 
 export function isProviderId(value: unknown): value is ProviderId {
   return typeof value === "string" && (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(value);
@@ -81,55 +57,6 @@ export interface YuqueTargetConfig extends BaseTargetConfig {
   publicLevel: 0 | 1;
 }
 
-
-export interface NotionTargetConfig extends BaseTargetConfig {
-  provider: "notion";
-  token: string;
-  databaseId: string;
-  parentId?: string;
-}
-
-export interface HaloTargetConfig extends BaseTargetConfig {
-  provider: "halo";
-  baseUrl: string;
-  token: string;
-  defaultStatus: WordpressStatus;
-}
-
-export interface TelegraphTargetConfig extends BaseTargetConfig {
-  provider: "telegraph";
-  token: string;
-  authorName?: string;
-  authorUrl?: string;
-}
-
-export interface ConfluenceTargetConfig extends BaseTargetConfig {
-  provider: "confluence";
-  baseUrl: string;
-  username: string;
-  token: string;
-  spaceKey: string;
-  parentId: string;
-}
-
-export interface WordpressComTargetConfig extends BaseTargetConfig {
-  provider: "wordpress-com";
-  siteId: string;
-  accessToken: string;
-  defaultStatus: WordpressStatus;
-  contentFormat: PublishContentFormat;
-}
-
-export interface MetaWeblogTargetConfig extends BaseTargetConfig {
-  provider: "metaweblog" | "cnblogs" | "typecho" | "jvue";
-  xmlRpcEndpoint: string;
-  blogId: string;
-  username: string;
-  appPassword: string;
-  defaultStatus: WordpressStatus;
-  contentFormat: PublishContentFormat;
-}
-
 export interface ZhihuTargetConfig extends WebAuthTargetBase {
   provider: "zhihu";
   defaultColumnId: string;
@@ -177,29 +104,14 @@ export interface GitlabTargetConfig extends BaseTargetConfig {
   previewBaseUrl?: string;
 }
 
-
-export interface LocalFilesystemTargetConfig extends BaseTargetConfig {
-  provider: "local-filesystem";
-  localOutputPath: string;
-  siteGenerator: StaticSiteGenerator;
-  overwriteExisting: boolean;
-}
-
 export type PublishTargetConfig =
   | WordpressTargetConfig
-  | WordpressComTargetConfig
   | YuqueTargetConfig
-  | NotionTargetConfig
-  | HaloTargetConfig
-  | TelegraphTargetConfig
-  | ConfluenceTargetConfig
-  | MetaWeblogTargetConfig
   | ZhihuTargetConfig
   | CsdnTargetConfig
   | JuejinTargetConfig
   | GithubTargetConfig
-  | GitlabTargetConfig
-  | LocalFilesystemTargetConfig;
+  | GitlabTargetConfig;
 
 export type LlmVendor = "openai" | "openai-compatible" | "anthropic" | "gemini";
 
