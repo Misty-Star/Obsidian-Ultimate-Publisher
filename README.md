@@ -62,8 +62,9 @@ The currently supported providers are:
 | Juejin | Cookie-based web authentication | Articles can be published and updated | Requires a category and at least one tag; supports brief content | Local Obsidian images are not uploaded |
 | GitHub Static Sites | GitHub token, owner/repo, branch, content root, and site generator subtype | Markdown files can be published and updated through the repository contents API | Normal publish metadata is not exposed yet; target settings choose the static-site generator and repository path | Media upload and delete are intentionally unsupported |
 | GitLab Static Sites | GitLab base URL, project path/ID, token, branch, content root, and site generator subtype | Markdown files can be published and updated through the repository repository-files API | Normal publish metadata is not exposed yet; target settings choose the static-site generator and repository path | Media upload and delete are intentionally unsupported |
+| Local Filesystem | Vault-relative output folder | Markdown files can be published, updated, and deleted inside the vault | Normal publish metadata is not exposed; target settings choose the static-site generator and overwrite behavior | Media copy is intentionally unsupported |
 
-Unsupported provider families and empty Marketplace categories are not shown as installable providers. Reference platforms that are still planned, such as Notion, Halo API, MetaWeblog/CNBlogs/Typecho/Jvue, WeChat, Jianshu, Bilibili, Xiaohongshu, and local filesystem export, are not shown in Marketplace until a real provider definition and publish/update tests exist.
+Unsupported provider families and empty Marketplace categories are not shown as installable providers. Reference platforms that are still planned, such as Notion, Halo API, MetaWeblog/CNBlogs/Typecho/Jvue, WeChat, Jianshu, Bilibili, and Xiaohongshu, are not shown in Marketplace until a real provider definition and publish/update tests exist.
 
 ## ⚙️ Configuration
 

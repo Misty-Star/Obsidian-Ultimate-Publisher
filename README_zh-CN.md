@@ -60,8 +60,9 @@
 | 掘金 | 基于 Cookie 的网页认证 | 支持发布和更新文章 | 必须填写分类和至少一个标签，支持摘要/简介 | 不上传本地 Obsidian 图片 |
 | GitHub 静态站点 | GitHub token、owner/repo、分支、内容根目录和静态站点生成器子类型 | 通过 repository contents API 发布和更新 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和仓库路径 | 暂不支持媒体上传和删除 |
 | GitLab 静态站点 | GitLab base URL、项目路径/ID、token、分支、内容根目录和静态站点生成器子类型 | 通过 repository files API 发布和更新 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和仓库路径 | 暂不支持媒体上传和删除 |
+| 本地文件系统 | 库内相对输出目录 | 支持在当前库内发布、更新、删除 Markdown 文件 | 暂不暴露普通发布元数据；目标设置里选择静态站点生成器和覆盖行为 | 暂不支持媒体复制 |
 
-尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。仍处于计划状态的参考平台（例如 Notion、Halo API、MetaWeblog/CNBlogs/Typecho/Jvue、微信公众号、简书、Bilibili、小红书和本地文件系统导出）不会出现在 Marketplace，直到已经具备真实 provider definition 和发布/更新测试。
+尚未支持的 Provider 家族和没有可用 Provider 的 Marketplace 分类不会展示为可安装平台。仍处于计划状态的参考平台（例如 Notion、Halo API、MetaWeblog/CNBlogs/Typecho/Jvue、微信公众号、简书、Bilibili 和小红书）不会出现在 Marketplace，直到已经具备真实 provider definition 和发布/更新测试。
 
 ## ⚙️ 配置
 
