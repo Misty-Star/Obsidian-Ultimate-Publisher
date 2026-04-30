@@ -19,8 +19,7 @@ import {
 } from "./web";
 import { wordpressDefinition } from "./wordpress";
 import { cnblogsDefinition, jvueDefinition, metaweblogDefinition, typechoDefinition, wordpressComDefinition } from "./metaweblog";
-import { githubDefinition, gitlabDefinition } from "./staticSite";
-import { localFilesystemDefinition } from "./filesystem";
+import { githubDefinition, githubStaticSiteDefinitions, gitlabDefinition, gitlabStaticSiteDefinitions } from "./staticSite";
 
 const providerDefinitionsById = {
   wordpress: wordpressDefinition,
@@ -44,7 +43,8 @@ const providerDefinitionsById = {
   xiaohongshu: xiaohongshuDefinition,
   github: githubDefinition,
   gitlab: gitlabDefinition,
-  "local-filesystem": localFilesystemDefinition,
+  ...githubStaticSiteDefinitions,
+  ...gitlabStaticSiteDefinitions,
 } satisfies ProviderDefinitionMap;
 
 const providerDisplayOrder: ProviderId[] = [
@@ -67,9 +67,19 @@ const providerDisplayOrder: ProviderId[] = [
   "halo-web",
   "bilibili",
   "xiaohongshu",
-  "github",
-  "gitlab",
-  "local-filesystem",
+  "github-hugo",
+  "github-hexo",
+  "github-jekyll",
+  "github-vuepress",
+  "github-vuepress2",
+  "github-vitepress",
+  "github-quartz",
+  "gitlab-hugo",
+  "gitlab-hexo",
+  "gitlab-jekyll",
+  "gitlab-vuepress",
+  "gitlab-vuepress2",
+  "gitlab-vitepress",
 ];
 
 export function getProviderDefinitions(): AnyProviderDefinition[] {

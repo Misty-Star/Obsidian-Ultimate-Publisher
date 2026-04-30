@@ -14,7 +14,7 @@ import {
   buildStaticSiteMarkdown,
   renderCommitMessage,
 } from "../core/staticSite/content";
-import { GithubTargetConfig } from "../types";
+import { GithubStaticSiteProviderId, GithubTargetConfig } from "../types";
 
 interface GithubContentResponse {
   content?: {
@@ -104,8 +104,12 @@ function buildPayload(note: PublishableNote, target: GithubTargetConfig, path: s
   };
 }
 
-export class GithubProvider implements PublisherProvider<GithubTargetConfig> {
-  readonly provider = "github" as const;
+export class GithubProvider<TProvider extends GithubStaticSiteProviderId = GithubStaticSiteProviderId> implements PublisherProvider<GithubTargetConfig<TProvider>> {
+  readonly provider: TProvider;
+
+  constructor(provider: TProvider = "github" as TProvider) {
+    this.provider = provider;
+  }
 
   getMediaSupport(_target: GithubTargetConfig): MediaSupport {
     return { mode: "unsupported" };

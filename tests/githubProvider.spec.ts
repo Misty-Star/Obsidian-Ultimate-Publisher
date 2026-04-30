@@ -20,12 +20,12 @@ function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
   };
 }
 
-function createTarget(): GithubTargetConfig {
+function createTarget(): GithubTargetConfig<"github-hugo"> {
   return {
     id: "github-target",
     name: "GitHub Static Sites",
     enabled: true,
-    provider: "github",
+    provider: "github-hugo",
     siteGenerator: "hugo",
     owner: "misty",
     repo: "site",
@@ -57,7 +57,10 @@ describe("GithubProvider", () => {
       text: JSON.stringify({ content: { path: "content/posts/post.md", html_url: "https://github.com/misty/site/post" } }),
     } as never);
 
-    const result = await new GithubProvider().publish(createNote(), createTarget());
+    const provider = new GithubProvider("github-hugo");
+    const result = await provider.publish(createNote(), createTarget());
+
+    expect(provider.provider).toBe("github-hugo");
 
     expect(result).toEqual({ remoteId: "content/posts/post.md", remoteUrl: "https://example.com/content/posts/post/" });
     expect(requestUrl).toHaveBeenCalledWith(

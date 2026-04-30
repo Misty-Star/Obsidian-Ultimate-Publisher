@@ -3,7 +3,7 @@ import { PublishableNote } from "../core/note";
 import { NormalPublishExecutionContext } from "../core/normalPublish/types";
 import { MediaSupport, ProviderRuntimeOptions, PublisherProvider, PublishResult, assertRemoteAssetsSupported } from "../core/providers";
 import { buildPreviewUrl, buildStaticSiteContentPath, buildStaticSiteMarkdown, renderCommitMessage } from "../core/staticSite/content";
-import { GitlabTargetConfig } from "../types";
+import { GitlabStaticSiteProviderId, GitlabTargetConfig } from "../types";
 
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
@@ -53,8 +53,12 @@ function buildPayload(note: PublishableNote, target: GitlabTargetConfig, path: s
   };
 }
 
-export class GitlabProvider implements PublisherProvider<GitlabTargetConfig> {
-  readonly provider = "gitlab" as const;
+export class GitlabProvider<TProvider extends GitlabStaticSiteProviderId = GitlabStaticSiteProviderId> implements PublisherProvider<GitlabTargetConfig<TProvider>> {
+  readonly provider: TProvider;
+
+  constructor(provider: TProvider = "gitlab" as TProvider) {
+    this.provider = provider;
+  }
 
   getMediaSupport(_target: GitlabTargetConfig): MediaSupport {
     return { mode: "unsupported" };

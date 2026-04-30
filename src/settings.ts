@@ -12,7 +12,6 @@ import {
   JianshuTargetConfig,
   JuejinTargetConfig,
   JuejinProviderOptionCacheEntry,
-  LocalFilesystemTargetConfig,
   LlmSettings,
   MetaWeblogTargetConfig,
   NotionTargetConfig,
@@ -245,16 +244,13 @@ export function createXiaohongshuTarget(): XiaohongshuTargetConfig {
 }
 
 export function createGithubTarget(): GithubTargetConfig {
-  return getProviderDefinition("github").createTarget();
+  return getProviderDefinition("github-hugo").createTarget();
 }
 
 export function createGitlabTarget(): GitlabTargetConfig {
-  return getProviderDefinition("gitlab").createTarget();
+  return getProviderDefinition("gitlab-hugo").createTarget();
 }
 
-export function createLocalFilesystemTarget(): LocalFilesystemTargetConfig {
-  return getProviderDefinition("local-filesystem").createTarget();
-}
 
 export function getRecord(
   records: PublishRecord[],
@@ -352,10 +348,34 @@ export function normalizeTarget(
     case "xiaohongshu":
       return getProviderDefinition("xiaohongshu").normalizeTarget(target);
     case "github":
-      return getProviderDefinition("github").normalizeTarget(target);
+      return getProviderDefinition("github").normalizeTarget(target as GithubTargetConfig<"github">);
     case "gitlab":
-      return getProviderDefinition("gitlab").normalizeTarget(target);
-    case "local-filesystem":
-      return getProviderDefinition("local-filesystem").normalizeTarget(target);
+      return getProviderDefinition("gitlab").normalizeTarget(target as GitlabTargetConfig<"gitlab">);
+    case "github-hugo":
+      return getProviderDefinition("github-hugo").normalizeTarget(target as GithubTargetConfig<"github-hugo">);
+    case "github-hexo":
+      return getProviderDefinition("github-hexo").normalizeTarget(target as GithubTargetConfig<"github-hexo">);
+    case "github-jekyll":
+      return getProviderDefinition("github-jekyll").normalizeTarget(target as GithubTargetConfig<"github-jekyll">);
+    case "github-vuepress":
+      return getProviderDefinition("github-vuepress").normalizeTarget(target as GithubTargetConfig<"github-vuepress">);
+    case "github-vuepress2":
+      return getProviderDefinition("github-vuepress2").normalizeTarget(target as GithubTargetConfig<"github-vuepress2">);
+    case "github-vitepress":
+      return getProviderDefinition("github-vitepress").normalizeTarget(target as GithubTargetConfig<"github-vitepress">);
+    case "github-quartz":
+      return getProviderDefinition("github-quartz").normalizeTarget(target as GithubTargetConfig<"github-quartz">);
+    case "gitlab-hugo":
+      return getProviderDefinition("gitlab-hugo").normalizeTarget(target as GitlabTargetConfig<"gitlab-hugo">);
+    case "gitlab-hexo":
+      return getProviderDefinition("gitlab-hexo").normalizeTarget(target as GitlabTargetConfig<"gitlab-hexo">);
+    case "gitlab-jekyll":
+      return getProviderDefinition("gitlab-jekyll").normalizeTarget(target as GitlabTargetConfig<"gitlab-jekyll">);
+    case "gitlab-vuepress":
+      return getProviderDefinition("gitlab-vuepress").normalizeTarget(target as GitlabTargetConfig<"gitlab-vuepress">);
+    case "gitlab-vuepress2":
+      return getProviderDefinition("gitlab-vuepress2").normalizeTarget(target as GitlabTargetConfig<"gitlab-vuepress2">);
+    case "gitlab-vitepress":
+      return getProviderDefinition("gitlab-vitepress").normalizeTarget(target as GitlabTargetConfig<"gitlab-vitepress">);
   }
 }

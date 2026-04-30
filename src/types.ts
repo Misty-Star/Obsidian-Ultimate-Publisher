@@ -20,12 +20,24 @@ export const SUPPORTED_PROVIDER_IDS = [
   "xiaohongshu",
   "github",
   "gitlab",
-  "local-filesystem",
+  "github-hugo",
+  "github-hexo",
+  "github-jekyll",
+  "github-vuepress",
+  "github-vuepress2",
+  "github-vitepress",
+  "github-quartz",
+  "gitlab-hugo",
+  "gitlab-hexo",
+  "gitlab-jekyll",
+  "gitlab-vuepress",
+  "gitlab-vuepress2",
+  "gitlab-vitepress",
 ] as const;
 
 export type ProviderId = (typeof SUPPORTED_PROVIDER_IDS)[number];
-export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web" | "filesystem";
-export type ProviderFamilyId = "rest-api" | "xml-rpc" | "cookie-web" | "github-static-site" | "gitlab-static-site" | "filesystem-local";
+export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web";
+export type ProviderFamilyId = "rest-api" | "xml-rpc" | "cookie-web" | "github-static-site" | "gitlab-static-site";
 
 export function isProviderId(value: unknown): value is ProviderId {
   return (
@@ -178,8 +190,27 @@ export type StaticSiteGenerator =
   | "vitepress"
   | "quartz";
 
-export interface GithubTargetConfig extends BaseTargetConfig {
-  provider: "github";
+export type GithubStaticSiteProviderId =
+  | "github"
+  | "github-hugo"
+  | "github-hexo"
+  | "github-jekyll"
+  | "github-vuepress"
+  | "github-vuepress2"
+  | "github-vitepress"
+  | "github-quartz";
+
+export type GitlabStaticSiteProviderId =
+  | "gitlab"
+  | "gitlab-hugo"
+  | "gitlab-hexo"
+  | "gitlab-jekyll"
+  | "gitlab-vuepress"
+  | "gitlab-vuepress2"
+  | "gitlab-vitepress";
+
+export interface GithubTargetConfig<TProvider extends GithubStaticSiteProviderId = GithubStaticSiteProviderId> extends BaseTargetConfig {
+  provider: TProvider;
   siteGenerator: StaticSiteGenerator;
   owner: string;
   repo: string;
@@ -190,8 +221,8 @@ export interface GithubTargetConfig extends BaseTargetConfig {
   previewBaseUrl?: string;
 }
 
-export interface GitlabTargetConfig extends BaseTargetConfig {
-  provider: "gitlab";
+export interface GitlabTargetConfig<TProvider extends GitlabStaticSiteProviderId = GitlabStaticSiteProviderId> extends BaseTargetConfig {
+  provider: TProvider;
   siteGenerator: StaticSiteGenerator;
   baseUrl: string;
   projectIdOrPath: string;
@@ -200,13 +231,6 @@ export interface GitlabTargetConfig extends BaseTargetConfig {
   token: string;
   commitMessageTemplate: string;
   previewBaseUrl?: string;
-}
-
-export interface LocalFilesystemTargetConfig extends BaseTargetConfig {
-  provider: "local-filesystem";
-  localOutputPath: string;
-  siteGenerator: StaticSiteGenerator;
-  overwriteExisting: boolean;
 }
 
 export type PublishTargetConfig =
@@ -226,8 +250,7 @@ export type PublishTargetConfig =
   | BilibiliTargetConfig
   | XiaohongshuTargetConfig
   | GithubTargetConfig
-  | GitlabTargetConfig
-  | LocalFilesystemTargetConfig;
+  | GitlabTargetConfig;
 export type LlmVendor = "openai" | "openai-compatible" | "anthropic" | "gemini";
 
 export interface LlmSettings {

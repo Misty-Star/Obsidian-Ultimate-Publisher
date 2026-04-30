@@ -4,6 +4,23 @@ import {
   getProviderDefinitions,
 } from "../src/providers/definitions";
 
+
+const STATIC_SITE_PROVIDER_GENERATORS = {
+  "github-hugo": "hugo",
+  "github-hexo": "hexo",
+  "github-jekyll": "jekyll",
+  "github-vuepress": "vuepress",
+  "github-vuepress2": "vuepress2",
+  "github-vitepress": "vitepress",
+  "github-quartz": "quartz",
+  "gitlab-hugo": "hugo",
+  "gitlab-hexo": "hexo",
+  "gitlab-jekyll": "jekyll",
+  "gitlab-vuepress": "vuepress",
+  "gitlab-vuepress2": "vuepress2",
+  "gitlab-vitepress": "vitepress",
+} as const;
+
 describe("provider definitions", () => {
   it("declares stable provider ids, categories, and families in display order", () => {
     expect(
@@ -32,13 +49,19 @@ describe("provider definitions", () => {
       { id: "halo-web", category: "web", family: "cookie-web" },
       { id: "bilibili", category: "web", family: "cookie-web" },
       { id: "xiaohongshu", category: "web", family: "cookie-web" },
-      { id: "github", category: "github", family: "github-static-site" },
-      { id: "gitlab", category: "gitlab", family: "gitlab-static-site" },
-      {
-        id: "local-filesystem",
-        category: "filesystem",
-        family: "filesystem-local",
-      },
+      { id: "github-hugo", category: "github", family: "github-static-site" },
+      { id: "github-hexo", category: "github", family: "github-static-site" },
+      { id: "github-jekyll", category: "github", family: "github-static-site" },
+      { id: "github-vuepress", category: "github", family: "github-static-site" },
+      { id: "github-vuepress2", category: "github", family: "github-static-site" },
+      { id: "github-vitepress", category: "github", family: "github-static-site" },
+      { id: "github-quartz", category: "github", family: "github-static-site" },
+      { id: "gitlab-hugo", category: "gitlab", family: "gitlab-static-site" },
+      { id: "gitlab-hexo", category: "gitlab", family: "gitlab-static-site" },
+      { id: "gitlab-jekyll", category: "gitlab", family: "gitlab-static-site" },
+      { id: "gitlab-vuepress", category: "gitlab", family: "gitlab-static-site" },
+      { id: "gitlab-vuepress2", category: "gitlab", family: "gitlab-static-site" },
+      { id: "gitlab-vitepress", category: "gitlab", family: "gitlab-static-site" },
     ]);
   });
 
@@ -49,7 +72,7 @@ describe("provider definitions", () => {
     const juejin = getProviderDefinition("juejin").createTarget();
     const jianshu = getProviderDefinition("jianshu").createTarget();
     const haloWeb = getProviderDefinition("halo-web").createTarget();
-    const github = getProviderDefinition("github").createTarget();
+    const github = getProviderDefinition("github-hugo").createTarget();
     const metaweblog = getProviderDefinition("metaweblog").createTarget();
 
     expect(wordpress).toMatchObject({
@@ -100,8 +123,8 @@ describe("provider definitions", () => {
       baseUrl: "",
     });
     expect(github).toMatchObject({
-      provider: "github",
-      name: "GitHub Static Sites",
+      provider: "github-hugo",
+      name: "GitHub Hugo",
       enabled: true,
       siteGenerator: "hugo",
       branch: "main",
@@ -175,7 +198,7 @@ describe("provider definitions", () => {
   });
 
   it("keeps static-site providers fully wired while excluding unsupported normal-publish, media, and delete capabilities", () => {
-    for (const providerId of ["github", "gitlab"] as const) {
+    for (const providerId of Object.keys(STATIC_SITE_PROVIDER_GENERATORS) as Array<keyof typeof STATIC_SITE_PROVIDER_GENERATORS>) {
       const definition = getProviderDefinition(providerId);
       const target = definition.createTarget();
       const fields = definition.settingsForm.getFields(target, {
@@ -193,7 +216,7 @@ describe("provider definitions", () => {
       });
       expect(definition.normalPublish).toBeUndefined();
       expect(typeof definition.createProvider).toBe("function");
-      expect(fields.map((field) => field.key)).toContain("siteGenerator");
+      expect(fields.map((field) => field.key)).not.toContain("siteGenerator");
       expect(fields.map((field) => field.key)).toContain("contentRoot");
       expect(fields.map((field) => field.key)).toContain(
         "commitMessageTemplate",
@@ -201,8 +224,41 @@ describe("provider definitions", () => {
     }
   });
 
+
+  it("keeps legacy static-site ids runtime-compatible but out of Marketplace order", () => {
+    const legacyGithub = getProviderDefinition("github").createTarget();
+    const legacyGitlab = getProviderDefinition("gitlab").createTarget();
+
+    expect(legacyGithub).toMatchObject({ provider: "github", siteGenerator: "hugo" });
+    expect(legacyGitlab).toMatchObject({ provider: "gitlab", siteGenerator: "hugo" });
+    expect(getProviderDefinitions().map((definition) => definition.id)).not.toContain("github");
+    expect(getProviderDefinitions().map((definition) => definition.id)).not.toContain("gitlab");
+  });
+
+  it("pins every generator-specific static-site definition to its provider id and runtime factory", () => {
+    for (const [providerId, generator] of Object.entries(STATIC_SITE_PROVIDER_GENERATORS) as Array<[keyof typeof STATIC_SITE_PROVIDER_GENERATORS, (typeof STATIC_SITE_PROVIDER_GENERATORS)[keyof typeof STATIC_SITE_PROVIDER_GENERATORS]]>) {
+      const definition = getProviderDefinition(providerId);
+      const target = definition.createTarget();
+      const normalized = definition.normalizeTarget({
+        ...target,
+        siteGenerator: generator === "hugo" ? "hexo" : "hugo",
+      } as never);
+      const provider = definition.createProvider({} as never);
+
+      expect(target).toMatchObject({
+        provider: providerId,
+        siteGenerator: generator,
+      });
+      expect(normalized).toMatchObject({
+        provider: providerId,
+        siteGenerator: generator,
+      });
+      expect(provider.provider).toBe(providerId);
+    }
+  });
+
   it("exposes runtime provider factories for all built-in providers", () => {
-    for (const providerId of ["wordpress", "wordpress-com", "metaweblog", "cnblogs", "typecho", "jvue", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab", "local-filesystem"] as const) {
+    for (const providerId of ["wordpress", "wordpress-com", "metaweblog", "cnblogs", "typecho", "jvue", "yuque", "zhihu", "csdn", "juejin", "github-hugo", "gitlab-hugo"] as const) {
       const definition = getProviderDefinition(providerId);
       expect(typeof definition.createProvider).toBe("function");
     }

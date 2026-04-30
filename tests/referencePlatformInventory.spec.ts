@@ -83,15 +83,17 @@ const REFERENCE_PLATFORM_MIGRATION_MATRIX: Array<{
   {
     referencePlatform:
       "GitHub Hugo/Hexo/Jekyll/VuePress/VuePress2/VitePress/Quartz",
-    status: "covered-by-shared-provider",
-    providerId: "github",
-    rationale: "Shared static-site provider with generator subtype.",
+    status: "implemented",
+    providerId: "github-hugo",
+    rationale:
+      "GitHub static-site generators are exposed as concrete Marketplace provider objects backed by the shared GitHub runtime.",
   },
   {
     referencePlatform: "GitLab Hexo/Hugo/Jekyll/VuePress/VuePress2/VitePress",
-    status: "covered-by-shared-provider",
-    providerId: "gitlab",
-    rationale: "Shared static-site provider with generator subtype.",
+    status: "implemented",
+    providerId: "gitlab-hugo",
+    rationale:
+      "GitLab reference generators are exposed as concrete Marketplace provider objects backed by the shared GitLab runtime; reference parity intentionally omits GitLab Quartz.",
   },
   {
     referencePlatform: "Zhihu",
@@ -143,9 +145,9 @@ const REFERENCE_PLATFORM_MIGRATION_MATRIX: Array<{
   },
   {
     referencePlatform: "LocalSystem",
-    status: "implemented",
-    providerId: "local-filesystem",
-    rationale: "Vault-relative local Markdown export provider.",
+    status: "out-of-scope",
+    rationale:
+      "Local File was removed from the Marketplace/product surface after the hosted generator-specific static-site split.",
   },
   {
     referencePlatform: "FTP/SFTP/cloud drives",

@@ -30,7 +30,6 @@ const MARKETPLACE_CATEGORY_DISPLAY_ORDER: ProviderCategory[] = [
   "github",
   "gitlab",
   "metaweblog",
-  "filesystem",
   "wordpress",
   "web",
 ];
@@ -73,8 +72,6 @@ function resolveMarketplaceCategoryLabel(i18n: Translator, categoryId: ProviderC
       return resolveTranslation(i18n, key, { en: "GitLab", "zh-CN": "GitLab" });
     case "metaweblog":
       return resolveTranslation(i18n, key, { en: "MetaWeblog", "zh-CN": "MetaWeblog" });
-    case "filesystem":
-      return resolveTranslation(i18n, key, { en: "Filesystem", "zh-CN": "文件系统" });
     case "wordpress":
       return resolveTranslation(i18n, key, { en: "WordPress", "zh-CN": "WordPress" });
     case "web":

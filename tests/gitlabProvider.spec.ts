@@ -20,12 +20,12 @@ function createNote(overrides: Partial<PublishableNote> = {}): PublishableNote {
   };
 }
 
-function createTarget(): GitlabTargetConfig {
+function createTarget(): GitlabTargetConfig<"gitlab-hugo"> {
   return {
     id: "gitlab-target",
     name: "GitLab Static Sites",
     enabled: true,
-    provider: "gitlab",
+    provider: "gitlab-hugo",
     siteGenerator: "hugo",
     baseUrl: "https://gitlab.example.com/",
     projectIdOrPath: "misty/site",
@@ -53,7 +53,10 @@ describe("GitlabProvider", () => {
   it("publishes Hugo Markdown content through the GitLab repository files API", async () => {
     vi.mocked(requestUrl).mockResolvedValue({ status: 201, text: JSON.stringify({ file_path: "content/posts/post.md" }) } as never);
 
-    const result = await new GitlabProvider().publish(createNote(), createTarget());
+    const provider = new GitlabProvider("gitlab-hugo");
+    const result = await provider.publish(createNote(), createTarget());
+
+    expect(provider.provider).toBe("gitlab-hugo");
 
     expect(result).toEqual({ remoteId: "content/posts/post.md", remoteUrl: "https://example.com/content/posts/post/" });
     expect(requestUrl).toHaveBeenCalledWith(

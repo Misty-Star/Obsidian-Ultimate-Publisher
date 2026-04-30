@@ -40,6 +40,7 @@ type ProviderCatalogSeedInput = {
 
 export type ProviderCatalogEntry = ProviderCatalogBase;
 
+
 const PROVIDER_CATALOG_PRESENTATION: ProviderCatalogSeedInput[] = [
   {
     id: "wordpress",
@@ -217,33 +218,124 @@ const PROVIDER_CATALOG_PRESENTATION: ProviderCatalogSeedInput[] = [
     icon: "XH",
   },
   {
-    id: "github",
-    descriptionKey: "settings.providers.github.description",
+    id: "github-hugo",
+    descriptionKey: "settings.providers.github-hugo.description",
     descriptionFallback: {
-      en: "Publish Markdown articles to GitHub-backed static sites such as Hugo.",
-      "zh-CN": "将 Markdown 文章发布到 Hugo 等 GitHub 静态站点仓库。",
+      en: "Publish Markdown articles to a GitHub-backed Hugo site.",
+      "zh-CN": "将 Markdown 文章发布到 GitHub 托管的 Hugo 站点。",
     },
     icon: "GH",
   },
   {
-    id: "gitlab",
-    descriptionKey: "settings.providers.gitlab.description",
+    id: "github-hexo",
+    descriptionKey: "settings.providers.github-hexo.description",
     descriptionFallback: {
-      en: "Publish Markdown articles to GitLab-backed static sites such as Hugo.",
-      "zh-CN": "将 Markdown 文章发布到 Hugo 等 GitLab 静态站点仓库。",
+      en: "Publish Markdown articles to a GitHub-backed Hexo site.",
+      "zh-CN": "将 Markdown 文章发布到 GitHub 托管的 Hexo 站点。",
+    },
+    icon: "GH",
+  },
+  {
+    id: "github-jekyll",
+    descriptionKey: "settings.providers.github-jekyll.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitHub-backed Jekyll site.",
+      "zh-CN": "将 Markdown 文章发布到 GitHub 托管的 Jekyll 站点。",
+    },
+    icon: "GH",
+  },
+  {
+    id: "github-vuepress",
+    descriptionKey: "settings.providers.github-vuepress.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitHub-backed VuePress site.",
+      "zh-CN": "将 Markdown 文章发布到 GitHub 托管的 VuePress 站点。",
+    },
+    icon: "GH",
+  },
+  {
+    id: "github-vuepress2",
+    descriptionKey: "settings.providers.github-vuepress2.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitHub-backed VuePress 2 site.",
+      "zh-CN": "将 Markdown 文章发布到 GitHub 托管的 VuePress 2 站点。",
+    },
+    icon: "GH",
+  },
+  {
+    id: "github-vitepress",
+    descriptionKey: "settings.providers.github-vitepress.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitHub-backed VitePress site.",
+      "zh-CN": "将 Markdown 文章发布到 GitHub 托管的 VitePress 站点。",
+    },
+    icon: "GH",
+  },
+  {
+    id: "github-quartz",
+    descriptionKey: "settings.providers.github-quartz.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitHub-backed Quartz site.",
+      "zh-CN": "将 Markdown 文章发布到 GitHub 托管的 Quartz 站点。",
+    },
+    icon: "GH",
+  },
+  {
+    id: "gitlab-hugo",
+    descriptionKey: "settings.providers.gitlab-hugo.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitLab-backed Hugo site.",
+      "zh-CN": "将 Markdown 文章发布到 GitLab 托管的 Hugo 站点。",
     },
     icon: "GL",
   },
   {
-    id: "local-filesystem",
-    descriptionKey: "settings.providers.local-filesystem.description",
+    id: "gitlab-hexo",
+    descriptionKey: "settings.providers.gitlab-hexo.description",
     descriptionFallback: {
-      en: "Export static-site Markdown files to a vault-relative local folder.",
-      "zh-CN": "将静态站点 Markdown 文件导出到当前库内的本地目录。",
+      en: "Publish Markdown articles to a GitLab-backed Hexo site.",
+      "zh-CN": "将 Markdown 文章发布到 GitLab 托管的 Hexo 站点。",
     },
-    icon: "FS",
+    icon: "GL",
+  },
+  {
+    id: "gitlab-jekyll",
+    descriptionKey: "settings.providers.gitlab-jekyll.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitLab-backed Jekyll site.",
+      "zh-CN": "将 Markdown 文章发布到 GitLab 托管的 Jekyll 站点。",
+    },
+    icon: "GL",
+  },
+  {
+    id: "gitlab-vuepress",
+    descriptionKey: "settings.providers.gitlab-vuepress.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitLab-backed VuePress site.",
+      "zh-CN": "将 Markdown 文章发布到 GitLab 托管的 VuePress 站点。",
+    },
+    icon: "GL",
+  },
+  {
+    id: "gitlab-vuepress2",
+    descriptionKey: "settings.providers.gitlab-vuepress2.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitLab-backed VuePress 2 site.",
+      "zh-CN": "将 Markdown 文章发布到 GitLab 托管的 VuePress 2 站点。",
+    },
+    icon: "GL",
+  },
+  {
+    id: "gitlab-vitepress",
+    descriptionKey: "settings.providers.gitlab-vitepress.description",
+    descriptionFallback: {
+      en: "Publish Markdown articles to a GitLab-backed VitePress site.",
+      "zh-CN": "将 Markdown 文章发布到 GitLab 托管的 VitePress 站点。",
+    },
+    icon: "GL",
   },
 ];
+
 
 const DEFAULT_I18N = createI18n("en");
 

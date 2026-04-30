@@ -22,7 +22,6 @@ import {
   HaloWebTargetConfig,
   JianshuTargetConfig,
   JuejinTargetConfig,
-  LocalFilesystemTargetConfig,
   MetaWeblogTargetConfig,
   NotionTargetConfig,
   ProviderCategory,
@@ -37,7 +36,7 @@ import {
   ZhihuTargetConfig,
 } from "../../types";
 
-export type ProviderTargetById = {
+type ProviderTargetByIdBase = {
   wordpress: WordpressTargetConfig;
   "wordpress-com": MetaWeblogTargetConfig<"wordpress-com">;
   metaweblog: MetaWeblogTargetConfig<"metaweblog">;
@@ -57,12 +56,26 @@ export type ProviderTargetById = {
   "halo-web": HaloWebTargetConfig;
   bilibili: BilibiliTargetConfig;
   xiaohongshu: XiaohongshuTargetConfig;
-  github: GithubTargetConfig;
-  gitlab: GitlabTargetConfig;
-  "local-filesystem": LocalFilesystemTargetConfig;
+  github: GithubTargetConfig<"github">;
+  gitlab: GitlabTargetConfig<"gitlab">;
+  "github-hugo": GithubTargetConfig<"github-hugo">;
+  "github-hexo": GithubTargetConfig<"github-hexo">;
+  "github-jekyll": GithubTargetConfig<"github-jekyll">;
+  "github-vuepress": GithubTargetConfig<"github-vuepress">;
+  "github-vuepress2": GithubTargetConfig<"github-vuepress2">;
+  "github-vitepress": GithubTargetConfig<"github-vitepress">;
+  "github-quartz": GithubTargetConfig<"github-quartz">;
+  "gitlab-hugo": GitlabTargetConfig<"gitlab-hugo">;
+  "gitlab-hexo": GitlabTargetConfig<"gitlab-hexo">;
+  "gitlab-jekyll": GitlabTargetConfig<"gitlab-jekyll">;
+  "gitlab-vuepress": GitlabTargetConfig<"gitlab-vuepress">;
+  "gitlab-vuepress2": GitlabTargetConfig<"gitlab-vuepress2">;
+  "gitlab-vitepress": GitlabTargetConfig<"gitlab-vitepress">;
 };
 
-export type ProviderDraftById = {
+export type ProviderTargetById = ProviderTargetByIdBase;
+
+type ProviderDraftByIdBase = {
   wordpress: WordpressPublishDraft;
   "wordpress-com": WordpressPublishDraft;
   metaweblog: WordpressPublishDraft;
@@ -84,8 +97,22 @@ export type ProviderDraftById = {
   xiaohongshu: never;
   github: never;
   gitlab: never;
-  "local-filesystem": never;
+  "github-hugo": never;
+  "github-hexo": never;
+  "github-jekyll": never;
+  "github-vuepress": never;
+  "github-vuepress2": never;
+  "github-vitepress": never;
+  "github-quartz": never;
+  "gitlab-hugo": never;
+  "gitlab-hexo": never;
+  "gitlab-jekyll": never;
+  "gitlab-vuepress": never;
+  "gitlab-vuepress2": never;
+  "gitlab-vitepress": never;
 };
+
+export type ProviderDraftById = ProviderDraftByIdBase;
 
 export type ProviderCapabilityFlag =
   | "publish"
@@ -144,9 +171,7 @@ export type ProviderSettingsFieldKey =
   | "contentRoot"
   | "commitMessageTemplate"
   | "previewBaseUrl"
-  | "projectIdOrPath"
-  | "localOutputPath"
-  | "overwriteExisting";
+  | "projectIdOrPath";
 
 export type ProviderSettingsFieldType =
   | "toggle"

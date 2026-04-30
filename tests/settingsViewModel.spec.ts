@@ -57,9 +57,19 @@ describe("settingsViewModel", () => {
       "halo-web",
       "bilibili",
       "xiaohongshu",
-      "github",
-      "gitlab",
-      "local-filesystem",
+      "github-hugo",
+      "github-hexo",
+      "github-jekyll",
+      "github-vuepress",
+      "github-vuepress2",
+      "github-vitepress",
+      "github-quartz",
+      "gitlab-hugo",
+      "gitlab-hexo",
+      "gitlab-jekyll",
+      "gitlab-vuepress",
+      "gitlab-vuepress2",
+      "gitlab-vitepress",
     ]);
   });
 
@@ -73,7 +83,6 @@ describe("settingsViewModel", () => {
       "github",
       "gitlab",
       "metaweblog",
-      "filesystem",
       "wordpress",
       "web",
     ]);
