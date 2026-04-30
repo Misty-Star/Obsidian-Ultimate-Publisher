@@ -17,6 +17,7 @@ import {
   JuejinTargetConfig,
   GithubTargetConfig,
   GitlabTargetConfig,
+  LocalFilesystemTargetConfig,
   ProviderCategory,
   ProviderFamilyId,
   ProviderId,
@@ -34,6 +35,7 @@ export type ProviderTargetById = {
   juejin: JuejinTargetConfig;
   github: GithubTargetConfig;
   gitlab: GitlabTargetConfig;
+  "local-filesystem": LocalFilesystemTargetConfig;
 };
 
 export type ProviderDraftById = {
@@ -44,6 +46,7 @@ export type ProviderDraftById = {
   juejin: JuejinPublishDraft;
   github: never;
   gitlab: never;
+  "local-filesystem": never;
 };
 
 export type ProviderCapabilityFlag =
@@ -92,7 +95,9 @@ export type ProviderSettingsFieldKey =
   | "contentRoot"
   | "commitMessageTemplate"
   | "previewBaseUrl"
-  | "projectIdOrPath";
+  | "projectIdOrPath"
+  | "localOutputPath"
+  | "overwriteExisting";
 
 export type ProviderSettingsFieldType = "toggle" | "text" | "password" | "dropdown";
 
