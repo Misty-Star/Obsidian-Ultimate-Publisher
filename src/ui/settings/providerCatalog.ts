@@ -104,15 +104,6 @@ const PROVIDER_CATALOG_PRESENTATION: ProviderCatalogSeedInput[] = [
     },
     icon: "GL",
   },
-  {
-    id: "local-filesystem",
-    descriptionKey: "settings.providers.local-filesystem.description",
-    descriptionFallback: {
-      en: "Export static-site Markdown files to a vault-relative local folder.",
-      "zh-CN": "将静态站点 Markdown 文件导出到当前库内的本地目录。",
-    },
-    icon: "FS",
-  },
 ];
 
 const DEFAULT_I18N = createI18n("en");

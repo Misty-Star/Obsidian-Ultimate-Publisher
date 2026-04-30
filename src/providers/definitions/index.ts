@@ -4,7 +4,6 @@ import { ProviderDefinitionMap, AnyProviderDefinition } from "./types";
 import { csdnDefinition, juejinDefinition, zhihuDefinition } from "./web";
 import { wordpressDefinition } from "./wordpress";
 import { githubDefinition, gitlabDefinition } from "./staticSite";
-import { localFilesystemDefinition } from "./filesystem";
 
 const providerDefinitionsById = {
   wordpress: wordpressDefinition,
@@ -14,10 +13,9 @@ const providerDefinitionsById = {
   juejin: juejinDefinition,
   github: githubDefinition,
   gitlab: gitlabDefinition,
-  "local-filesystem": localFilesystemDefinition,
 } satisfies ProviderDefinitionMap;
 
-const providerDisplayOrder: ProviderId[] = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab", "local-filesystem"];
+const providerDisplayOrder: ProviderId[] = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"];
 
 export function getProviderDefinitions(): AnyProviderDefinition[] {
   return providerDisplayOrder.map((providerId) => providerDefinitionsById[providerId]);

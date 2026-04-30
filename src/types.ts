@@ -1,17 +1,8 @@
-export const SUPPORTED_PROVIDER_IDS = [
-  "wordpress",
-  "yuque",
-  "zhihu",
-  "csdn",
-  "juejin",
-  "github",
-  "gitlab",
-  "local-filesystem",
-] as const;
+export const SUPPORTED_PROVIDER_IDS = ["wordpress", "yuque", "zhihu", "csdn", "juejin", "github", "gitlab"] as const;
 
 export type ProviderId = (typeof SUPPORTED_PROVIDER_IDS)[number];
-export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web" | "filesystem";
-export type ProviderFamilyId = "rest-api" | "cookie-web" | "github-static-site" | "gitlab-static-site" | "filesystem-local";
+export type ProviderCategory = "common" | "wordpress" | "metaweblog" | "github" | "gitlab" | "web";
+export type ProviderFamilyId = "rest-api" | "cookie-web" | "github-static-site" | "gitlab-static-site";
 
 export function isProviderId(value: unknown): value is ProviderId {
   return typeof value === "string" && (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(value);
@@ -113,13 +104,6 @@ export interface GitlabTargetConfig extends BaseTargetConfig {
   previewBaseUrl?: string;
 }
 
-export interface LocalFilesystemTargetConfig extends BaseTargetConfig {
-  provider: "local-filesystem";
-  localOutputPath: string;
-  siteGenerator: StaticSiteGenerator;
-  overwriteExisting: boolean;
-}
-
 export type PublishTargetConfig =
   | WordpressTargetConfig
   | YuqueTargetConfig
@@ -127,8 +111,8 @@ export type PublishTargetConfig =
   | CsdnTargetConfig
   | JuejinTargetConfig
   | GithubTargetConfig
-  | GitlabTargetConfig
-  | LocalFilesystemTargetConfig;
+  | GitlabTargetConfig;
+
 export type LlmVendor = "openai" | "openai-compatible" | "anthropic" | "gemini";
 
 export interface LlmSettings {

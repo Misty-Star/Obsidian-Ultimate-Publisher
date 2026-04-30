@@ -7,7 +7,6 @@ import {
   GitlabTargetConfig,
   JuejinTargetConfig,
   JuejinProviderOptionCacheEntry,
-  LocalFilesystemTargetConfig,
   LlmSettings,
   ProviderOptionCache,
   PublishRecord,
@@ -179,10 +178,6 @@ export function createGitlabTarget(): GitlabTargetConfig {
   return getProviderDefinition("gitlab").createTarget();
 }
 
-export function createLocalFilesystemTarget(): LocalFilesystemTargetConfig {
-  return getProviderDefinition("local-filesystem").createTarget();
-}
-
 export function getRecord(records: PublishRecord[], notePath: string, targetId: string): PublishRecord | undefined {
   return records.find((record) => record.notePath === notePath && record.targetId === targetId);
 }
@@ -225,7 +220,5 @@ export function normalizeTarget(target: PublishTargetConfig): PublishTargetConfi
       return getProviderDefinition("github").normalizeTarget(target);
     case "gitlab":
       return getProviderDefinition("gitlab").normalizeTarget(target);
-    case "local-filesystem":
-      return getProviderDefinition("local-filesystem").normalizeTarget(target);
   }
 }
