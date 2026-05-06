@@ -16,8 +16,35 @@ Use TypeScript with strict typing and 2-space indentation. Follow the existing s
 ## Testing Guidelines
 Write Vitest specs next to related behavior in `tests/` using the `*.spec.ts` suffix, for example `tests/publishWorkflow.spec.ts`. Prefer focused unit tests for pure helpers in `src/core/`, plus workflow tests for multi-target publish behavior. Reuse `tests/support/obsidian.ts` instead of mocking the Obsidian API from scratch. New features should include tests for success paths and at least one failure or edge case.
 
-## Commit & Pull Request Guidelines
-Recent history follows conventional prefixes like `feat:`, `fix:`, `docs:`, `style:`, and `merge:`. Keep commit subjects short, imperative, and scoped to one change. PRs should explain user-visible impact, list verification commands run, and link related issues when available. Include screenshots or GIFs for settings, ribbon menu, dashboard, or modal UI changes.
+## Lore Commit Protocol
+
+Every commit message must follow the Lore protocol: a concise decision record using git-native trailers.
+
+### Format
+
+```text
+<intent line: why the change was made, not what changed>
+
+<optional concise body: constraints and approach rationale>
+
+Constraint: <external constraint that shaped the decision>
+Rejected: <alternative considered> | <reason for rejection>
+Confidence: <low|medium|high>
+Scope-risk: <narrow|moderate|broad>
+Directive: <forward-looking warning for future modifiers>
+Tested: <what was verified>
+Not-tested: <known gaps in verification>
+```
+
+### Rules
+
+- Intent line first; describe why, not what.
+- Use trailers only when they add decision context.
+- Use `Rejected:` for alternatives future agents should not re-explore.
+- Use `Directive:` for warnings, `Constraint:` for external forces, and `Not-tested:` for known verification gaps.
+
+## Pull Request Guidelines
+PRs should explain user-visible impact, list verification commands run, and link related issues when available. Include screenshots or GIFs for settings, ribbon menu, dashboard, or modal UI changes.
 
 ## Security & Configuration Tips
 Never commit real WordPress, Yuque, or web publishing credentials. Use sanitized examples in docs and tests, and keep secrets in Obsidian plugin settings rather than checked-in files.
