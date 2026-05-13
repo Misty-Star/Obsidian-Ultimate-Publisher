@@ -43,7 +43,7 @@ describe("EditTargetModal i18n", () => {
     modal.onOpen();
     const text = collectText(modal.contentEl as never);
 
-    expect(text).toContain("编辑 Zhihu 目标");
+    expect(text).toContain("编辑 知乎 目标");
     expect(text).toContain("授权");
     expect(text).toContain("状态：已授权");
     expect(text).toContain("账号：测试账号 (uid-001)");
@@ -69,6 +69,6 @@ describe("EditTargetModal i18n", () => {
     modal.onOpen();
     const text = collectText(modal.contentEl as never);
 
-    expect(text).toContain("添加 Zhihu 目标");
+    expect(text).toContain("添加 知乎 目标");
   });
 });

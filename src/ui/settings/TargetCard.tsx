@@ -22,6 +22,7 @@ function resolveTranslation(
 }
 
 export function TargetCard({ i18n, target, onEdit, onDelete }: TargetCardProps): React.JSX.Element {
+  const hasSecondaryName = Boolean(target.name);
   const enabledAria = resolveTranslation(i18n, "settings.target.status.enabled", {
     en: "Enabled",
     "zh-CN": "已启用",
@@ -41,14 +42,21 @@ export function TargetCard({ i18n, target, onEdit, onDelete }: TargetCardProps):
 
   return (
     <article className="ultimate-publisher-target-card">
-      <div className="ultimate-publisher-target-card-header">
-        <span
-          className={`ultimate-publisher-target-status ${target.enabled ? "is-enabled" : "is-disabled"}`.trim()}
-          aria-label={target.enabled ? enabledAria : disabledAria}
+      <div className={`ultimate-publisher-target-card-header ${hasSecondaryName ? "" : "is-compact"}`.trim()}>
+        <div
+          className="ultimate-publisher-provider-icon ultimate-publisher-target-provider-icon"
+          aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: target.providerIcon }}
         />
-        <div className="ultimate-publisher-target-card-copy">
-          <h3>{target.providerName}</h3>
-          <p>{target.name}</p>
+        <div className={`ultimate-publisher-target-card-copy ${hasSecondaryName ? "" : "is-compact"}`.trim()}>
+          <div className="ultimate-publisher-target-card-title">
+            <span
+              className={`ultimate-publisher-target-status ${target.enabled ? "is-enabled" : "is-disabled"}`.trim()}
+              aria-label={target.enabled ? enabledAria : disabledAria}
+            />
+            <h3>{target.providerName}</h3>
+          </div>
+          {target.name ? <p>{target.name}</p> : null}
         </div>
       </div>
       <div className="ultimate-publisher-target-card-actions">

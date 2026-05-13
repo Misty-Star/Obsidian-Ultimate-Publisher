@@ -7,7 +7,7 @@ import { cloneTarget, normalizeTarget } from "../../settings";
 import { FrontmatterAutomationSettings, LlmSettings, ProviderId, UltimatePublisherSettings } from "../../types";
 import { ProviderRegistry } from "../../providers/registry";
 import { EditTargetModal } from "./EditTargetModal";
-import { getProviderCatalogEntry } from "./providerCatalog";
+import { createProviderTargetDraft, getProviderCatalogEntry } from "./providerCatalog";
 import { SettingsView } from "./SettingsView";
 import {
   authorizeWebAuthTarget,
@@ -50,14 +50,14 @@ export function mountSettingsView(containerEl: HTMLElement, options: MountSettin
   };
 
   const handleAddProvider = async (providerId: ProviderId): Promise<void> => {
-    const entry = getProviderCatalogEntry(providerId);
+    const entry = getProviderCatalogEntry(providerId, i18n);
     if (!entry) {
       return;
     }
 
     new EditTargetModal(options.plugin.app, {
       mode: "create",
-      target: entry.createTarget(),
+      target: createProviderTargetDraft(entry),
       onAuthorizeDraft: async (target) => {
         if (!isWebAuthTarget(target)) {
           return target;

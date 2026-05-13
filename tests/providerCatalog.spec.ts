@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createI18n } from "../src/i18n";
-import { getProviderCatalog } from "../src/ui/settings/providerCatalog";
+import { createProviderTargetDraft, getProviderCatalog } from "../src/ui/settings/providerCatalog";
 
 describe("getProviderCatalog", () => {
   it("returns the supported provider definitions", () => {
@@ -82,7 +82,7 @@ describe("getProviderCatalog", () => {
     ]);
   });
 
-  it("keeps provider brand names and localizes descriptions", () => {
+  it("localizes provider names in zh-CN while keeping descriptions localized", () => {
     const zh = createI18n("zh-CN");
     const catalog = getProviderCatalog(zh);
     const wordpress = catalog.find((entry) => entry.id === "wordpress");
@@ -96,13 +96,34 @@ describe("getProviderCatalog", () => {
     expect(wordpress?.description).toBe(
       "使用应用密码认证，通过 REST API 发布内容。",
     );
+    expect(yuque?.name).toBe("语雀");
     expect(yuque?.description).toContain("Yuque");
+    expect(zhihu?.name).toBe("知乎");
     expect(zhihu?.description).toContain("Zhihu");
+    expect(juejin?.name).toBe("掘金");
     expect(juejin?.description).toContain("Juejin");
-    expect(jianshu?.name).toBe("Jianshu");
+    expect(jianshu?.name).toBe("简书");
     expect(jianshu?.description).toContain("简书");
-    expect(xiaohongshu?.name).toBe("Xiaohongshu");
+    expect(xiaohongshu?.name).toBe("小红书");
     expect(xiaohongshu?.description).toContain("小红书");
+  });
+
+  it("migrates provider icons from the reference project", () => {
+    const catalog = getProviderCatalog(createI18n("zh-CN"));
+    const zhihu = catalog.find((entry) => entry.id === "zhihu");
+    const metaweblog = catalog.find((entry) => entry.id === "metaweblog");
+
+    expect(zhihu?.icon).toContain("<svg");
+    expect(zhihu?.icon).toContain('p-id="2450"');
+    expect(metaweblog?.icon).toContain("data:image/png;base64,");
+  });
+
+  it("seeds localized default target names for new provider drafts", () => {
+    const zh = createI18n("zh-CN");
+    const zhihu = getProviderCatalog(zh).find((entry) => entry.id === "zhihu");
+
+    expect(zhihu?.name).toBe("知乎");
+    expect(createProviderTargetDraft(zhihu as never).name).toBe("知乎");
   });
 
   it("uses locale fallback when translator returns en fallback for missing locale key", () => {

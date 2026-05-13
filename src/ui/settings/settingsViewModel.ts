@@ -1,13 +1,15 @@
 import { Translator } from "../../i18n";
 import { messages } from "../../i18n/messages";
+import { getProviderDefinition } from "../../providers/definitions";
 import { ProviderCategory, UltimatePublisherSettings } from "../../types";
 import { ProviderCatalogEntry } from "./providerCatalog";
 
 export interface ConfiguredTargetCardModel {
   id: string;
-  name: string;
+  name: string | null;
   providerId: ProviderCatalogEntry["id"];
   providerName: string;
+  providerIcon: string;
   enabled: boolean;
 }
 
@@ -40,11 +42,20 @@ export function buildConfiguredTargetCards(
 ): ConfiguredTargetCardModel[] {
   return settings.targets.map((target) => {
     const entry = catalog.find((item) => item.id === target.provider);
+    const providerName = entry?.name ?? target.provider;
+    const providerDefaultName = getProviderDefinition(target.provider).name;
+    const normalizedTargetName = target.name.trim();
+    const shouldHideTargetName =
+      normalizedTargetName.length === 0 ||
+      normalizedTargetName === providerName ||
+      normalizedTargetName === providerDefaultName;
+
     return {
       id: target.id,
-      name: target.name,
+      name: shouldHideTargetName ? null : target.name,
       providerId: target.provider,
-      providerName: entry?.name ?? target.provider,
+      providerName,
+      providerIcon: entry?.icon ?? "",
       enabled: target.enabled,
     };
   });

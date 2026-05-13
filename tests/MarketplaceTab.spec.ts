@@ -131,6 +131,45 @@ describe("MarketplaceTab", () => {
     hookState = undefined;
   });
 
+  it("renders localized zh-CN provider names and svg icons", () => {
+    const i18n = createI18n("zh-CN");
+    const settings: UltimatePublisherSettings = { targets: [], records: [] };
+    const providerCatalog = getProviderCatalog(i18n);
+
+    const tree = expandElement(
+      React.createElement(MarketplaceTab, {
+        i18n,
+        settings,
+        providerCatalog,
+        onAddProvider: vi.fn(),
+      }),
+    );
+    const text = collectText(tree);
+
+    expect(text).toContain("语雀");
+    expect(text).not.toContain("Zhihu");
+
+    findButtonByText(tree, "网页").onClick();
+
+    const switchedTree = expandElement(
+      React.createElement(MarketplaceTab, {
+        i18n,
+        settings,
+        providerCatalog,
+        onAddProvider: vi.fn(),
+      }),
+    );
+    const switchedText = collectText(switchedTree);
+
+    expect(switchedText).toContain("知乎");
+    expect(switchedText).toContain("掘金");
+    expect(switchedText).toContain("简书");
+
+    const serialized = JSON.stringify(switchedTree);
+    expect(serialized).toContain("dangerouslySetInnerHTML");
+    expect(serialized).toContain("<svg");
+  });
+
   it("switches visible providers when clicking category tabs", () => {
     const i18n = createI18n("en");
     const settings: UltimatePublisherSettings = { targets: [], records: [] };

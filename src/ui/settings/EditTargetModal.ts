@@ -36,7 +36,7 @@ export class EditTargetModal extends Modal {
     contentEl.empty();
     const i18n = createI18nFromObsidianLanguage();
 
-    const providerName = getProviderCatalogEntry(this.draft.provider)?.name ?? this.draft.name;
+    const providerName = getProviderCatalogEntry(this.draft.provider, i18n)?.name ?? this.draft.name;
     contentEl.createEl("h2", {
       text:
         this.options.mode === "create"

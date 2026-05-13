@@ -2,7 +2,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { createI18n } from "../src/i18n";
-import { DEFAULT_SETTINGS, createWordpressTarget, createYuqueTarget } from "../src/settings";
+import { DEFAULT_SETTINGS, createJuejinTarget, createWordpressTarget, createYuqueTarget } from "../src/settings";
 import { SettingsView } from "../src/ui/settings/SettingsView";
 import { UltimatePublisherSettings } from "../src/types";
 
@@ -81,6 +81,136 @@ describe("SettingsView", () => {
     expect(markup).toContain("Web");
     expect(markup).toContain("Yuque");
     expect(markup).not.toContain("Zhihu");
+  });
+
+  it("renders marketplace provider name and description to the right of the provider icon", () => {
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings: { targets: [], records: [] } satisfies UltimatePublisherSettings,
+        initialTab: "marketplace",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("ultimate-publisher-provider-card-header");
+    expect(markup).toMatch(
+      /ultimate-publisher-provider-card-header[\s\S]*ultimate-publisher-provider-icon[\s\S]*ultimate-publisher-provider-copy[\s\S]*<h3>Yuque<\/h3>[\s\S]*Token-based publishing to a Yuque knowledge base\./
+    );
+  });
+
+  it("renders configured target provider icons in the configured targets tab", () => {
+    const settings: UltimatePublisherSettings = {
+      targets: [{ ...createWordpressTarget(), id: "wp-1", name: "Main Blog" }],
+      records: [],
+    };
+
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings,
+        initialTab: "configured",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("ultimate-publisher-target-provider-icon");
+    expect(markup).toContain("Main Blog");
+    expect(markup).toContain("WordPress");
+  });
+
+  it("renders the configured target status dot between the provider icon and provider name", () => {
+    const settings: UltimatePublisherSettings = {
+      targets: [{ ...createWordpressTarget(), id: "wp-1", name: "Main Blog" }],
+      records: [],
+    };
+
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings,
+        initialTab: "configured",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+      })
+    );
+
+    const iconIndex = markup.indexOf("ultimate-publisher-target-provider-icon");
+    const statusIndex = markup.indexOf("ultimate-publisher-target-status");
+    const providerNameIndex = markup.indexOf("WordPress");
+
+    expect(iconIndex).toBeGreaterThan(-1);
+    expect(statusIndex).toBeGreaterThan(iconIndex);
+    expect(providerNameIndex).toBeGreaterThan(statusIndex);
+  });
+
+  it("hides redundant configured target names that only mirror the provider default", () => {
+    const settings: UltimatePublisherSettings = {
+      targets: [{ ...createJuejinTarget(), id: "jj-1", name: "Juejin" }],
+      records: [],
+    };
+
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings,
+        initialTab: "configured",
+        i18n: createI18n("zh-CN"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("掘金");
+    expect(markup).not.toContain("<p>Juejin</p>");
+  });
+
+  it("uses compact card alignment when the configured target has no secondary name", () => {
+    const settings: UltimatePublisherSettings = {
+      targets: [{ ...createJuejinTarget(), id: "jj-1", name: "Juejin" }],
+      records: [],
+    };
+
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings,
+        initialTab: "configured",
+        i18n: createI18n("zh-CN"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("ultimate-publisher-target-card-header is-compact");
+    expect(markup).toContain("ultimate-publisher-target-card-copy is-compact");
+  });
+
+  it("keeps standard card alignment when the configured target has a custom secondary name", () => {
+    const settings: UltimatePublisherSettings = {
+      targets: [{ ...createWordpressTarget(), id: "wp-1", name: "Main Blog" }],
+      records: [],
+    };
+
+    const markup = renderToStaticMarkup(
+      React.createElement(SettingsView, {
+        settings,
+        initialTab: "configured",
+        i18n: createI18n("en"),
+        onAddProvider: vi.fn(),
+        onDeleteTarget: vi.fn(),
+        onEditTarget: vi.fn(),
+      })
+    );
+
+    expect(markup).toContain("ultimate-publisher-target-card-header");
+    expect(markup).not.toContain("ultimate-publisher-target-card-header is-compact");
+    expect(markup).not.toContain("ultimate-publisher-target-card-copy is-compact");
   });
 
   it("keeps English labels when locale is en", () => {

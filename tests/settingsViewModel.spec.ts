@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createI18n } from "../src/i18n";
-import { createWordpressTarget, createYuqueTarget } from "../src/settings";
+import { createJuejinTarget, createWordpressTarget, createYuqueTarget } from "../src/settings";
 import {
   buildConfiguredTargetCards,
   buildMarketplaceCards,
@@ -20,11 +20,43 @@ describe("settingsViewModel", () => {
       records: [],
     };
 
-    expect(
-      buildConfiguredTargetCards(settings, getProviderCatalog()).map(
-        (item) => item.id,
-      ),
-    ).toEqual(["yuque-1", "wp-1"]);
+    const cards = buildConfiguredTargetCards(settings, getProviderCatalog());
+
+    expect(cards.map((item) => item.id)).toEqual(["yuque-1", "wp-1"]);
+    expect(cards[0]?.providerIcon).toContain("<svg");
+    expect(cards[1]?.providerIcon).toContain("<svg");
+  });
+
+  it("hides configured target names when they only repeat the provider default name", () => {
+    const settings: UltimatePublisherSettings = {
+      targets: [
+        { ...createWordpressTarget(), id: "wp-1", name: "WordPress" },
+        { ...createJuejinTarget(), id: "jj-1", name: "Juejin" },
+      ],
+      records: [],
+    };
+
+    const cards = buildConfiguredTargetCards(settings, getProviderCatalog(createI18n("zh-CN")));
+
+    expect(cards[0]?.providerName).toBe("WordPress");
+    expect(cards[0]?.name).toBeNull();
+    expect(cards[1]?.providerName).toBe("掘金");
+    expect(cards[1]?.name).toBeNull();
+  });
+
+  it("keeps configured target names when users set a custom alias", () => {
+    const settings: UltimatePublisherSettings = {
+      targets: [
+        { ...createWordpressTarget(), id: "wp-1", name: "Main Blog" },
+        { ...createJuejinTarget(), id: "jj-1", name: "掘金主号" },
+      ],
+      records: [],
+    };
+
+    const cards = buildConfiguredTargetCards(settings, getProviderCatalog(createI18n("zh-CN")));
+
+    expect(cards[0]?.name).toBe("Main Blog");
+    expect(cards[1]?.name).toBe("掘金主号");
   });
 
   it("shows all providers in marketplace order", () => {
@@ -86,6 +118,18 @@ describe("settingsViewModel", () => {
       "wordpress",
       "web",
     ]);
+  });
+
+  it("localizes marketplace cards in zh-CN", () => {
+    const settings: UltimatePublisherSettings = { targets: [], records: [] };
+    const zh = createI18n("zh-CN");
+
+    const cards = buildMarketplaceCards(settings, getProviderCatalog(zh));
+
+    expect(cards.find((item) => item.id === "zhihu")?.name).toBe("知乎");
+    expect(cards.find((item) => item.id === "juejin")?.name).toBe("掘金");
+    expect(cards.find((item) => item.id === "yuque")?.name).toBe("语雀");
+    expect(cards.find((item) => item.id === "wechat")?.name).toBe("微信公众号");
   });
 
   it("builds cards for the web category", () => {

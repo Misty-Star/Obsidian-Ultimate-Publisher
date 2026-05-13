@@ -32,12 +32,16 @@ export function ProviderCard({ i18n, provider, onAdd }: ProviderCardProps): Reac
 
   return (
     <article className="ultimate-publisher-provider-card">
-      <div className="ultimate-publisher-provider-icon" aria-hidden="true">
-        {provider.icon}
-      </div>
-      <div className="ultimate-publisher-provider-copy">
-        <h3>{provider.name}</h3>
-        <p>{provider.description}</p>
+      <div className="ultimate-publisher-provider-card-header">
+        <div
+          className="ultimate-publisher-provider-icon"
+          aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: provider.icon }}
+        />
+        <div className="ultimate-publisher-provider-copy">
+          <h3>{provider.name}</h3>
+          <p>{provider.description}</p>
+        </div>
       </div>
       <div className="ultimate-publisher-provider-card-footer">
         <button type="button" onClick={() => onAdd(provider.id)}>
